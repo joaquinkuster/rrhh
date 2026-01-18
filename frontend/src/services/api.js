@@ -93,3 +93,47 @@ export const deleteEmpleado = async (id) => {
     if (!response.ok) throw new Error(result.error || 'Error al eliminar empleado');
     return result;
 };
+
+// ===== Empresas =====
+export const getEmpresas = async (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.search) query.append('search', params.search);
+    if (params.page) query.append('page', params.page);
+    if (params.limit) query.append('limit', params.limit);
+
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+    const response = await fetch(`${API_URL}/empresas${queryString}`);
+    if (!response.ok) throw new Error('Error al obtener empresas');
+    return response.json();
+};
+
+export const createEmpresa = async (data) => {
+    const response = await fetch(`${API_URL}/empresas`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al crear empresa');
+    return result;
+};
+
+export const deleteEmpresa = async (id) => {
+    const response = await fetch(`${API_URL}/empresas/${id}`, {
+        method: 'DELETE',
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al eliminar empresa');
+    return result;
+};
+
+export const deleteEmpresasBulk = async (ids) => {
+    const response = await fetch(`${API_URL}/empresas/bulk`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al eliminar empresas');
+    return result;
+};

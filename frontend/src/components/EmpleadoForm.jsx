@@ -31,6 +31,21 @@ const initialFormData = {
     nacionalidadId: '',
     genero: 'masculino',
     estadoCivil: 'soltero',
+    activo: true,
+};
+
+const formatCuil = (value) => {
+    // Remove all non-digits
+    const digits = value.replace(/\D/g, '');
+
+    // Format as XX-XXXXXXXX-X
+    if (digits.length <= 2) {
+        return digits;
+    } else if (digits.length <= 10) {
+        return `${digits.slice(0, 2)}-${digits.slice(2)}`;
+    } else {
+        return `${digits.slice(0, 2)}-${digits.slice(2, 10)}-${digits.slice(10, 11)}`;
+    }
 };
 
 const EmpleadoForm = ({ empleado, onSubmit, onCancel }) => {
@@ -54,6 +69,7 @@ const EmpleadoForm = ({ empleado, onSubmit, onCancel }) => {
                 nacionalidadId: empleado.nacionalidadId || '',
                 genero: empleado.genero || 'masculino',
                 estadoCivil: empleado.estadoCivil || 'soltero',
+                activo: empleado.activo !== undefined ? empleado.activo : true,
             });
         }
     }, [empleado]);
@@ -109,8 +125,17 @@ const EmpleadoForm = ({ empleado, onSubmit, onCancel }) => {
     };
 
     const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData((prev) => ({ ...prev, [name]: value }));
+        const { name, value, type, checked } = e.target;
+
+        if (name === 'cuil') {
+            const formatted = formatCuil(value);
+            setFormData((prev) => ({ ...prev, cuil: formatted }));
+        } else if (type === 'checkbox') {
+            setFormData((prev) => ({ ...prev, [name]: checked }));
+        } else {
+            setFormData((prev) => ({ ...prev, [name]: value }));
+        }
+
         if (errors[name]) {
             setErrors((prev) => ({ ...prev, [name]: '' }));
         }
@@ -236,7 +261,8 @@ const EmpleadoForm = ({ empleado, onSubmit, onCancel }) => {
                         className={`form-input ${errors.cuil ? 'error' : ''}`}
                         value={formData.cuil}
                         onChange={handleChange}
-                        placeholder="Ej: 20-12345678-9"
+                        placeholder="XX-XXXXXXXX-X"
+                        maxLength={13}
                     />
                     {errors.cuil && <span className="form-error">{errors.cuil}</span>}
                 </div>
@@ -313,6 +339,20 @@ const EmpleadoForm = ({ empleado, onSubmit, onCancel }) => {
                             </option>
                         ))}
                     </select>
+                </div>
+
+                {/* Estado Activo */}
+                <div className="form-group">
+                    <label className="form-label checkbox-label">
+                        <input
+                            type="checkbox"
+                            name="activo"
+                            className="form-checkbox"
+                            checked={formData.activo}
+                            onChange={handleChange}
+                        />
+                        <span>Empleado activo</span>
+                    </label>
                 </div>
             </div>
 

@@ -8,6 +8,7 @@ import {
 } from '../services/api';
 import EmpleadoForm from '../components/EmpleadoForm';
 import EmpleadoList from '../components/EmpleadoList';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const GENEROS = [
     { value: '', label: 'Todos' },
@@ -40,6 +41,10 @@ const Empleados = () => {
         genero: '',
         estadoCivil: '',
     });
+
+    // Confirm dialog state
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [employeeToDelete, setEmployeeToDelete] = useState(null);
 
     useEffect(() => {
         loadData();
@@ -116,18 +121,29 @@ const Empleados = () => {
         }
     };
 
-    const handleDelete = async (emp) => {
-        if (!confirm(`¿Estás seguro de eliminar al empleado "${emp.nombre} ${emp.apellido}"?`)) {
-            return;
-        }
+    const handleDeleteClick = (emp) => {
+        setEmployeeToDelete(emp);
+        setConfirmOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!employeeToDelete) return;
 
         try {
-            await deleteEmpleado(emp.id);
+            await deleteEmpleado(employeeToDelete.id);
             setSuccess('Empleado eliminado correctamente');
             loadEmpleados();
         } catch (err) {
             setError(err.message);
+        } finally {
+            setConfirmOpen(false);
+            setEmployeeToDelete(null);
         }
+    };
+
+    const handleCancelDelete = () => {
+        setConfirmOpen(false);
+        setEmployeeToDelete(null);
     };
 
     const handleCloseModal = () => {
@@ -253,7 +269,7 @@ const Empleados = () => {
                 <EmpleadoList
                     empleados={empleados}
                     onEdit={handleEdit}
-                    onDelete={handleDelete}
+                    onDelete={handleDeleteClick}
                     loading={loading}
                 />
             </div>
@@ -281,6 +297,17 @@ const Empleados = () => {
                     </div>
                 </div>
             )}
+
+            <ConfirmDialog
+                isOpen={confirmOpen}
+                title="Eliminar empleado"
+                message={employeeToDelete ? `¿Estás seguro de eliminar al empleado "${employeeToDelete.nombre} ${employeeToDelete.apellido}"? Esta acción no se puede deshacer.` : ''}
+                onConfirm={handleConfirmDelete}
+                onCancel={handleCancelDelete}
+                confirmText="Eliminar"
+                cancelText="Cancelar"
+                variant="danger"
+            />
         </div>
     );
 };

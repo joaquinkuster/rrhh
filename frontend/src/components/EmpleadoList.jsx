@@ -44,13 +44,13 @@ const EmpleadoList = ({ empleados, onEdit, onDelete, loading }) => {
                         <th>Documento</th>
                         <th>Nacionalidad</th>
                         <th>Género</th>
-                        <th>Estado Civil</th>
+                        <th>Estado</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     {empleados.map((emp) => (
-                        <tr key={emp.id}>
+                        <tr key={emp.id} className={!emp.activo ? 'row-inactive' : ''}>
                             <td>
                                 <strong>{emp.apellido}, {emp.nombre}</strong>
                             </td>
@@ -66,7 +66,11 @@ const EmpleadoList = ({ empleados, onEdit, onDelete, loading }) => {
                                 </span>
                             </td>
                             <td>{getGeneroLabel(emp.genero)}</td>
-                            <td>{getEstadoCivilLabel(emp.estadoCivil)}</td>
+                            <td>
+                                <span className={`badge ${emp.activo ? 'badge-success' : 'badge-danger'}`}>
+                                    {emp.activo ? 'Activo' : 'Baja'}
+                                </span>
+                            </td>
                             <td>
                                 <div className="table-actions">
                                     <button

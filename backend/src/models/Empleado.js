@@ -111,6 +111,11 @@ const Empleado = sequelize.define('Empleado', {
             },
         },
     },
+    activo: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: true,
+    },
 }, {
     tableName: 'empleados',
     timestamps: true,
