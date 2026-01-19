@@ -165,7 +165,6 @@ textarea {
   width: 48px;
   height: 48px;
   border-radius: var(--radius-lg);
-  background: white;
   padding: 4px;
   object-fit: contain;
 }
@@ -539,6 +538,10 @@ textarea {
   align-items: center;
   padding: var(--space-6);
   border-bottom: 1px solid var(--neutral-200);
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 10;
 }
 
 .modal-title {
@@ -557,6 +560,33 @@ textarea {
 .modal-close:hover {
   background: var(--neutral-100);
   color: var(--neutral-700);
+}
+
+/* Btn-icon delete icon styling */
+.btn-icon-delete {
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  color: var(--neutral-500);
+  transition: all var(--transition-fast);
+}
+
+.btn-icon-delete:hover {
+  background: var(--neutral-100);
+  color: var(--neutral-700);
+}
+
+:root.dark .btn-icon-delete {
+  color: var(--neutral-400);
+}
+
+:root.dark .btn-icon-delete:hover {
+  background: rgba(100, 100, 100, 0.3);
+  color: white;
+}
+
+:root.dark .modal-close:hover {
+  background: rgba(100, 100, 100, 0.3);
+  color: white;
 }
 
 .modal-body {
@@ -633,6 +663,16 @@ textarea {
 .sidebar.collapsed .sidebar-header {
   justify-content: center;
   padding: var(--space-4);
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.sidebar.collapsed .sidebar-logo {
+  margin: 0 auto;
+}
+
+.sidebar.collapsed .sidebar-toggle {
+  margin-left: 0;
 }
 
 .sidebar.collapsed .sidebar-nav .nav-link {
@@ -985,7 +1025,8 @@ textarea {
 }
 
 :root.dark .modal-header {
-  border-color: #334155;
+  border-color: rgba(100, 100, 100, 0.3);
+  background: #1e293b;
 }
 
 :root.dark .card-header {
@@ -1050,4 +1091,438 @@ textarea {
 
 :root.dark .spinner {
   border-color: #334155;
+}
+
+/* Wizard Styles */
+.wizard-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  /* Overlay semitransparente igual a .modal-overlay */
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  /* Centrado vertical */
+  justify-content: center;
+  /* Centrado horizontal */
+  padding: var(--space-4);
+  backdrop-filter: blur(4px);
+}
+
+.wizard-content {
+  background: white;
+  /* Fondo blanco como las otras modales */
+  width: 100%;
+  max-width: 1000px;
+  /* Un poco más ancho que el standard pero contenido */
+  height: 85vh;
+  /* Altura máxima fija para que parezca modal */
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-2xl);
+  overflow: hidden;
+  /* Para que el scroll sea interno */
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+.wizard-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-8);
+}
+
+/* Step Tracker */
+.step-tracker-container {
+  padding: var(--space-6) var(--space-8) 0;
+  /* Ajuste para header del modal */
+}
+
+.step-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+  color: var(--neutral-400);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+
+.step-progress-bar {
+  height: 8px;
+  background: var(--neutral-800);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin-bottom: var(--space-6);
+}
+
+.step-progress-fill {
+  height: 100%;
+  background: var(--primary-500);
+  transition: width 0.3s ease;
+  border-radius: var(--radius-full);
+}
+
+.steps-indicators {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+}
+
+.step-item {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  position: relative;
+}
+
+.step-item:last-child {
+  flex: 0;
+}
+
+.step-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--neutral-100);
+  border: 2px solid var(--neutral-200);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  color: var(--neutral-500);
+  z-index: 2;
+  transition: all 0.3s ease;
+}
+
+.step-line {
+  flex: 1;
+  height: 2px;
+  background: var(--neutral-200);
+  margin: 0 var(--space-2);
+  transition: all 0.3s ease;
+}
+
+.step-item:last-child .step-line {
+  display: none;
+}
+
+/* Active/Completed States */
+.step-item.step-completed .step-circle {
+  background: var(--primary-500);
+  border-color: var(--primary-500);
+  color: white;
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.4);
+}
+
+.step-item.step-completed .step-line {
+  background: var(--primary-500);
+}
+
+.step-item.step-current .step-circle {
+  border-color: var(--primary-500);
+  color: var(--primary-500);
+  box-shadow: 0 0 15px rgba(139, 92, 246, 0.3);
+}
+
+/* Wizard Grid Layout (Two Columns) */
+.wizard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-6);
+  min-height: 500px;
+}
+
+.wizard-panel {
+  background: white;
+  border: 1px solid var(--neutral-200);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+}
+
+.wizard-panel-header {
+  margin-bottom: var(--space-4);
+}
+
+.wizard-panel-title {
+  font-size: var(--font-size-lg);
+  color: var(--neutral-800);
+  margin-bottom: var(--space-1);
+}
+
+.wizard-panel-subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--neutral-500);
+}
+
+/* Wizard Form Elements */
+.wizard-input {
+  background: var(--neutral-50);
+  border: 1px solid var(--neutral-300);
+  color: var(--neutral-800);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  width: 100%;
+  margin-bottom: var(--space-4);
+}
+
+.wizard-input:focus {
+  border-color: var(--primary-500);
+  outline: none;
+}
+
+.wizard-list {
+  flex: 1;
+  overflow-y: auto;
+  margin-top: var(--space-4);
+}
+
+.wizard-list-item {
+  background: var(--neutral-50);
+  border: 1px solid var(--neutral-200);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-3);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.wizard-list-item:hover,
+.wizard-list-item.selected {
+  border-color: var(--primary-500);
+  background: var(--primary-50);
+}
+
+.wizard-item-title {
+  font-weight: 500;
+  color: var(--neutral-800);
+  display: block;
+}
+
+.wizard-item-desc {
+  font-size: var(--font-size-sm);
+  color: var(--neutral-500);
+  margin-top: 4px;
+  display: block;
+}
+
+.wizard-item-meta {
+  font-size: var(--font-size-xs);
+  color: var(--neutral-500);
+  margin-top: 8px;
+  display: block;
+}
+
+.wizard-footer {
+  padding: var(--space-6);
+  border-top: 1px solid var(--neutral-200);
+  display: flex;
+  justify-content: space-between;
+  background: white;
+}
+
+/* Step 5 Summary */
+.summary-tree {
+  margin-top: var(--space-6);
+  border: 1px solid var(--neutral-200);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  background: var(--neutral-50);
+}
+
+.tree-node {
+  margin-left: var(--space-4);
+  padding-left: var(--space-4);
+  border-left: 1px solid var(--neutral-200);
+}
+
+.tree-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  color: var(--neutral-600);
+}
+
+.badge-count {
+  font-size: var(--font-size-xs);
+  background: var(--neutral-200);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--neutral-600);
+}
+
+/* Dark Mode Overrides for Wizard */
+:root.dark .wizard-modal {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+:root.dark .wizard-content {
+  background: var(--neutral-900);
+  border: 1px solid var(--neutral-700);
+}
+
+:root.dark .wizard-panel {
+  background: var(--neutral-800);
+  border-color: var(--neutral-700);
+}
+
+:root.dark .wizard-panel-title {
+  color: var(--neutral-100);
+}
+
+:root.dark .step-progress-bar {
+  background: var(--neutral-700);
+}
+
+:root.dark .step-circle {
+  background: var(--neutral-800);
+  border-color: var(--neutral-600);
+}
+
+:root.dark .step-line {
+  background: var(--neutral-700);
+}
+
+:root.dark .wizard-input {
+  background: var(--neutral-900);
+  border-color: var(--neutral-700);
+  color: var(--neutral-100);
+}
+
+:root.dark .wizard-list-item {
+  background: var(--neutral-900);
+  border-color: var(--neutral-700);
+}
+
+:root.dark .wizard-list-item:hover,
+:root.dark .wizard-list-item.selected {
+  border-color: var(--primary-500);
+  background: rgba(139, 92, 246, 0.1);
+}
+
+:root.dark .wizard-item-title {
+  color: var(--neutral-200);
+}
+
+:root.dark .wizard-footer {
+  background: var(--neutral-900);
+  border-color: var(--neutral-800);
+}
+
+:root.dark .summary-tree {
+  background: var(--neutral-800);
+  border-color: var(--neutral-700);
+}
+
+:root.dark .tree-node {
+  border-left-color: var(--neutral-700);
+}
+
+:root.dark .tree-label {
+  color: var(--neutral-300);
+}
+
+:root.dark .badge-count {
+  background: var(--neutral-700);
+  color: var(--neutral-400);
+}
+
+/* ===== Custom Scrollbar Styles ===== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--primary-500);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-600);
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary-500) transparent;
+}
+
+/* ===== Dark Mode - Additional Fixes ===== */
+
+/* Better border color for modal header/footer in dark mode */
+:root.dark .modal-header {
+  border-bottom-color: rgba(100, 100, 100, 0.3);
+}
+
+:root.dark .modal-body {
+  border-color: rgba(100, 100, 100, 0.3);
+}
+
+/* Better title contrast in dark mode */
+:root.dark .modal-title {
+  color: var(--neutral-800);
+}
+
+:root.dark .card-title {
+  color: var(--neutral-800);
+}
+
+:root.dark .form-label {
+  color: var(--neutral-700);
+}
+
+/* Better btn-secondary btn-sm contrast in dark mode */
+:root.dark .btn-secondary {
+  background: rgba(100, 100, 100, 0.25);
+  color: var(--neutral-700);
+  border: 1px solid rgba(100, 100, 100, 0.3);
+}
+
+:root.dark .btn-secondary:hover {
+  background: rgba(100, 100, 100, 0.4);
+  color: var(--neutral-800);
+}
+
+:root.dark .btn-secondary.btn-sm {
+  background: rgba(100, 100, 100, 0.25);
+  color: var(--neutral-700);
+}
+
+:root.dark .btn-secondary.btn-sm:hover {
+  background: rgba(100, 100, 100, 0.4);
+  color: var(--neutral-800);
+}
+
+/* CSS variable for border color that adapts to theme */
+:root {
+  --border-color: #e2e8f0;
+  --card-bg: white;
+  --text-primary: var(--neutral-800);
+  --text-secondary: var(--neutral-500);
+  --primary-color: #0d9488;
+  --primary-bg: rgba(13, 148, 136, 0.1);
+  --success-color: #22c55e;
+  --danger-color: #ef4444;
+  --neutral-bg: var(--neutral-100);
+}
+
+:root.dark {
+  --border-color: rgba(100, 100, 100, 0.3);
+  --card-bg: #1e293b;
+  --text-primary: var(--neutral-800);
+  --text-secondary: var(--neutral-500);
+  --primary-color: #0d9488;
+  --primary-bg: rgba(13, 148, 136, 0.15);
+  --neutral-bg: rgba(100, 100, 100, 0.15);
 }

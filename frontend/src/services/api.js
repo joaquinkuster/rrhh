@@ -107,6 +107,12 @@ export const getEmpresas = async (params = {}) => {
     return response.json();
 };
 
+export const getEmpresaById = async (id) => {
+    const response = await fetch(`${API_URL}/empresas/${id}`);
+    if (!response.ok) throw new Error('Error al obtener la empresa');
+    return response.json();
+};
+
 export const createEmpresa = async (data) => {
     const response = await fetch(`${API_URL}/empresas`, {
         method: 'POST',
@@ -115,6 +121,17 @@ export const createEmpresa = async (data) => {
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || 'Error al crear empresa');
+    return result;
+};
+
+export const updateEmpresa = async (id, data) => {
+    const response = await fetch(`${API_URL}/empresas/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al actualizar empresa');
     return result;
 };
 
@@ -137,3 +154,4 @@ export const deleteEmpresasBulk = async (ids) => {
     if (!response.ok) throw new Error(result.error || 'Error al eliminar empresas');
     return result;
 };
+

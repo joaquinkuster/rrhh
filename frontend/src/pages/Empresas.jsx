@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getEmpresas, createEmpresa, deleteEmpresa, deleteEmpresasBulk } from '../services/api';
+import { getEmpresas, deleteEmpresa, deleteEmpresasBulk, getEmpresaById, updateEmpresa } from '../services/api';
 import ConfirmDialog from '../components/ConfirmDialog';
+import EmpresaWizard from '../components/EmpresaWizard';
+import EmpresaDetail from '../components/EmpresaDetail';
 
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50];
 
@@ -24,13 +26,15 @@ const Empresas = () => {
     const [selectedIds, setSelectedIds] = useState(new Set());
 
     // Modals
-    const [showCreateModal, setShowCreateModal] = useState(false);
-    const [newEmpresaName, setNewEmpresaName] = useState('');
+    const [showWizard, setShowWizard] = useState(false);
+    const [editingEmpresa, setEditingEmpresa] = useState(null);
+    const [selectedEmpresa, setSelectedEmpresa] = useState(null);
+    const [showDetail, setShowDetail] = useState(false);
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [confirmBulkOpen, setConfirmBulkOpen] = useState(false);
     const [empresaToDelete, setEmpresaToDelete] = useState(null);
 
-    // Column visibility (prepared for future use)
+    // Column visibility
     const [visibleColumns, setVisibleColumns] = useState({
         nombre: true,
         email: true,
@@ -47,7 +51,6 @@ const Empresas = () => {
             setEmpresas(result.data);
             setTotalPages(result.pagination.totalPages);
             setTotal(result.pagination.total);
-            // Clear selection that no longer exists
             setSelectedIds(new Set());
         } catch (err) {
             setError(err.message);
@@ -60,7 +63,6 @@ const Empresas = () => {
         loadEmpresas();
     }, [loadEmpresas]);
 
-    // Search with debounce
     useEffect(() => {
         const timer = setTimeout(() => {
             setSearch(searchInput);
@@ -87,16 +89,33 @@ const Empresas = () => {
         setSelectedIds(newSelected);
     };
 
-    const handleCreate = async (e) => {
-        e.preventDefault();
-        if (!newEmpresaName.trim()) return;
+    const handleWizardSuccess = () => {
+        setShowWizard(false);
+        setEditingEmpresa(null);
+        setSuccess(editingEmpresa ? 'Empresa actualizada correctamente' : 'Empresa creada correctamente');
+        loadEmpresas();
+    };
 
+    const handleNewEmpresa = () => {
+        setEditingEmpresa(null);
+        setShowWizard(true);
+    };
+
+    const handleEditClick = async (empresa) => {
         try {
-            await createEmpresa({ nombre: newEmpresaName.trim() });
-            setSuccess('Empresa creada correctamente');
-            setShowCreateModal(false);
-            setNewEmpresaName('');
-            loadEmpresas();
+            const fullEmpresa = await getEmpresaById(empresa.id);
+            setEditingEmpresa(fullEmpresa);
+            setShowWizard(true);
+        } catch (err) {
+            setError(err.message);
+        }
+    };
+
+    const handleViewClick = async (empresa) => {
+        try {
+            const fullEmpresa = await getEmpresaById(empresa.id);
+            setSelectedEmpresa(fullEmpresa);
+            setShowDetail(true);
         } catch (err) {
             setError(err.message);
         }
@@ -185,7 +204,7 @@ const Empresas = () => {
                                 Eliminar seleccionados
                             </button>
                         )}
-                        <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
+                        <button className="btn btn-primary" onClick={handleNewEmpresa}>
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 20, height: 20 }}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                             </svg>
@@ -281,21 +300,39 @@ const Empresas = () => {
                                                 />
                                             </td>
                                             <td><strong>{empresa.nombre}</strong></td>
-                                            {visibleColumns.email && <td>-</td>}
-                                            {visibleColumns.telefono && <td>-</td>}
-                                            {visibleColumns.industria && <td>-</td>}
-                                            {visibleColumns.direccion && <td>-</td>}
+                                            {visibleColumns.email && <td>{empresa.email || '-'}</td>}
+                                            {visibleColumns.telefono && <td>{empresa.telefono || '-'}</td>}
+                                            {visibleColumns.industria && <td>{empresa.industria || '-'}</td>}
+                                            {visibleColumns.direccion && <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{empresa.direccion || '-'}</td>}
                                             <td>
                                                 <div className="table-actions">
                                                     <button
-                                                        className="btn btn-danger btn-sm"
-                                                        onClick={() => handleDeleteClick(empresa)}
-                                                        title="Eliminar"
+                                                        className="btn-icon"
+                                                        title="Ver empresa"
+                                                        onClick={() => handleViewClick(empresa)}
                                                     >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
+                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 18, height: 18 }}>
+                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                        </svg>
+                                                    </button>
+                                                    <button
+                                                        className="btn-icon"
+                                                        title="Editar empresa"
+                                                        onClick={() => handleEditClick(empresa)}
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 18, height: 18 }}>
+                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                                                        </svg>
+                                                    </button>
+                                                    <button
+                                                        className="btn-icon"
+                                                        title="Eliminar empresa"
+                                                        onClick={() => handleDeleteClick(empresa)}
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 18, height: 18 }}>
                                                             <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
                                                         </svg>
-                                                        Eliminar
                                                     </button>
                                                 </div>
                                             </td>
@@ -362,45 +399,27 @@ const Empresas = () => {
                 )}
             </div>
 
-            {/* Create Modal */}
-            {showCreateModal && (
-                <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
-                    <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
-                        <div className="modal-header">
-                            <h2 className="modal-title">Nueva Empresa</h2>
-                            <button className="modal-close" onClick={() => setShowCreateModal(false)}>
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 24, height: 24 }}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </div>
-                        <div className="modal-body">
-                            <form onSubmit={handleCreate}>
-                                <div className="form-group">
-                                    <label className="form-label">
-                                        Nombre <span className="required">*</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        className="form-input"
-                                        value={newEmpresaName}
-                                        onChange={(e) => setNewEmpresaName(e.target.value)}
-                                        placeholder="Nombre de la empresa"
-                                        autoFocus
-                                    />
-                                </div>
-                                <div className="form-actions">
-                                    <button type="button" className="btn btn-secondary" onClick={() => setShowCreateModal(false)}>
-                                        Cancelar
-                                    </button>
-                                    <button type="submit" className="btn btn-primary" disabled={!newEmpresaName.trim()}>
-                                        Crear Empresa
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
+            {/* Wizard Modal - Create/Edit */}
+            {showWizard && (
+                <EmpresaWizard
+                    empresa={editingEmpresa}
+                    onClose={() => {
+                        setShowWizard(false);
+                        setEditingEmpresa(null);
+                    }}
+                    onSuccess={handleWizardSuccess}
+                />
+            )}
+
+            {/* View Detail Modal */}
+            {showDetail && selectedEmpresa && (
+                <EmpresaDetail
+                    empresa={selectedEmpresa}
+                    onClose={() => {
+                        setShowDetail(false);
+                        setSelectedEmpresa(null);
+                    }}
+                />
             )}
 
             <ConfirmDialog
