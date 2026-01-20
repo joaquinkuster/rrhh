@@ -618,7 +618,7 @@ const EmpresaWizard = ({ empresa: empresaToEdit, onClose, onSuccess }) => {
                             <button className="btn btn-primary" onClick={nextStep}>Siguiente →</button>
                         ) : (
                             <button className="btn btn-primary" onClick={handleSubmit} disabled={loading}>
-                                {loading ? (isEditing ? 'Guardando...' : 'Creando...') : (isEditing ? '✓ Guardar Cambios' : '✓ Confirmar y Crear Empresa')}
+                                {loading ? (isEditing ? 'Guardando...' : 'Creando...') : (isEditing ? 'Actualizar Empresa' : 'Confirmar y Crear Empresa')}
                             </button>
                         )}
                     </div>

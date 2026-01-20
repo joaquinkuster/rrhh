@@ -7,16 +7,28 @@ import {
 } from '../services/api';
 import NacionalidadForm from '../components/NacionalidadForm';
 import NacionalidadList from '../components/NacionalidadList';
+import ConfirmDialog from '../components/ConfirmDialog';
+import { PageHeader, AlertMessage, FormModal } from '../components/shared';
 
 const Nacionalidades = () => {
+    // State
     const [nacionalidades, setNacionalidades] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [showModal, setShowModal] = useState(false);
-    const [editingNac, setEditingNac] = useState(null);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+
+    // Modal state
+    const [showModal, setShowModal] = useState(false);
+    const [editingItem, setEditingItem] = useState(null);
+
+    // Delete confirmation state
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState(null);
+
+    // Search
     const [search, setSearch] = useState('');
 
+    // Load data
     useEffect(() => {
         loadNacionalidades();
     }, [search]);
@@ -33,75 +45,76 @@ const Nacionalidades = () => {
         }
     };
 
+    // CRUD handlers
     const handleCreate = () => {
-        setEditingNac(null);
+        setEditingItem(null);
         setShowModal(true);
         setError('');
         setSuccess('');
     };
 
-    const handleEdit = (nac) => {
-        setEditingNac(nac);
+    const handleEdit = (item) => {
+        setEditingItem(item);
         setShowModal(true);
         setError('');
         setSuccess('');
+    };
+
+    const handleCloseModal = () => {
+        setShowModal(false);
+        setEditingItem(null);
     };
 
     const handleSubmit = async (data) => {
         try {
-            if (editingNac) {
-                await updateNacionalidad(editingNac.id, data);
+            if (editingItem) {
+                await updateNacionalidad(editingItem.id, data);
                 setSuccess('Nacionalidad actualizada correctamente');
             } else {
                 await createNacionalidad(data);
                 setSuccess('Nacionalidad creada correctamente');
             }
-            setShowModal(false);
+            handleCloseModal();
             loadNacionalidades();
         } catch (err) {
             setError(err.message);
         }
     };
 
-    const handleDelete = async (nac) => {
-        if (!confirm(`¿Estás seguro de eliminar la nacionalidad "${nac.nombre}"?`)) {
-            return;
-        }
+    const handleDeleteClick = (item) => {
+        setItemToDelete(item);
+        setConfirmOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!itemToDelete) return;
 
         try {
-            await deleteNacionalidad(nac.id);
+            await deleteNacionalidad(itemToDelete.id);
             setSuccess('Nacionalidad eliminada correctamente');
             loadNacionalidades();
         } catch (err) {
             setError(err.message);
+        } finally {
+            setConfirmOpen(false);
+            setItemToDelete(null);
         }
     };
 
-    const handleCloseModal = () => {
-        setShowModal(false);
-        setEditingNac(null);
+    const handleCancelDelete = () => {
+        setConfirmOpen(false);
+        setItemToDelete(null);
     };
 
     return (
         <div>
-            <div className="page-header">
-                <h1 className="page-title">Nacionalidades</h1>
-                <p className="page-subtitle">Gestiona las nacionalidades del sistema</p>
-            </div>
+            <PageHeader
+                title="Nacionalidades"
+                subtitle="Gestiona las nacionalidades del sistema"
+            />
 
-            {error && (
-                <div className="alert alert-error">
-                    {error}
-                    <button onClick={() => setError('')} style={{ float: 'right', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
-                </div>
-            )}
-
-            {success && (
-                <div className="alert alert-success">
-                    {success}
-                    <button onClick={() => setSuccess('')} style={{ float: 'right', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
-                </div>
-            )}
+            <AlertMessage type="error" message={error} onClose={() => setError('')} />
+            <AlertMessage type="success" message={success} onClose={() => setSuccess('')} />
 
             <div className="card">
                 <div className="card-header">
@@ -125,34 +138,35 @@ const Nacionalidades = () => {
                 <NacionalidadList
                     nacionalidades={nacionalidades}
                     onEdit={handleEdit}
-                    onDelete={handleDelete}
+                    onDelete={handleDeleteClick}
                     loading={loading}
                 />
             </div>
 
-            {showModal && (
-                <div className="modal-overlay" onClick={handleCloseModal}>
-                    <div className="modal" onClick={(e) => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h2 className="modal-title">
-                                {editingNac ? 'Editar' : 'Nueva'} Nacionalidad
-                            </h2>
-                            <button className="modal-close" onClick={handleCloseModal}>
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 24, height: 24 }}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </div>
-                        <div className="modal-body">
-                            <NacionalidadForm
-                                nacionalidad={editingNac}
-                                onSubmit={handleSubmit}
-                                onCancel={handleCloseModal}
-                            />
-                        </div>
-                    </div>
-                </div>
-            )}
+            <FormModal
+                isOpen={showModal}
+                onClose={handleCloseModal}
+                headerTitle={editingItem ? 'Editar Nacionalidad' : 'Nueva Nacionalidad'}
+                contentTitle="Información de la Nacionalidad"
+                contentSubtitle="Ingresa el nombre de la nacionalidad"
+            >
+                <NacionalidadForm
+                    nacionalidad={editingItem}
+                    onSubmit={handleSubmit}
+                    onCancel={handleCloseModal}
+                />
+            </FormModal>
+
+            <ConfirmDialog
+                isOpen={confirmOpen}
+                title="Eliminar nacionalidad"
+                message={itemToDelete ? `¿Estás seguro de eliminar la nacionalidad "${itemToDelete.nombre}"? Esta acción no se puede deshacer.` : ''}
+                onConfirm={handleConfirmDelete}
+                onCancel={handleCancelDelete}
+                confirmText="Eliminar"
+                cancelText="Cancelar"
+                variant="danger"
+            />
         </div>
     );
 };

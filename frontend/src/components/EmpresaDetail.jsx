@@ -18,11 +18,17 @@ const EmpresaDetail = ({ empresa, onClose }) => {
                 </div>
 
                 <div className="modal-body" style={{ maxHeight: 'calc(90vh - 100px)', overflowY: 'auto' }}>
-                    {/* Información de la Empresa */}
-                    <div style={{ marginBottom: '2rem' }}>
-                        <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '1rem' }}>
+                    <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
+                        <h3 style={{ fontSize: '1.5rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
                             Información de la Empresa
                         </h3>
+                        <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                            Información completa y estructura organizacional de la empresa
+                        </p>
+                    </div>
+
+                    {/* Información de la Empresa */}
+                    <div style={{ marginBottom: '2rem' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                             <div style={{ padding: '1rem', background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '0.5rem' }}>
                                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Nombre</div>

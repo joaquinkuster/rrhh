@@ -9,6 +9,7 @@ import {
 import EmpleadoForm from '../components/EmpleadoForm';
 import EmpleadoList from '../components/EmpleadoList';
 import ConfirmDialog from '../components/ConfirmDialog';
+import { PageHeader, AlertMessage, FormModal } from '../components/shared';
 
 const GENEROS = [
     { value: '', label: 'Todos' },
@@ -26,13 +27,22 @@ const ESTADOS_CIVILES = [
 ];
 
 const Empleados = () => {
+    // State
     const [empleados, setEmpleados] = useState([]);
     const [nacionalidades, setNacionalidades] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [showModal, setShowModal] = useState(false);
-    const [editingEmp, setEditingEmp] = useState(null);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+
+    // Modal state
+    const [showModal, setShowModal] = useState(false);
+    const [editingItem, setEditingItem] = useState(null);
+
+    // Delete confirmation state
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState(null);
+
+    // Filters
     const [filters, setFilters] = useState({
         nombre: '',
         apellido: '',
@@ -42,22 +52,19 @@ const Empleados = () => {
         estadoCivil: '',
     });
 
-    // Confirm dialog state
-    const [confirmOpen, setConfirmOpen] = useState(false);
-    const [employeeToDelete, setEmployeeToDelete] = useState(null);
-
+    // Load data
     useEffect(() => {
-        loadData();
+        loadNacionalidades();
     }, []);
 
     useEffect(() => {
         loadEmpleados();
     }, [filters]);
 
-    const loadData = async () => {
+    const loadNacionalidades = async () => {
         try {
-            const nacs = await getNacionalidades();
-            setNacionalidades(nacs);
+            const data = await getNacionalidades();
+            setNacionalidades(data);
         } catch (err) {
             console.error('Error al cargar nacionalidades:', err);
         }
@@ -75,6 +82,7 @@ const Empleados = () => {
         }
     };
 
+    // Filter handlers
     const handleFilterChange = (e) => {
         const { name, value } = e.target;
         setFilters((prev) => ({ ...prev, [name]: value }));
@@ -91,88 +99,78 @@ const Empleados = () => {
         });
     };
 
+    const hasActiveFilters = Object.values(filters).some((v) => v !== '');
+
+    // CRUD handlers
     const handleCreate = () => {
-        setEditingEmp(null);
+        setEditingItem(null);
         setShowModal(true);
         setError('');
         setSuccess('');
     };
 
-    const handleEdit = (emp) => {
-        setEditingEmp(emp);
+    const handleEdit = (item) => {
+        setEditingItem(item);
         setShowModal(true);
         setError('');
         setSuccess('');
+    };
+
+    const handleCloseModal = () => {
+        setShowModal(false);
+        setEditingItem(null);
     };
 
     const handleSubmit = async (data) => {
         try {
-            if (editingEmp) {
-                await updateEmpleado(editingEmp.id, data);
+            if (editingItem) {
+                await updateEmpleado(editingItem.id, data);
                 setSuccess('Empleado actualizado correctamente');
             } else {
                 await createEmpleado(data);
                 setSuccess('Empleado creado correctamente');
             }
-            setShowModal(false);
+            handleCloseModal();
             loadEmpleados();
         } catch (err) {
             setError(err.message);
         }
     };
 
-    const handleDeleteClick = (emp) => {
-        setEmployeeToDelete(emp);
+    const handleDeleteClick = (item) => {
+        setItemToDelete(item);
         setConfirmOpen(true);
     };
 
     const handleConfirmDelete = async () => {
-        if (!employeeToDelete) return;
+        if (!itemToDelete) return;
 
         try {
-            await deleteEmpleado(employeeToDelete.id);
+            await deleteEmpleado(itemToDelete.id);
             setSuccess('Empleado eliminado correctamente');
             loadEmpleados();
         } catch (err) {
             setError(err.message);
         } finally {
             setConfirmOpen(false);
-            setEmployeeToDelete(null);
+            setItemToDelete(null);
         }
     };
 
     const handleCancelDelete = () => {
         setConfirmOpen(false);
-        setEmployeeToDelete(null);
+        setItemToDelete(null);
     };
-
-    const handleCloseModal = () => {
-        setShowModal(false);
-        setEditingEmp(null);
-    };
-
-    const hasActiveFilters = Object.values(filters).some((v) => v !== '');
 
     return (
         <div>
-            <div className="page-header">
-                <h1 className="page-title">Empleados</h1>
-                <p className="page-subtitle">Gestiona los empleados de la organización</p>
-            </div>
+            <PageHeader
+                title="Empleados"
+                subtitle="Gestiona los empleados de la organización"
+            />
 
-            {error && (
-                <div className="alert alert-error">
-                    {error}
-                    <button onClick={() => setError('')} style={{ float: 'right', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
-                </div>
-            )}
-
-            {success && (
-                <div className="alert alert-success">
-                    {success}
-                    <button onClick={() => setSuccess('')} style={{ float: 'right', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
-                </div>
-            )}
+            <AlertMessage type="error" message={error} onClose={() => setError('')} />
+            <AlertMessage type="success" message={success} onClose={() => setSuccess('')} />
 
             <div className="card">
                 <div className="card-header">
@@ -274,34 +272,24 @@ const Empleados = () => {
                 />
             </div>
 
-            {showModal && (
-                <div className="modal-overlay" onClick={handleCloseModal}>
-                    <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '800px' }}>
-                        <div className="modal-header">
-                            <h2 className="modal-title">
-                                {editingEmp ? 'Editar' : 'Nuevo'} Empleado
-                            </h2>
-                            <button className="modal-close" onClick={handleCloseModal}>
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 24, height: 24 }}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </div>
-                        <div className="modal-body">
-                            <EmpleadoForm
-                                empleado={editingEmp}
-                                onSubmit={handleSubmit}
-                                onCancel={handleCloseModal}
-                            />
-                        </div>
-                    </div>
-                </div>
-            )}
+            <FormModal
+                isOpen={showModal}
+                onClose={handleCloseModal}
+                headerTitle={editingItem ? 'Editar Empleado' : 'Nuevo Empleado'}
+                contentTitle="Información del Empleado"
+                contentSubtitle="Ingresa los datos básicos del empleado"
+            >
+                <EmpleadoForm
+                    empleado={editingItem}
+                    onSubmit={handleSubmit}
+                    onCancel={handleCloseModal}
+                />
+            </FormModal>
 
             <ConfirmDialog
                 isOpen={confirmOpen}
                 title="Eliminar empleado"
-                message={employeeToDelete ? `¿Estás seguro de eliminar al empleado "${employeeToDelete.nombre} ${employeeToDelete.apellido}"? Esta acción no se puede deshacer.` : ''}
+                message={itemToDelete ? `¿Estás seguro de eliminar al empleado "${itemToDelete.nombre} ${itemToDelete.apellido}"? Esta acción no se puede deshacer.` : ''}
                 onConfirm={handleConfirmDelete}
                 onCancel={handleCancelDelete}
                 confirmText="Eliminar"

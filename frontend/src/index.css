@@ -302,6 +302,29 @@ textarea {
   transform: translateY(-1px);
 }
 
+.btn-warning {
+  background: #facc15;
+  color: #1a1a1a;
+  border: none;
+  font-weight: 600;
+}
+
+.btn-warning:hover {
+  background: #fde047;
+  transform: translateY(-1px);
+}
+
+.btn-info {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border: none;
+}
+
+.btn-info:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
 .btn-sm {
   padding: var(--space-2) var(--space-3);
   font-size: var(--font-size-xs);
@@ -390,7 +413,7 @@ textarea {
 .table th,
 .table td {
   padding: var(--space-4);
-  text-align: left;
+  text-align: center;
 }
 
 .table th {
@@ -401,6 +424,7 @@ textarea {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   border-bottom: 2px solid var(--neutral-200);
+  text-align: center;
 }
 
 .table td {
@@ -419,6 +443,7 @@ textarea {
 .table-actions {
   display: flex;
   gap: var(--space-2);
+  justify-content: center;
 }
 
 /* ===== Badges ===== */
@@ -525,8 +550,8 @@ textarea {
   background: white;
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-xl);
-  width: 100%;
-  max-width: 600px;
+  width: 95%;
+  max-width: 950px;
   max-height: 90vh;
   overflow-y: auto;
   animation: slideUp var(--transition-base);
@@ -548,6 +573,7 @@ textarea {
   font-size: var(--font-size-xl);
   font-weight: 600;
   color: var(--secondary-700);
+  text-align: left;
 }
 
 .modal-close {

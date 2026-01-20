@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getEmpresas, deleteEmpresa, deleteEmpresasBulk, getEmpresaById, updateEmpresa } from '../services/api';
+import { getEmpresas, deleteEmpresa, deleteEmpresasBulk, getEmpresaById } from '../services/api';
 import ConfirmDialog from '../components/ConfirmDialog';
 import EmpresaWizard from '../components/EmpresaWizard';
 import EmpresaDetail from '../components/EmpresaDetail';
+import { PageHeader, AlertMessage, ActionButtons } from '../components/shared';
 
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50];
 
 const Empresas = () => {
+    // State
     const [empresas, setEmpresas] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -25,14 +27,16 @@ const Empresas = () => {
     // Selection
     const [selectedIds, setSelectedIds] = useState(new Set());
 
-    // Modals
+    // Modal state
     const [showWizard, setShowWizard] = useState(false);
-    const [editingEmpresa, setEditingEmpresa] = useState(null);
-    const [selectedEmpresa, setSelectedEmpresa] = useState(null);
+    const [editingItem, setEditingItem] = useState(null);
+    const [selectedItem, setSelectedItem] = useState(null);
     const [showDetail, setShowDetail] = useState(false);
+
+    // Delete confirmation state
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [confirmBulkOpen, setConfirmBulkOpen] = useState(false);
-    const [empresaToDelete, setEmpresaToDelete] = useState(null);
+    const [itemToDelete, setItemToDelete] = useState(null);
 
     // Column visibility
     const [visibleColumns, setVisibleColumns] = useState({
@@ -44,6 +48,7 @@ const Empresas = () => {
     });
     const [showColumnSelector, setShowColumnSelector] = useState(false);
 
+    // Load data
     const loadEmpresas = useCallback(async () => {
         try {
             setLoading(true);
@@ -71,6 +76,7 @@ const Empresas = () => {
         return () => clearTimeout(timer);
     }, [searchInput]);
 
+    // Selection handlers
     const handleSelectAll = (e) => {
         if (e.target.checked) {
             setSelectedIds(new Set(empresas.map(emp => emp.id)));
@@ -89,58 +95,76 @@ const Empresas = () => {
         setSelectedIds(newSelected);
     };
 
-    const handleWizardSuccess = () => {
-        setShowWizard(false);
-        setEditingEmpresa(null);
-        setSuccess(editingEmpresa ? 'Empresa actualizada correctamente' : 'Empresa creada correctamente');
-        loadEmpresas();
-    };
+    const allSelected = empresas.length > 0 && empresas.every(emp => selectedIds.has(emp.id));
+    const someSelected = empresas.some(emp => selectedIds.has(emp.id)) && !allSelected;
 
-    const handleNewEmpresa = () => {
-        setEditingEmpresa(null);
+    // CRUD handlers
+    const handleCreate = () => {
+        setEditingItem(null);
         setShowWizard(true);
+        setError('');
+        setSuccess('');
     };
 
-    const handleEditClick = async (empresa) => {
+    const handleEdit = async (item) => {
         try {
-            const fullEmpresa = await getEmpresaById(empresa.id);
-            setEditingEmpresa(fullEmpresa);
+            const fullItem = await getEmpresaById(item.id);
+            setEditingItem(fullItem);
             setShowWizard(true);
+            setError('');
+            setSuccess('');
         } catch (err) {
             setError(err.message);
         }
     };
 
-    const handleViewClick = async (empresa) => {
+    const handleView = async (item) => {
         try {
-            const fullEmpresa = await getEmpresaById(empresa.id);
-            setSelectedEmpresa(fullEmpresa);
+            const fullItem = await getEmpresaById(item.id);
+            setSelectedItem(fullItem);
             setShowDetail(true);
         } catch (err) {
             setError(err.message);
         }
     };
 
-    const handleDeleteClick = (empresa) => {
-        setEmpresaToDelete(empresa);
+    const handleCloseWizard = () => {
+        setShowWizard(false);
+        setEditingItem(null);
+    };
+
+    const handleWizardSuccess = () => {
+        handleCloseWizard();
+        setSuccess(editingItem ? 'Empresa actualizada correctamente' : 'Empresa creada correctamente');
+        loadEmpresas();
+    };
+
+    const handleDeleteClick = (item) => {
+        setItemToDelete(item);
         setConfirmOpen(true);
     };
 
     const handleConfirmDelete = async () => {
-        if (!empresaToDelete) return;
+        if (!itemToDelete) return;
 
         try {
-            await deleteEmpresa(empresaToDelete.id);
+            await deleteEmpresa(itemToDelete.id);
             setSuccess('Empresa eliminada correctamente');
             loadEmpresas();
         } catch (err) {
             setError(err.message);
         } finally {
             setConfirmOpen(false);
-            setEmpresaToDelete(null);
+            setItemToDelete(null);
         }
     };
 
+    const handleCancelDelete = () => {
+        setConfirmOpen(false);
+        setItemToDelete(null);
+    };
+
+    // Bulk delete handlers
     const handleBulkDeleteClick = () => {
         if (selectedIds.size === 0) return;
         setConfirmBulkOpen(true);
@@ -159,33 +183,20 @@ const Empresas = () => {
         }
     };
 
+    // Column toggle
     const toggleColumn = (col) => {
         setVisibleColumns(prev => ({ ...prev, [col]: !prev[col] }));
     };
 
-    const allSelected = empresas.length > 0 && empresas.every(emp => selectedIds.has(emp.id));
-    const someSelected = empresas.some(emp => selectedIds.has(emp.id)) && !allSelected;
-
     return (
         <div>
-            <div className="page-header">
-                <h1 className="page-title">Empresas</h1>
-                <p className="page-subtitle">Gestiona las empresas del sistema</p>
-            </div>
+            <PageHeader
+                title="Empresas"
+                subtitle="Gestiona las empresas del sistema"
+            />
 
-            {error && (
-                <div className="alert alert-error">
-                    {error}
-                    <button onClick={() => setError('')} style={{ float: 'right', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
-                </div>
-            )}
-
-            {success && (
-                <div className="alert alert-success">
-                    {success}
-                    <button onClick={() => setSuccess('')} style={{ float: 'right', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
-                </div>
-            )}
+            <AlertMessage type="error" message={error} onClose={() => setError('')} />
+            <AlertMessage type="success" message={success} onClose={() => setSuccess('')} />
 
             <div className="card">
                 <div className="card-header">
@@ -204,7 +215,7 @@ const Empresas = () => {
                                 Eliminar seleccionados
                             </button>
                         )}
-                        <button className="btn btn-primary" onClick={handleNewEmpresa}>
+                        <button className="btn btn-primary" onClick={handleCreate}>
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 20, height: 20 }}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                             </svg>
@@ -305,36 +316,11 @@ const Empresas = () => {
                                             {visibleColumns.industria && <td>{empresa.industria || '-'}</td>}
                                             {visibleColumns.direccion && <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{empresa.direccion || '-'}</td>}
                                             <td>
-                                                <div className="table-actions">
-                                                    <button
-                                                        className="btn-icon"
-                                                        title="Ver empresa"
-                                                        onClick={() => handleViewClick(empresa)}
-                                                    >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 18, height: 18 }}>
-                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                        </svg>
-                                                    </button>
-                                                    <button
-                                                        className="btn-icon"
-                                                        title="Editar empresa"
-                                                        onClick={() => handleEditClick(empresa)}
-                                                    >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 18, height: 18 }}>
-                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-                                                        </svg>
-                                                    </button>
-                                                    <button
-                                                        className="btn-icon"
-                                                        title="Eliminar empresa"
-                                                        onClick={() => handleDeleteClick(empresa)}
-                                                    >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 18, height: 18 }}>
-                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                                                        </svg>
-                                                    </button>
-                                                </div>
+                                                <ActionButtons
+                                                    onView={() => handleView(empresa)}
+                                                    onEdit={() => handleEdit(empresa)}
+                                                    onDelete={() => handleDeleteClick(empresa)}
+                                                />
                                             </td>
                                         </tr>
                                     ))}
@@ -402,22 +388,19 @@ const Empresas = () => {
             {/* Wizard Modal - Create/Edit */}
             {showWizard && (
                 <EmpresaWizard
-                    empresa={editingEmpresa}
-                    onClose={() => {
-                        setShowWizard(false);
-                        setEditingEmpresa(null);
-                    }}
+                    empresa={editingItem}
+                    onClose={handleCloseWizard}
                     onSuccess={handleWizardSuccess}
                 />
             )}
 
             {/* View Detail Modal */}
-            {showDetail && selectedEmpresa && (
+            {showDetail && selectedItem && (
                 <EmpresaDetail
-                    empresa={selectedEmpresa}
+                    empresa={selectedItem}
                     onClose={() => {
                         setShowDetail(false);
-                        setSelectedEmpresa(null);
+                        setSelectedItem(null);
                     }}
                 />
             )}
@@ -425,9 +408,9 @@ const Empresas = () => {
             <ConfirmDialog
                 isOpen={confirmOpen}
                 title="Eliminar empresa"
-                message={empresaToDelete ? `¿Estás seguro de eliminar la empresa "${empresaToDelete.nombre}"? Esta acción no se puede deshacer.` : ''}
+                message={itemToDelete ? `¿Estás seguro de eliminar la empresa "${itemToDelete.nombre}"? Esta acción no se puede deshacer.` : ''}
                 onConfirm={handleConfirmDelete}
-                onCancel={() => { setConfirmOpen(false); setEmpresaToDelete(null); }}
+                onCancel={handleCancelDelete}
                 confirmText="Eliminar"
                 variant="danger"
             />

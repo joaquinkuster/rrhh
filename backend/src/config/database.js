@@ -1,13 +1,25 @@
 const { Sequelize } = require('sequelize');
-const path = require('path');
 
-const sequelize = new Sequelize({
-  dialect: 'sqlite',
-  storage: path.join(__dirname, '../../database.sqlite'),
-  logging: false,
-});
-
-// Habilitar foreign keys en SQLite
-sequelize.query('PRAGMA foreign_keys = ON;');
+const sequelize = new Sequelize(
+  process.env.DB_NAME || 'cataratasrh',
+  process.env.DB_USER || 'root',
+  process.env.DB_PASSWORD || '',
+  {
+    host: process.env.DB_HOST || 'localhost',
+    port: process.env.DB_PORT || 3306,
+    dialect: 'mysql',
+    logging: false,
+    define: {
+      charset: 'utf8mb4',
+      collate: 'utf8mb4_unicode_ci',
+    },
+    pool: {
+      max: 5,
+      min: 0,
+      acquire: 30000,
+      idle: 10000
+    }
+  }
+);
 
 module.exports = sequelize;
