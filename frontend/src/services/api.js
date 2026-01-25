@@ -427,3 +427,71 @@ export const reactivateEvaluacion = async (id) => {
     return result;
 };
 
+// ===== Contactos =====
+export const getContactos = async (filters = {}) => {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== '') params.append(key, value);
+    });
+    const query = params.toString() ? `?${params.toString()}` : '';
+    const response = await fetch(`${API_URL}/contactos${query}`);
+    if (!response.ok) throw new Error('Error al obtener contactos');
+    return response.json();
+};
+
+export const getContactoById = async (id) => {
+    const response = await fetch(`${API_URL}/contactos/${id}`);
+    if (!response.ok) throw new Error('Error al obtener contacto');
+    return response.json();
+};
+
+export const createContacto = async (data) => {
+    const response = await fetch(`${API_URL}/contactos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al crear contacto');
+    return result;
+};
+
+export const updateContacto = async (id, data) => {
+    const response = await fetch(`${API_URL}/contactos/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al actualizar contacto');
+    return result;
+};
+
+export const deleteContacto = async (id) => {
+    const response = await fetch(`${API_URL}/contactos/${id}`, {
+        method: 'DELETE',
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al eliminar contacto');
+    return result;
+};
+
+export const deleteContactosBulk = async (ids) => {
+    const response = await fetch(`${API_URL}/contactos/bulk`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al eliminar contactos');
+    return result;
+};
+
+export const reactivateContacto = async (id) => {
+    const response = await fetch(`${API_URL}/contactos/${id}/reactivate`, {
+        method: 'PATCH',
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al reactivar contacto');
+    return result;
+};

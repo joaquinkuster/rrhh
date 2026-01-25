@@ -8,6 +8,7 @@ const Contrato = require('./Contrato');
 const ContratoPuesto = require('./ContratoPuesto');
 const RegistroSalud = require('./RegistroSalud');
 const Evaluacion = require('./Evaluacion');
+const Contacto = require('./Contacto');
 
 
 // Relaciones
@@ -70,6 +71,10 @@ Contrato.belongsToMany(Evaluacion, {
     as: 'evaluacionesRealizadas'
 });
 
+// Contacto -> Empleado
+Contacto.belongsTo(Empleado, { foreignKey: 'empleadoId', as: 'empleado' });
+Empleado.hasMany(Contacto, { foreignKey: 'empleadoId', as: 'contactos', onDelete: 'CASCADE' });
+
 module.exports = {
     sequelize,
     Empleado,
@@ -81,4 +86,5 @@ module.exports = {
     ContratoPuesto,
     RegistroSalud,
     Evaluacion,
+    Contacto,
 };

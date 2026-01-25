@@ -5,6 +5,7 @@ const empresaRoutes = require('./routes/empresaRoutes');
 const contratoRoutes = require('./routes/contratoRoutes');
 const registroSaludRoutes = require('./routes/registroSaludRoutes');
 const evaluacionRoutes = require('./routes/evaluacionRoutes');
+const contactoRoutes = require('./routes/contactoRoutes');
 
 const app = express();
 
@@ -19,6 +20,7 @@ app.use('/api/empresas', empresaRoutes);
 app.use('/api/contratos', contratoRoutes);
 app.use('/api/registros-salud', registroSaludRoutes);
 app.use('/api/evaluaciones', evaluacionRoutes);
+app.use('/api/contactos', contactoRoutes);
 
 // Ruta de salud
 app.get('/api/health', (req, res) => {

@@ -6,6 +6,7 @@ import Empresas from './pages/Empresas';
 import Contratos from './pages/Contratos';
 import RegistrosSalud from './pages/RegistrosSalud';
 import Evaluaciones from './pages/Evaluaciones';
+import Contactos from './pages/Contactos';
 
 function App() {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -24,6 +25,7 @@ function App() {
                     <Route path="/contratos" element={<Contratos />} />
                     <Route path="/registros-salud" element={<RegistrosSalud />} />
                     <Route path="/evaluaciones" element={<Evaluaciones />} />
+                    <Route path="/contactos" element={<Contactos />} />
                 </Routes>
             </main>
         </div>
