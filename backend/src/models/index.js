@@ -9,6 +9,11 @@ const ContratoPuesto = require('./ContratoPuesto');
 const RegistroSalud = require('./RegistroSalud');
 const Evaluacion = require('./Evaluacion');
 const Contacto = require('./Contacto');
+const Solicitud = require('./Solicitud');
+const Licencia = require('./Licencia');
+const Vacaciones = require('./Vacaciones');
+const HorasExtras = require('./HorasExtras');
+const Renuncia = require('./Renuncia');
 
 
 // Relaciones
@@ -75,6 +80,30 @@ Contrato.belongsToMany(Evaluacion, {
 Contacto.belongsTo(Empleado, { foreignKey: 'empleadoId', as: 'empleado' });
 Empleado.hasMany(Contacto, { foreignKey: 'empleadoId', as: 'contactos', onDelete: 'CASCADE' });
 
+// Contrato -> Solicitudes
+Contrato.hasMany(Solicitud, { foreignKey: 'contratoId', as: 'solicitudes', onDelete: 'CASCADE' });
+Solicitud.belongsTo(Contrato, { foreignKey: 'contratoId', as: 'contrato' });
+
+// Solicitud -> Licencia (1:1)
+Solicitud.hasOne(Licencia, { foreignKey: 'solicitudId', as: 'licencia', onDelete: 'CASCADE' });
+Licencia.belongsTo(Solicitud, { foreignKey: 'solicitudId', as: 'solicitud' });
+
+// Solicitud -> Vacaciones (1:1)
+Solicitud.hasOne(Vacaciones, { foreignKey: 'solicitudId', as: 'vacaciones', onDelete: 'CASCADE' });
+Vacaciones.belongsTo(Solicitud, { foreignKey: 'solicitudId', as: 'solicitud' });
+
+// Solicitud -> HorasExtras (1:1)
+Solicitud.hasOne(HorasExtras, { foreignKey: 'solicitudId', as: 'horasExtras', onDelete: 'CASCADE' });
+HorasExtras.belongsTo(Solicitud, { foreignKey: 'solicitudId', as: 'solicitud' });
+
+// Solicitud -> Renuncia (1:1)
+Solicitud.hasOne(Renuncia, { foreignKey: 'solicitudId', as: 'renuncia', onDelete: 'CASCADE' });
+Renuncia.belongsTo(Solicitud, { foreignKey: 'solicitudId', as: 'solicitud' });
+
+// Licencia -> RegistroSalud (opcional)
+Licencia.belongsTo(RegistroSalud, { foreignKey: 'registroSaludId', as: 'registroSalud' });
+RegistroSalud.hasMany(Licencia, { foreignKey: 'registroSaludId', as: 'licencias' });
+
 module.exports = {
     sequelize,
     Empleado,
@@ -87,4 +116,10 @@ module.exports = {
     RegistroSalud,
     Evaluacion,
     Contacto,
+    Solicitud,
+    Licencia,
+    Vacaciones,
+    HorasExtras,
+    Renuncia,
 };
+

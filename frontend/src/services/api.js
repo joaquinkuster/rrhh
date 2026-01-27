@@ -495,3 +495,86 @@ export const reactivateContacto = async (id) => {
     if (!response.ok) throw new Error(result.error || 'Error al reactivar contacto');
     return result;
 };
+
+// ===== Solicitudes =====
+export const getSolicitudes = async (filters = {}) => {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== '') params.append(key, value);
+    });
+    const query = params.toString() ? `?${params.toString()}` : '';
+    const response = await fetch(`${API_URL}/solicitudes${query}`);
+    if (!response.ok) throw new Error('Error al obtener solicitudes');
+    return response.json();
+};
+
+export const getSolicitudById = async (id) => {
+    const response = await fetch(`${API_URL}/solicitudes/${id}`);
+    if (!response.ok) throw new Error('Error al obtener solicitud');
+    return response.json();
+};
+
+export const createSolicitud = async (data) => {
+    const response = await fetch(`${API_URL}/solicitudes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al crear solicitud');
+    return result;
+};
+
+export const updateSolicitud = async (id, data) => {
+    const response = await fetch(`${API_URL}/solicitudes/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al actualizar solicitud');
+    return result;
+};
+
+export const deleteSolicitud = async (id) => {
+    const response = await fetch(`${API_URL}/solicitudes/${id}`, {
+        method: 'DELETE',
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al eliminar solicitud');
+    return result;
+};
+
+export const deleteSolicitudesBulk = async (ids) => {
+    const response = await fetch(`${API_URL}/solicitudes/bulk`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al eliminar solicitudes');
+    return result;
+};
+
+export const reactivateSolicitud = async (id) => {
+    const response = await fetch(`${API_URL}/solicitudes/${id}/reactivate`, {
+        method: 'PATCH',
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al reactivar solicitud');
+    return result;
+};
+
+export const getVacacionesDias = async (contratoId, periodo) => {
+    const params = periodo ? `?periodo=${periodo}` : '';
+    const response = await fetch(`${API_URL}/solicitudes/vacaciones/dias/${contratoId}${params}`);
+    if (!response.ok) throw new Error('Error al obtener días de vacaciones');
+    return response.json();
+};
+
+export const getFeriadosArgentina = async (year) => {
+    const response = await fetch(`${API_URL}/solicitudes/feriados/${year}`);
+    if (!response.ok) return [];
+    return response.json();
+};
+
