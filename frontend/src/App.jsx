@@ -7,6 +7,11 @@ import Contratos from './pages/Contratos';
 import RegistrosSalud from './pages/RegistrosSalud';
 import Evaluaciones from './pages/Evaluaciones';
 import Contactos from './pages/Contactos';
+import LiquidacionList from './pages/Liquidaciones/LiquidacionList';
+import LiquidacionGenerator from './pages/Liquidaciones/LiquidacionGenerator';
+import NovedadesList from './pages/Liquidaciones/NovedadesList';
+import DocumentacionList from './pages/Liquidaciones/DocumentacionList';
+import ConceptosManager from './pages/Liquidaciones/ConceptosManager';
 
 function App() {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -26,6 +31,11 @@ function App() {
                     <Route path="/registros-salud" element={<RegistrosSalud />} />
                     <Route path="/evaluaciones" element={<Evaluaciones />} />
                     <Route path="/contactos" element={<Contactos />} />
+                    <Route path="/liquidaciones" element={<LiquidacionList />} />
+                    <Route path="/liquidaciones/nueva" element={<LiquidacionGenerator />} />
+                    <Route path="/liquidaciones/novedades" element={<NovedadesList />} />
+                    <Route path="/liquidaciones/documentacion" element={<DocumentacionList />} />
+                    <Route path="/liquidaciones/configuracion" element={<ConceptosManager />} />
                 </Routes>
             </main>
         </div>

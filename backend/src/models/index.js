@@ -9,9 +9,15 @@ const ContratoPuesto = require('./ContratoPuesto');
 const RegistroSalud = require('./RegistroSalud');
 const Evaluacion = require('./Evaluacion');
 const Contacto = require('./Contacto');
+const ConceptoSalarial = require('./ConceptoSalarial');
+const Liquidacion = require('./Liquidacion');
+const DetalleLiquidacion = require('./DetalleLiquidacion');
+const Novedad = require('./Novedad');
+const DocumentacionPago = require('./DocumentacionPago');
 
 
 // Relaciones
+
 
 // Empresa -> Areas
 Empresa.hasMany(Area, { foreignKey: 'empresaId', as: 'areas', onDelete: 'CASCADE' });
@@ -75,6 +81,22 @@ Contrato.belongsToMany(Evaluacion, {
 Contacto.belongsTo(Empleado, { foreignKey: 'empleadoId', as: 'empleado' });
 Empleado.hasMany(Contacto, { foreignKey: 'empleadoId', as: 'contactos', onDelete: 'CASCADE' });
 
+// Liquidacion -> Empleado
+Liquidacion.belongsTo(Empleado, { foreignKey: 'empleadoId', as: 'empleado' });
+Empleado.hasMany(Liquidacion, { foreignKey: 'empleadoId', as: 'liquidaciones' });
+
+// DetalleLiquidacion -> Liquidacion
+DetalleLiquidacion.belongsTo(Liquidacion, { foreignKey: 'liquidacionId', as: 'liquidacion' });
+Liquidacion.hasMany(DetalleLiquidacion, { foreignKey: 'liquidacionId', as: 'detalles', onDelete: 'CASCADE' });
+
+// Liquidacion -> DocumentacionPago
+Liquidacion.hasOne(DocumentacionPago, { foreignKey: 'liquidacionId', as: 'documentacion', onDelete: 'CASCADE' });
+DocumentacionPago.belongsTo(Liquidacion, { foreignKey: 'liquidacionId', as: 'liquidacion' });
+
+// Empleado -> Novedades
+Empleado.hasMany(Novedad, { foreignKey: 'empleadoId', as: 'novedades', onDelete: 'CASCADE' });
+Novedad.belongsTo(Empleado, { foreignKey: 'empleadoId', as: 'empleado' });
+
 module.exports = {
     sequelize,
     Empleado,
@@ -87,4 +109,9 @@ module.exports = {
     RegistroSalud,
     Evaluacion,
     Contacto,
+    ConceptoSalarial,
+    Liquidacion,
+    DetalleLiquidacion,
+    Novedad,
+    DocumentacionPago
 };

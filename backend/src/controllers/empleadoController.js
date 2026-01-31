@@ -44,6 +44,12 @@ const getAll = async (req, res) => {
 
         const { count, rows } = await Empleado.findAndCountAll({
             where,
+            include: [{
+                model: require('../models').Contrato,
+                as: 'contratos',
+                where: { activo: true },
+                required: false // Include employees even if they don't have active contracts (though for liquidation they should)
+            }],
             order: [['apellido', 'ASC'], ['nombre', 'ASC']],
             limit: parseInt(limit),
             offset,

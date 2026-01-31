@@ -123,5 +123,26 @@ Contrato.addHook('beforeValidate', (contrato) => {
     }
 });
 
+// Helper methods
+Contrato.prototype.esRelacionDependencia = function () {
+    return [
+        'tiempo_indeterminado',
+        'periodo_prueba',
+        'plazo_fijo',
+        'eventual',
+        'teletrabajo'
+    ].includes(this.tipoContrato);
+};
+
+Contrato.prototype.esNoLaboral = function () {
+    return [
+        'locacion_servicios',
+        'monotributista',
+        'responsable_inscripto',
+        'honorarios',
+        'contrato_obra'
+    ].includes(this.tipoContrato);
+};
+
 module.exports = Contrato;
 
