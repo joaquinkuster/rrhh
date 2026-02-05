@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const evaluacionController = require('../controllers/evaluacionController');
+const { isAuthenticated } = require('../middlewares/authMiddleware');
+
+// Todas las rutas requieren autenticación
+router.use(isAuthenticated);
 
 router.get('/', evaluacionController.getAll);
 router.get('/:id', evaluacionController.getById);

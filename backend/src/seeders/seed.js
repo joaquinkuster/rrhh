@@ -14,7 +14,12 @@ const {
     RegistroSalud,
     Evaluacion,
     Contacto,
+    ConceptoSalarial,
+    ParametroLaboral,
+    Solicitud,
+    Vacaciones,
 } = require('../models');
+
 
 /**
  * Verificar si ya existen datos en la base de datos
@@ -130,7 +135,44 @@ const runSeed = async () => {
         // ==========================================
         // EMPLEADOS
         // ==========================================
+        // USUARIO ADMINISTRADOR
+        // Email: admin@cataratasrh.com | Contraseña: Admin123!
+        const adminEmpleado = {
+            nombre: 'Admin',
+            apellido: 'Sistema',
+            email: 'admin@cataratasrh.com',
+            telefono: '+54 11 5555-9999',
+            tipoDocumento: 'cedula',
+            numeroDocumento: '99999999',
+            cuil: '20-99999999-9',
+            fechaNacimiento: '1990-01-01',
+            nacionalidad: 'Argentina',
+            genero: 'masculino',
+            estadoCivil: 'soltero',
+            calle: 'Av. Administración',
+            numero: '1',
+            piso: null,
+            departamento: null,
+            codigoPostal: '1000',
+            provinciaId: '02',
+            provinciaNombre: 'Buenos Aires',
+            ciudadId: '001',
+            ciudadNombre: 'CABA',
+            activo: true,
+            esAdministrador: true,
+            contrasena: 'Admin123!',
+            creadoPorRrhh: true,
+        };
+
+        // EMPLEADOS REGULARES
+        // Email: juan.garcia@ejemplo.com | Contraseña: Juan2024!
+        // Email: maria.rodriguez@ejemplo.com | Contraseña: Maria2024!
+        // Email: carlos.lopez@ejemplo.com | Contraseña: Carlos2024!
+        // Email: ana.martinez@ejemplo.com | Contraseña: Ana2024!
+        // Email: pedro.fernandez@ejemplo.com | Contraseña: Pedro2024!
+        // Email: laura.sanchez@ejemplo.com | Contraseña: Laura2024!
         const empleadosData = [
+            adminEmpleado,
             {
                 nombre: 'Juan',
                 apellido: 'García',
@@ -152,6 +194,8 @@ const runSeed = async () => {
                 provinciaNombre: 'Buenos Aires',
                 ciudadId: '001',
                 ciudadNombre: 'CABA',
+                contrasena: 'Juan2024!',
+                creadoPorRrhh: true,
                 activo: true,
             },
             {
@@ -175,6 +219,8 @@ const runSeed = async () => {
                 provinciaNombre: 'Buenos Aires',
                 ciudadId: '001',
                 ciudadNombre: 'CABA',
+                contrasena: 'Maria2024!',
+                creadoPorRrhh: true,
                 activo: true,
             },
             {
@@ -198,6 +244,8 @@ const runSeed = async () => {
                 provinciaNombre: 'Buenos Aires',
                 ciudadId: '001',
                 ciudadNombre: 'CABA',
+                contrasena: 'Carlos2024!',
+                creadoPorRrhh: true,
                 activo: true,
             },
             {
@@ -221,6 +269,8 @@ const runSeed = async () => {
                 provinciaNombre: 'Buenos Aires',
                 ciudadId: '001',
                 ciudadNombre: 'CABA',
+                contrasena: 'Ana2024!',
+                creadoPorRrhh: true,
                 activo: true,
             },
             {
@@ -244,6 +294,8 @@ const runSeed = async () => {
                 provinciaNombre: 'Buenos Aires',
                 ciudadId: '001',
                 ciudadNombre: 'CABA',
+                contrasena: 'Pedro2024!',
+                creadoPorRrhh: true,
                 activo: true,
             },
             {
@@ -267,10 +319,14 @@ const runSeed = async () => {
                 provinciaNombre: 'Buenos Aires',
                 ciudadId: '001',
                 ciudadNombre: 'CABA',
+                contrasena: 'Laura2024!',
+                creadoPorRrhh: true,
                 activo: true,
             },
         ];
-        const empleados = await Empleado.bulkCreate(empleadosData);
+        const empleados = await Empleado.bulkCreate(empleadosData, {
+            individualHooks: true, // Ejecuta hooks para hashear contraseñas
+        });
 
         // ==========================================
         // CONTRATOS (sin validaciones de fecha)
@@ -281,7 +337,7 @@ const runSeed = async () => {
             {
                 empleadoId: empleados[0].id,
                 tipoContrato: 'tiempo_indeterminado',
-                fechaInicio: '2025-01-01',
+                fechaInicio: '2025-03-01',
                 fechaFin: '2026-01-29',
                 horario: 'Lunes a Viernes 9:00 a 18:00',
                 salario: 150000.00,
@@ -292,7 +348,7 @@ const runSeed = async () => {
             {
                 empleadoId: empleados[1].id,
                 tipoContrato: 'tiempo_indeterminado',
-                fechaInicio: '2024-01-01',
+                fechaInicio: '2024-03-01',
                 fechaFin: null,
                 horario: 'Lunes a Viernes 9:00 a 18:00',
                 salario: 180000.00,
@@ -344,6 +400,28 @@ const runSeed = async () => {
                 estado: 'pendiente',
                 activo: true,
             },
+            {
+                empleadoId: empleados[1].id,
+                tipoContrato: 'tiempo_indeterminado',
+                fechaInicio: '2026-02-01',
+                fechaFin: null,
+                horario: 'Lunes a Viernes 10:00 a 19:00',
+                salario: 95000.00,
+                compensacion: 'Obra social + Almuerzo',
+                estado: 'en_curso',
+                activo: true,
+            },
+            {
+                empleadoId: empleados[2].id,
+                tipoContrato: 'tiempo_indeterminado',
+                fechaInicio: '2026-02-01',
+                fechaFin: null,
+                horario: 'Lunes a Viernes 10:00 a 19:00',
+                salario: 1000.00,
+                compensacion: 'Obra social + Almuerzo',
+                estado: 'en_curso',
+                activo: true,
+            },
         ];
 
         const contratos = [];
@@ -362,6 +440,8 @@ const runSeed = async () => {
             { contratoId: contratos[3].id, puestoId: puestos[8].id }, // Contador
             { contratoId: contratos[4].id, puestoId: puestos[3].id }, // Frontend Jr (pasante)
             { contratoId: contratos[5].id, puestoId: puestos[7].id }, // Tester QA
+            { contratoId: contratos[6].id, puestoId: puestos[7].id }, // Tester QA
+            { contratoId: contratos[7].id, puestoId: puestos[7].id }, // Tester QA
         ];
         await ContratoPuesto.bulkCreate(contratoPuestosData);
 
@@ -626,6 +706,104 @@ const runSeed = async () => {
             await Contacto.create(contactoData, { validate: contactoData.dependiente ? false : true });
         }
 
+        // ==========================================
+        // CONCEPTOS SALARIALES (Retenciones obligatorias)
+        // ==========================================
+        const conceptosSalariales = await ConceptoSalarial.bulkCreate([
+            {
+                nombre: 'Jubilación',
+                tipo: 'deduccion',
+                esPorcentaje: true,
+                valor: 11,
+                activo: true,
+            },
+            {
+                nombre: 'Obra Social',
+                tipo: 'deduccion',
+                esPorcentaje: true,
+                valor: 3,
+                activo: true,
+            },
+            {
+                nombre: 'PAMI',
+                tipo: 'deduccion',
+                esPorcentaje: true,
+                valor: 3,
+                activo: true,
+            },
+            {
+                nombre: 'Cuota Sindical',
+                tipo: 'deduccion',
+                esPorcentaje: true,
+                valor: 2.5,
+                activo: true,
+            },
+        ]);
+
+        // ==========================================
+        // SOLICITUDES DE VACACIONES (para testing de liquidaciones)
+        // ==========================================
+        const solicitudesVacaciones = [
+            {
+                contratoId: contratos[1].id, // Contrato 2
+                empleadoId: empleados[1].id,
+                tipoSolicitud: 'vacaciones',
+                activo: true,
+                createdAt: new Date('2024-02-01'),
+                updatedAt: new Date('2024-02-01'),
+            },
+            {
+                contratoId: contratos[1].id, // Contrato 2
+                empleadoId: empleados[1].id,
+                tipoSolicitud: 'vacaciones',
+                activo: true,
+                createdAt: new Date('2024-04-25'),
+                updatedAt: new Date('2024-04-25'),
+            },
+        ];
+
+        const solicitudesCreadas = await Solicitud.bulkCreate(solicitudesVacaciones);
+
+        const vacacionesData = [
+            {
+                solicitudId: solicitudesCreadas[0].id,
+                periodo: 2024,
+                diasCorrespondientes: 14,
+                diasTomados: 0,
+                diasDisponibles: 14,
+                fechaInicio: '2024-03-03',
+                fechaFin: '2024-03-04',
+                fechaRegreso: '2024-03-05',
+                diasSolicitud: 2,
+                descripcion: null,
+                documentos: [],
+                estado: 'aprobada',
+            },
+            {
+                solicitudId: solicitudesCreadas[1].id,
+                periodo: 2024,
+                diasCorrespondientes: 14,
+                diasTomados: 0,
+                diasDisponibles: 14,
+                fechaInicio: '2024-04-29',
+                fechaFin: '2024-05-05',
+                fechaRegreso: '2024-05-06',
+                diasSolicitud: 7,
+                descripcion: null,
+                documentos: [],
+                estado: 'aprobada',
+            },
+        ];
+
+        await Vacaciones.bulkCreate(vacacionesData);
+
+        // ==========================================
+        // PARÁMETROS LABORALES (Singleton)
+        // ==========================================
+        await ParametroLaboral.create({
+            limiteAusenciaInjustificada: 1,
+        });
+
         console.log('✅ Semilla de datos cargada exitosamente:');
         console.log(`   📊 ${empresas.length} empresas`);
         console.log(`   📊 ${areas.length} áreas`);
@@ -636,6 +814,10 @@ const runSeed = async () => {
         console.log(`   📊 ${registrosSaludData.length} registros de salud`);
         console.log(`   📊 ${evaluacionesData.length} evaluaciones`);
         console.log(`   📊 ${contactosData.length} contactos`);
+        console.log(`   📊 ${conceptosSalariales.length} conceptos salariales`);
+        console.log(`   📊 ${solicitudesVacaciones.length} solicitudes de vacaciones`);
+        console.log(`   📊 1 parámetro laboral`);
+
 
         return true;
     } catch (error) {

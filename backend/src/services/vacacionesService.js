@@ -1,6 +1,9 @@
-const { Solicitud, Vacaciones, Licencia, HorasExtras, Renuncia } = require('../models');
+const { Solicitud, Vacaciones, Licencia, HorasExtras, Renuncia, Contrato } = require('../models');
 const { Op } = require('sequelize');
 const { condicionSolapamientoFechas, condicionFechaEnRango, calcularDiasEntre } = require('../utils/solapamiento');
+const { calcularDiasEfectivos, calcularAntiguedadEnAnios } = require('../services/empleadoService');
+const { getLicenciasNoAprobadas } = require('../services/licenciaService');
+const { esDiaHabil, parseLocalDate } = require('../utils/fechas');
 
 /**
  * Valida creación/edición de vacaciones
@@ -136,7 +139,134 @@ const onAprobacion = async (contratoId, diasAprobados, transaction) => {
     }
 };
 
+/**
+ * Calcula días de vacaciones según Ley 20.744
+ */
+const calcularDiasCorrespondientesVacaciones = async (contrato) => {
+    const licencias = await getLicenciasNoAprobadas(contrato);
+    const diasEfectivos = calcularDiasEfectivos(
+        contrato.fechaInicio,
+        licencias
+    );
+
+    // Si trabajó menos de la mitad del año
+    if (diasEfectivos < 180) {
+        return Math.floor(diasEfectivos / 20);
+    }
+
+    const antiguedad = calcularAntiguedadEnAnios(contrato.fechaInicio);
+
+    if (antiguedad < 5) return 14;
+    if (antiguedad < 10) return 21;
+    if (antiguedad < 20) return 28;
+    return 35;
+};
+
+// Get vacation days info for a contract
+const getDiasDisponiblesVacaciones = async (req, res) => {
+    try {
+        const { contratoId } = req.params;
+        const { periodo } = req.query;
+
+        const contrato = await Contrato.findByPk(contratoId);
+        if (!contrato) {
+            return res.status(404).json({ error: 'Contrato no encontrado' });
+        }
+
+        const diasCorrespondientes = await calcularDiasCorrespondientesVacaciones(contrato);
+
+        // Calculate days taken from approved vacations in the period
+        const vacacionesAprobadas = await Solicitud.findAll({
+            where: {
+                contratoId: parseInt(contratoId),
+                tipoSolicitud: 'vacaciones',
+                activo: true,
+            },
+            include: [{
+                model: Vacaciones,
+                as: 'vacaciones',
+                where: {
+                    periodo: periodo ? parseInt(periodo) : new Date().getFullYear(),
+                    estado: 'aprobada',
+                },
+            }],
+        });
+
+        const diasTomados = vacacionesAprobadas.reduce((sum, sol) => {
+            return sum + (sol.vacaciones?.diasSolicitud || 0);
+        }, 0);
+
+        const diasDisponibles = Math.max(0, diasCorrespondientes - diasTomados);
+
+        res.json({
+            diasCorrespondientes,
+            diasTomados,
+            diasDisponibles,
+            antiguedad: contrato.fechaInicio,
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+const getDiasSolicitadosVacaciones = async (req, res) => {
+    try {
+        const { fechaInicio, fechaFin } = req.query;
+
+        if (!fechaInicio || !fechaFin) {
+            return res.status(400).json({ error: 'Faltan parámetros: fechaInicio y fechaFin' });
+        }
+
+        const inicio = parseLocalDate(fechaInicio);
+        inicio.setHours(0, 0, 0, 0);
+        const fin = parseLocalDate(fechaFin);
+        fin.setHours(0, 0, 0, 0);
+
+        if (fin < inicio) {
+            return res.status(400).json({ error: 'La fecha fin no puede ser anterior a la fecha inicio' });
+        }
+
+        let diasSolicitud = 0;
+        let cursor = new Date(inicio);
+
+        // Contar días hábiles
+        while (cursor <= fin) {
+            const habil = esDiaHabil(cursor.toISOString().split('T')[0]);
+
+            console.log(
+                cursor.toISOString().split('T')[0],
+                habil ? 'HÁBIL' : 'NO HÁBIL'
+            );
+
+            if (habil) {
+                diasSolicitud++;
+            }
+
+            cursor.setDate(cursor.getDate() + 1);
+        }
+
+        // Fecha de regreso (primer día hábil)
+        let fechaRegreso = new Date(fin);
+        fechaRegreso.setDate(fechaRegreso.getDate() + 1);
+
+        while (!esDiaHabil(fechaRegreso.toISOString().split('T')[0])) {
+            fechaRegreso.setDate(fechaRegreso.getDate() + 1);
+        }
+
+        res.json({
+            diasSolicitud,
+            fechaRegreso: fechaRegreso.toISOString().split('T')[0],
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+
 module.exports = {
     validarVacaciones,
-    onAprobacion
+    onAprobacion,
+    calcularDiasCorrespondientesVacaciones,
+    getDiasDisponiblesVacaciones,
+    getDiasSolicitadosVacaciones
 };

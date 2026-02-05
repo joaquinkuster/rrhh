@@ -3,6 +3,30 @@ const { Op } = require('sequelize');
 const { condicionSolapamientoFechas, condicionFechaEnRango, calcularDiasEntre } = require('../utils/solapamiento');
 
 /**
+ * Obtiene licencias que NO cuentan como días trabajados
+ */
+const getLicenciasNoAprobadas = async (contrato) => {
+    const solicitudes = await Solicitud.findAll({
+        where: {
+            contratoId: contrato.id,
+            tipoSolicitud: 'licencia',
+            activo: true,
+        },
+        include: [{
+            model: Licencia,
+            as: 'licencia',
+            where: {
+                estado: {
+                    [Op.in]: ['injustificada', 'rechazada', 'pendiente'],
+                },
+            },
+        }],
+    });
+
+    return solicitudes.map(s => s.licencia);
+};
+
+/**
  * Valida creación/edición de licencia
  * @param {number} contratoId - ID del contrato
  * @param {object} datos - Datos de la solicitud
@@ -138,5 +162,6 @@ const onAprobacion = async (contratoId, diasJustificados, transaction) => {
 
 module.exports = {
     validarLicencia,
-    onAprobacion
+    onAprobacion,
+    getLicenciasNoAprobadas
 };

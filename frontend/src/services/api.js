@@ -1,5 +1,64 @@
 const API_URL = '/api';
 
+// ===== Default fetch options with credentials =====
+const fetchWithCredentials = (url, options = {}) => {
+    return fetch(url, {
+        ...options,
+        credentials: 'include', // Incluir cookies en todas las peticiones
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers,
+        },
+    });
+};
+
+// ===== Autenticación =====
+export const login = async (credentials) => {
+    const response = await fetchWithCredentials(`${API_URL}/auth/login`, {
+        method: 'POST',
+        body: JSON.stringify(credentials),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al iniciar sesión');
+    return result;
+};
+
+export const logout = async () => {
+    const response = await fetchWithCredentials(`${API_URL}/auth/logout`, {
+        method: 'POST',
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al cerrar sesión');
+    return result;
+};
+
+export const register = async (empleadoData) => {
+    const response = await fetchWithCredentials(`${API_URL}/auth/register`, {
+        method: 'POST',
+        body: JSON.stringify(empleadoData),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al registrarse');
+    return result;
+};
+
+export const getCurrentUser = async () => {
+    const response = await fetchWithCredentials(`${API_URL}/auth/me`);
+    if (response.status === 401) return null; // No autenticado
+    if (!response.ok) throw new Error('Error al obtener usuario actual');
+    return response.json();
+};
+
+export const updatePassword = async (passwordData) => {
+    const response = await fetchWithCredentials(`${API_URL}/auth/password`, {
+        method: 'PUT',
+        body: JSON.stringify(passwordData),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al actualizar contraseña');
+    return result;
+};
+
 // ===== Cache para APIs Externas =====
 const cache = {
     nacionalidades: null,
@@ -577,4 +636,132 @@ export const getDiasSolicitadosVacaciones = async (fechaInicio, fechaFin) => {
     const response = await fetch(`${API_URL}/solicitudes/vacaciones/diasSolicitados?${params.toString()}`);
     if (!response.ok) throw new Error('Error al calcular días solicitados');
     return response.json();
+};
+
+// ===== LIQUIDACIONES =====
+export const getLiquidaciones = async (params = {}) => {
+    const queryParams = new URLSearchParams(params);
+    const response = await fetch(`${API_URL}/liquidaciones?${queryParams.toString()}`);
+    if (!response.ok) throw new Error('Error al obtener liquidaciones');
+    return response.json();
+};
+
+export const getLiquidacionById = async (id) => {
+    const response = await fetch(`${API_URL}/liquidaciones/${id}`);
+    if (!response.ok) throw new Error('Error al obtener liquidación');
+    return response.json();
+};
+
+export const updateLiquidacion = async (id, liquidacion) => {
+    const response = await fetch(`${API_URL}/liquidaciones/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(liquidacion),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al actualizar liquidación');
+    return result;
+};
+
+export const deleteLiquidacion = async (id) => {
+    const response = await fetch(`${API_URL}/liquidaciones/${id}`, {
+        method: 'DELETE',
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al eliminar liquidación');
+    return result;
+};
+
+export const deleteLiquidacionesBulk = async (ids) => {
+    const response = await fetch(`${API_URL}/liquidaciones/bulk`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al eliminar liquidaciones');
+    return result;
+};
+
+export const reactivateLiquidacion = async (id) => {
+    const response = await fetch(`${API_URL}/liquidaciones/${id}/reactivate`, {
+        method: 'PATCH',
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al reactivar liquidación');
+    return result;
+};
+
+export const marcarLiquidacionComoPagada = async (id, estaPagada) => {
+    const response = await fetch(`${API_URL}/liquidaciones/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estaPagada }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al actualizar liquidación');
+    return result;
+};
+
+// ===== CONCEPTOS SALARIALES =====
+export const getConceptosSalariales = async (params = {}) => {
+    const queryParams = new URLSearchParams(params);
+    const response = await fetch(`${API_URL}/conceptos-salariales?${queryParams.toString()}`);
+    if (!response.ok) throw new Error('Error al obtener conceptos salariales');
+    return response.json();
+};
+
+export const getConceptoSalarialById = async (id) => {
+    const response = await fetch(`${API_URL}/conceptos-salariales/${id}`);
+    if (!response.ok) throw new Error('Error al obtener concepto salarial');
+    return response.json();
+};
+
+export const createConceptoSalarial = async (concepto) => {
+    const response = await fetch(`${API_URL}/conceptos-salariales`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(concepto),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al crear concepto salarial');
+    return result;
+};
+
+export const updateConceptoSalarial = async (id, concepto) => {
+    const response = await fetch(`${API_URL}/conceptos-salariales/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(concepto),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al actualizar concepto salarial');
+    return result;
+};
+
+export const deleteConceptoSalarial = async (id) => {
+    const response = await fetch(`${API_URL}/conceptos-salariales/${id}`, {
+        method: 'DELETE',
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al eliminar concepto salarial');
+    return result;
+};
+
+// ===== PARÁMETROS LABORALES =====
+export const getParametrosLaborales = async () => {
+    const response = await fetch(`${API_URL}/parametros-laborales`);
+    if (!response.ok) throw new Error('Error al obtener parámetros laborales');
+    return response.json();
+};
+
+export const updateParametrosLaborales = async (parametros) => {
+    const response = await fetch(`${API_URL}/parametros-laborales`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(parametros),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al actualizar parámetros laborales');
+    return result;
 };

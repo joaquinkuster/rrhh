@@ -85,7 +85,7 @@ const Icons = {
     ),
 };
 
-const EmpleadoDetail = ({ empleado, onClose, onEdit }) => {
+const EmpleadoDetail = ({ empleado, onClose, onEdit, hideEditButton = false }) => {
     if (!empleado) return null;
 
 
@@ -221,7 +221,7 @@ const EmpleadoDetail = ({ empleado, onClose, onEdit }) => {
                                 #{empleado.id}
                             </span>
                         </div>
-                        {onEdit && (
+                        {!hideEditButton && onEdit && (
                             <button className="btn btn-warning btn-sm" onClick={() => onEdit(empleado)} title="Editar">
                                 {Icons.edit}
                                 Editar

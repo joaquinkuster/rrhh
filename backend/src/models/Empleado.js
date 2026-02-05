@@ -1,6 +1,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 const { parseLocalDate } = require('../utils/fechas');
+const bcrypt = require('bcrypt');
 
 const Empleado = sequelize.define('Empleado', {
     id: {
@@ -216,9 +217,48 @@ const Empleado = sequelize.define('Empleado', {
         allowNull: false,
         defaultValue: true,
     },
+    // Autenticación y autorización
+    esAdministrador: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+    },
+    contrasena: {
+        type: DataTypes.STRING(255),
+        allowNull: false,
+        validate: {
+            notEmpty: { msg: 'La contraseña es requerida' },
+        },
+    },
+    creadoPorRrhh: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: true,
+    },
 }, {
     tableName: 'empleados',
     timestamps: true,
+    hooks: {
+        beforeCreate: async (empleado) => {
+            // Hashear contraseña antes de crear
+            if (empleado.contrasena) {
+                const salt = await bcrypt.genSalt(10);
+                empleado.contrasena = await bcrypt.hash(empleado.contrasena, salt);
+            }
+        },
+        beforeUpdate: async (empleado) => {
+            // Solo hashear si la contraseña fue modificada
+            if (empleado.changed('contrasena')) {
+                const salt = await bcrypt.genSalt(10);
+                empleado.contrasena = await bcrypt.hash(empleado.contrasena, salt);
+            }
+        },
+    },
 });
+
+// Método de instancia para verificar contraseña
+Empleado.prototype.verificarContrasena = async function (contrasena) {
+    return await bcrypt.compare(contrasena, this.contrasena);
+};
 
 module.exports = Empleado;

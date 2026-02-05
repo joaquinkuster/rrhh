@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const contratoController = require('../controllers/contratoController');
+const { isAuthenticated } = require('../middlewares/authMiddleware');
+
+// Todas las rutas requieren autenticación
+router.use(isAuthenticated);
 
 router.get('/', contratoController.getAll);
 router.get('/empleado/:empleadoId/puestos-con-contrato', contratoController.getPuestosConContrato);

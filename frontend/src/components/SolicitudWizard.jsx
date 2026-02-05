@@ -600,7 +600,7 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
                         <input
                             type="number"
                             className="form-input"
-                            value={formData.diasSolicitados || ''}
+                            value={formData.diasSolicitados || 0}
                             disabled
                         />
                     </div>
@@ -682,7 +682,7 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
                                 ?
                             </span>
                         </label>
-                        <input type="number" className="form-input" value={formData.diasCorrespondientes || ''} disabled />
+                        <input type="number" className="form-input" value={formData.diasCorrespondientes || 0} disabled />
                     </div>
                 </div>
                 {showTooltipVacaciones && (
@@ -699,7 +699,7 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
                     </div>
                     <div className="form-group">
                         <label className="form-label">Días Disponibles</label>
-                        <input type="number" className="form-input" value={formData.diasDisponibles || ''} disabled />
+                        <input type="number" className="form-input" value={formData.diasDisponibles || 0} disabled />
                     </div>
                 </div>
                 {/* Row 2: Dates */}
@@ -824,7 +824,7 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
                 </div>
                 <div className="form-group">
                     <label className="form-label">Cantidad Horas</label>
-                    <input type="text" className="form-input" value={formData.cantidadHoras || ''} disabled />
+                    <input type="text" className="form-input" value={formData.cantidadHoras || 0} disabled />
                 </div>
             </div>
 

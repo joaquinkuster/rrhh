@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const contactoController = require('../controllers/contactoController');
+const { isAuthenticated } = require('../middlewares/authMiddleware');
+
+// Todas las rutas requieren autenticación
+router.use(isAuthenticated);
 
 router.get('/', contactoController.getAll);
 router.get('/:id', contactoController.getById);

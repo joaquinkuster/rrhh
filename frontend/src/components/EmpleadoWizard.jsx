@@ -33,7 +33,7 @@ const FieldError = ({ message }) => {
     return <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>{message}</span>;
 };
 
-const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess }) => {
+const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess, isPublicRegistration = false }) => {
     const isEditMode = !!empleadoToEdit;
     const [currentStep, setCurrentStep] = useState(1);
     const [error, setError] = useState('');
@@ -41,6 +41,8 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess }) => {
     const [touched, setTouched] = useState({});
     const [fieldErrors, setFieldErrors] = useState({});
     const [showTooltipEdad, setShowTooltipEdad] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     // Datos externos
     const [nacionalidades, setNacionalidades] = useState([]);
@@ -60,6 +62,10 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess }) => {
         nacionalidad: '',
         genero: '',
         estadoCivil: '',
+        ...(isPublicRegistration && {
+            contrasena: '',
+            confirmarContrasena: '',
+        }),
     });
 
     // Form data - Paso 2: Dirección
@@ -279,6 +285,27 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess }) => {
             if (!info.nacionalidad?.trim()) errors.nacionalidad = 'La nacionalidad es requerida';
             if (!info.genero?.trim()) errors.genero = 'El género es requerido';
             if (!info.estadoCivil?.trim()) errors.estadoCivil = 'El estado civil es requerido';
+
+            // Validación de contraseña para registro público
+            if (isPublicRegistration) {
+                if (!info.contrasena?.trim()) {
+                    errors.contrasena = 'La contraseña es requerida';
+                } else if (info.contrasena.length < 8) {
+                    errors.contrasena = 'La contraseña debe tener al menos 8 caracteres';
+                } else if (!/[A-Z]/.test(info.contrasena)) {
+                    errors.contrasena = 'La contraseña debe contener al menos una mayúscula';
+                } else if (!/[0-9]/.test(info.contrasena)) {
+                    errors.contrasena = 'La contraseña debe contener al menos un número';
+                } else if (!/[@$!%*?&#]/.test(info.contrasena)) {
+                    errors.contrasena = 'La contraseña debe contener al menos un carácter especial (@$!%*?&#)';
+                }
+
+                if (!info.confirmarContrasena?.trim()) {
+                    errors.confirmarContrasena = 'Debes confirmar la contraseña';
+                } else if (info.contrasena !== info.confirmarContrasena) {
+                    errors.confirmarContrasena = 'Las contraseñas no coinciden';
+                }
+            }
         }
 
         if (currentStep === 2) {
@@ -327,6 +354,11 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess }) => {
             if (isEditMode) {
                 await updateEmpleado(empleadoToEdit.id, data);
                 onSuccess();
+            } else if (isPublicRegistration) {
+                // Para registro público, usar la API de registro que no requiere autenticación
+                const { register } = await import('../services/api');
+                const nuevoEmpleado = await register(data);
+                onSuccess(nuevoEmpleado);
             } else {
                 const nuevoEmpleado = await createEmpleado(data);
                 onSuccess(nuevoEmpleado);
@@ -559,6 +591,111 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess }) => {
                     <FieldError message={touched.estadoCivil && fieldErrors.estadoCivil} />
                 </div>
             </div>
+
+            {isPublicRegistration && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+                    <div className="form-group">
+                        <label className="form-label">Contraseña *</label>
+                        <div style={{ position: 'relative' }}>
+                            <input
+                                type={showPassword ? 'text' : 'password'}
+                                name="contrasena"
+                                className={`form-input ${touched.contrasena && fieldErrors.contrasena ? 'input-error' : ''}`}
+                                value={info.contrasena}
+                                onChange={handleInfoChange}
+                                onBlur={() => handleBlur('contrasena')}
+                                placeholder="Mínimo 8 caracteres (mayúscula, número, carácter especial)"
+                                style={{ paddingRight: '3rem' }}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                style={{
+                                    position: 'absolute',
+                                    right: '0.75rem',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    background: 'none',
+                                    border: 'none',
+                                    color: 'var(--neutral-500)',
+                                    cursor: 'pointer',
+                                    padding: '0.5rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    borderRadius: '4px',
+                                    transition: 'all 0.2s'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--neutral-50)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                            >
+                                {showPassword ? (
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: '20px', height: '20px' }}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+                                    </svg>
+                                ) : (
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: '20px', height: '20px' }}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                )}
+                            </button>
+                        </div>
+                        <FieldError message={touched.contrasena && fieldErrors.contrasena} />
+                    </div>
+                    <div className="form-group">
+                        <label className="form-label">Confirmar Contraseña *</label>
+                        <div style={{ position: 'relative' }}>
+                            <input
+                                type={showConfirmPassword ? 'text' : 'password'}
+                                name="confirmarContrasena"
+                                className={`form-input ${touched.confirmarContrasena && fieldErrors.confirmarContrasena ? 'input-error' : ''}`}
+                                value={info.confirmarContrasena}
+                                onChange={handleInfoChange}
+                                onBlur={() => handleBlur('confirmarContrasena')}
+                                placeholder="Repetir contraseña"
+                                style={{ paddingRight: '3rem' }}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                style={{
+                                    position: 'absolute',
+                                    right: '0.75rem',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    background: 'none',
+                                    border: 'none',
+                                    color: 'var(--neutral-500)',
+                                    cursor: 'pointer',
+                                    padding: '0.5rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    borderRadius: '4px',
+                                    transition: 'all 0.2s'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--neutral-50)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                                aria-label={showConfirmPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                            >
+                                {showConfirmPassword ? (
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: '20px', height: '20px' }}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+                                    </svg>
+                                ) : (
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: '20px', height: '20px' }}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                )}
+                            </button>
+                        </div>
+                        <FieldError message={touched.confirmarContrasena && fieldErrors.confirmarContrasena} />
+                    </div>
+                </div>
+            )}
         </div>
     );
 

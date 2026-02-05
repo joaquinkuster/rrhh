@@ -112,20 +112,10 @@ const condicionFechaEnRango = (fecha) => ({
  * @returns {Object} - Condición para Sequelize
  */
 const condicionSolapamientoHoras = (fecha, horaInicio, horaFin) => ({
-    fecha: fecha,
-    [Op.or]: [
-        {
-            horaInicio: { [Op.between]: [horaInicio, horaFin] }
-        },
-        {
-            horaFin: { [Op.between]: [horaInicio, horaFin] }
-        },
-        {
-            [Op.and]: [
-                { horaInicio: { [Op.lte]: horaInicio } },
-                { horaFin: { [Op.gte]: horaFin } }
-            ]
-        }
+    fecha,
+    [Op.and]: [
+        { horaInicio: { [Op.lt]: horaFin } }, // empieza antes de que termine la nueva
+        { horaFin: { [Op.gt]: horaInicio } }  // termina después de que empieza la nueva
     ]
 });
 

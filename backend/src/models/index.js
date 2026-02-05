@@ -14,6 +14,10 @@ const Licencia = require('./Licencia');
 const Vacaciones = require('./Vacaciones');
 const HorasExtras = require('./HorasExtras');
 const Renuncia = require('./Renuncia');
+const Liquidacion = require('./Liquidacion');
+const ConceptoSalarial = require('./ConceptoSalarial');
+const ParametroLaboral = require('./ParametroLaboral');
+
 
 
 // Relaciones
@@ -104,6 +108,11 @@ Renuncia.belongsTo(Solicitud, { foreignKey: 'solicitudId', as: 'solicitud' });
 Licencia.belongsTo(RegistroSalud, { foreignKey: 'registroSaludId', as: 'registroSalud' });
 RegistroSalud.hasMany(Licencia, { foreignKey: 'registroSaludId', as: 'licencias' });
 
+// Contrato -> Liquidaciones
+Contrato.hasMany(Liquidacion, { foreignKey: 'contratoId', as: 'liquidaciones', onDelete: 'CASCADE' });
+Liquidacion.belongsTo(Contrato, { foreignKey: 'contratoId', as: 'contrato' });
+
+
 module.exports = {
     sequelize,
     Empleado,
@@ -121,5 +130,9 @@ module.exports = {
     Vacaciones,
     HorasExtras,
     Renuncia,
+    Liquidacion,
+    ConceptoSalarial,
+    ParametroLaboral,
 };
+
 

@@ -13,6 +13,12 @@ const startServer = async () => {
         await sequelize.sync({ force: true });
         console.log('✅ Base de datos sincronizada');
 
+        // Sincronizar tabla de sesiones
+        if (app.sessionStore) {
+            await app.sessionStore.sync();
+            console.log('✅ Tabla de sesiones creada');
+        }
+
         // Ejecutar semilla de datos (solo si no existen datos)
         await runSeed();
 

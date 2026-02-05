@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const solicitudController = require('../controllers/solicitudController');
+const { isAuthenticated } = require('../middlewares/authMiddleware');
+
+// Todas las rutas requieren autenticación
+router.use(isAuthenticated);
 
 // GET all solicitudes
 router.get('/', solicitudController.getAll);
