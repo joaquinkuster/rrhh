@@ -1,48 +1,77 @@
-.register-container {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, var(--primary-500) 0%, var(--primary-700) 100%);
-    padding: 2rem;
+/* Register page - same style as Login but reversed (30% branding | 70% form) */
+.register-card {
+    grid-template-columns: 3fr 7fr !important;
+    /* 30/70 split - REVERSED */
+    max-width: 1400px !important;
+    /* Increased width */
 }
 
-.register-content {
-    background: transparent;
-    border-radius: 20px;
-    box-shadow: none;
-    max-width: 1000px;
-    width: 100%;
-    padding: 2.5rem;
-    animation: fadeIn 0.5s ease-out;
+.register-left-side {
+    /* This is the branding side (30%) - uses auth-right styles */
+    padding: 2.5rem !important;
 }
 
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+.register-right-side {
+    /* This is the form side (70%) - uses auth-left styles */
+    padding: 3rem !important;
 }
 
-.register-header {
-    text-align: center;
-    margin-bottom: 2rem;
+.register-sidebar-logo {
+    width: 80px;
+    height: 80px;
+    border-radius: 1rem;
+    margin: 0 auto 1.5rem;
+    display: block;
 }
 
-.register-header h1 {
+.register-left-side h2 {
     font-size: 1.75rem;
     font-weight: 700;
-    color: var(--text-primary);
-    margin: 0 0 0.5rem 0;
+    margin-bottom: 1rem;
 }
 
-.register-header p {
+.register-left-side h2 span {
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.register-left-side p {
+    font-size: 1rem;
+    margin-bottom: 2rem;
+    opacity: 0.95;
+    line-height: 1.6;
+}
+
+.register-back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    border-radius: 0.5rem;
     font-size: 0.875rem;
-    color: var(--text-secondary);
-    margin: 0;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.register-back-link:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: translateY(-1px);
+}
+
+/* Responsive */
+@media (max-width: 968px) {
+    .register-card {
+        grid-template-columns: 1fr !important;
+    }
+
+    .register-left-side {
+        display: none;
+    }
+
+    .register-right-side {
+        padding: 2rem !important;
+    }
 }

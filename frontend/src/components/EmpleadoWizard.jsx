@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import StepTracker from './StepTracker';
-import { createEmpleado, updateEmpleado, getNacionalidades, getProvincias, getCiudades } from '../services/api';
+import { createEmpleado, updateEmpleado } from '../services/api';
+import ubicaciones from '../data/ubicaciones.json';
 
 const GENEROS = [
     { value: 'femenino', label: 'Femenino' },
@@ -59,13 +60,11 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess, isPublic
         numeroDocumento: '',
         cuil: '',
         fechaNacimiento: '',
-        nacionalidad: '',
+        nacionalidadId: '',
         genero: '',
         estadoCivil: '',
-        ...(isPublicRegistration && {
-            contrasena: '',
-            confirmarContrasena: '',
-        }),
+        contrasena: '',
+        confirmarContrasena: '',
     });
 
     // Form data - Paso 2: Dirección
@@ -103,7 +102,7 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess, isPublic
                 numeroDocumento: empleadoToEdit.numeroDocumento || '',
                 cuil: empleadoToEdit.cuil || '',
                 fechaNacimiento: empleadoToEdit.fechaNacimiento || '',
-                nacionalidad: empleadoToEdit.nacionalidad || '',
+                nacionalidadId: String(empleadoToEdit.nacionalidadId || ''),
                 genero: empleadoToEdit.genero || '',
                 estadoCivil: empleadoToEdit.estadoCivil || '',
             });
@@ -113,25 +112,17 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess, isPublic
                 piso: empleadoToEdit.piso || '',
                 departamento: empleadoToEdit.departamento || '',
                 codigoPostal: empleadoToEdit.codigoPostal || '',
-                provinciaId: empleadoToEdit.provinciaId || '',
+                provinciaId: String(empleadoToEdit.provinciaId || ''),
                 provinciaNombre: empleadoToEdit.provinciaNombre || '',
-                ciudadId: empleadoToEdit.ciudadId || '',
+                ciudadId: String(empleadoToEdit.ciudadId || ''),
                 ciudadNombre: empleadoToEdit.ciudadNombre || '',
             });
         }
     }, [empleadoToEdit]);
 
-    const loadInitialData = async () => {
-        try {
-            const [nacs, provs] = await Promise.all([
-                getNacionalidades(),
-                getProvincias(),
-            ]);
-            setNacionalidades(nacs);
-            setProvincias(provs);
-        } catch (err) {
-            console.error('Error cargando datos:', err);
-        }
+    const loadInitialData = () => {
+        setNacionalidades(ubicaciones.nacionalidades);
+        setProvincias(ubicaciones.provincias);
     };
 
     // Cargar ciudades cuando cambia la provincia
@@ -145,12 +136,12 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess, isPublic
 
 
 
-    const loadCiudades = async (provinciaId) => {
-        try {
-            const data = await getCiudades(provinciaId);
-            setCiudades(data);
-        } catch (err) {
-            console.error('Error cargando ciudades:', err);
+    const loadCiudades = (provinciaId) => {
+        const provincia = ubicaciones.provincias.find(p => p.id == provinciaId);
+        if (provincia && provincia.ciudades) {
+            setCiudades(provincia.ciudades);
+        } else {
+            setCiudades([]);
         }
     };
 
@@ -183,8 +174,8 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess, isPublic
         if (field === 'fechaNacimiento' && !info.fechaNacimiento?.trim()) errors.fechaNacimiento = 'La fecha es requerida';
         else if (field === 'fechaNacimiento') delete errors.fechaNacimiento;
 
-        if (field === 'nacionalidad' && !info.nacionalidad?.trim()) errors.nacionalidad = 'La nacionalidad es requerida';
-        else if (field === 'nacionalidad') delete errors.nacionalidad;
+        if (field === 'nacionalidadId' && !info.nacionalidadId?.trim()) errors.nacionalidadId = 'La nacionalidad es requerida';
+        else if (field === 'nacionalidadId') delete errors.nacionalidadId;
 
         if (field === 'genero' && !info.genero?.trim()) errors.genero = 'El género es requerido';
         else if (field === 'genero') delete errors.genero;
@@ -202,8 +193,6 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess, isPublic
         if (field === 'provinciaId' && !direccion.provinciaId) errors.provinciaId = 'La provincia es requerida';
         else if (field === 'provinciaId') delete errors.provinciaId;
 
-
-
         setFieldErrors(errors);
     };
 
@@ -218,7 +207,7 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess, isPublic
         const { name, value } = e.target;
 
         if (name === 'provinciaId') {
-            const prov = provincias.find(p => p.id === value);
+            const prov = provincias.find(p => p.id == value);
             setDireccion(prev => ({
                 ...prev,
                 provinciaId: value,
@@ -227,7 +216,7 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess, isPublic
                 ciudadNombre: '',
             }));
         } else if (name === 'ciudadId') {
-            const city = ciudades.find(c => c.id === value);
+            const city = ciudades.find(c => c.id == value);
             setDireccion(prev => ({
                 ...prev,
                 ciudadId: value,
@@ -282,12 +271,15 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess, isPublic
                 }
             }
 
-            if (!info.nacionalidad?.trim()) errors.nacionalidad = 'La nacionalidad es requerida';
+            if (!info.nacionalidadId?.trim()) errors.nacionalidadId = 'La nacionalidad es requerida';
             if (!info.genero?.trim()) errors.genero = 'El género es requerido';
             if (!info.estadoCivil?.trim()) errors.estadoCivil = 'El estado civil es requerido';
 
-            // Validación de contraseña para registro público
-            if (isPublicRegistration) {
+            // Validación de contraseña (opcional en edición si no se cambia)
+            const passwordEntered = !!info.contrasena?.trim();
+            const passwordRequired = !isEditMode;
+
+            if (passwordRequired || passwordEntered) {
                 if (!info.contrasena?.trim()) {
                     errors.contrasena = 'La contraseña es requerida';
                 } else if (info.contrasena.length < 8) {
@@ -299,7 +291,9 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess, isPublic
                 } else if (!/[@$!%*?&#]/.test(info.contrasena)) {
                     errors.contrasena = 'La contraseña debe contener al menos un carácter especial (@$!%*?&#)';
                 }
+            }
 
+            if (passwordRequired || !!info.confirmarContrasena?.trim() || passwordEntered) {
                 if (!info.confirmarContrasena?.trim()) {
                     errors.confirmarContrasena = 'Debes confirmar la contraseña';
                 } else if (info.contrasena !== info.confirmarContrasena) {
@@ -352,6 +346,12 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess, isPublic
             };
 
             if (isEditMode) {
+                // En edición, si la contraseña está vacía, no enviarla para mantener la actual
+                if (!data.contrasena) {
+                    delete data.contrasena;
+                    delete data.confirmarContrasena;
+                }
+
                 await updateEmpleado(empleadoToEdit.id, data);
                 onSuccess();
             } else if (isPublicRegistration) {
@@ -366,7 +366,7 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess, isPublic
         } catch (err) {
             const errorMessage = err.message.toLowerCase();
             // Detect step 1 field errors (nombre, apellido, email, documento, cuil, fecha nacimiento, nacionalidad, género, estado civil)
-            const step1Fields = ['nombre', 'apellido', 'email', 'documento', 'cuil', 'fecha', 'nacimiento', 'nacionalidad', 'género', 'genero', 'estado civil', 'estadocivil', 'edad', 'años'];
+            const step1Fields = ['nombre', 'apellido', 'email', 'documento', 'cuil', 'fecha', 'nacimiento', 'nacionalidad', 'nacionalidadId', 'género', 'genero', 'estado civil', 'estadocivil', 'edad', 'años'];
             const isStep1Error = step1Fields.some(field => errorMessage.includes(field));
 
             if (isStep1Error) {
@@ -402,6 +402,10 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess, isPublic
                     errorMessage.includes('años') || errorMessage.includes('14')) {
                     setFieldErrors(prev => ({ ...prev, fechaNacimiento: err.message }));
                     setTouched(prev => ({ ...prev, fechaNacimiento: true }));
+                }
+                if (errorMessage.includes('nacionalidad')) {
+                    setFieldErrors(prev => ({ ...prev, nacionalidadId: err.message }));
+                    setTouched(prev => ({ ...prev, nacionalidadId: true }));
                 }
             }
             // Always show the error message in the banner
@@ -542,18 +546,18 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess, isPublic
                 <div className="form-group">
                     <label className="form-label">Nacionalidad *</label>
                     <select
-                        name="nacionalidad"
-                        className={`form-input ${touched.nacionalidad && fieldErrors.nacionalidad ? 'input-error' : ''}`}
-                        value={info.nacionalidad}
+                        name="nacionalidadId"
+                        className={`form-input ${touched.nacionalidadId && fieldErrors.nacionalidadId ? 'input-error' : ''}`}
+                        value={info.nacionalidadId}
                         onChange={handleInfoChange}
-                        onBlur={() => handleBlur('nacionalidad')}
+                        onBlur={() => handleBlur('nacionalidadId')}
                     >
                         <option value="">Seleccionar nacionalidad</option>
                         {nacionalidades.map(nac => (
-                            <option key={nac} value={nac}>{nac}</option>
+                            <option key={nac.id} value={nac.id}>{nac.nombre}</option>
                         ))}
                     </select>
-                    <FieldError message={touched.nacionalidad && fieldErrors.nacionalidad} />
+                    <FieldError message={touched.nacionalidadId && fieldErrors.nacionalidadId} />
                 </div>
             </div>
 
@@ -592,110 +596,108 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess, isPublic
                 </div>
             </div>
 
-            {isPublicRegistration && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
-                    <div className="form-group">
-                        <label className="form-label">Contraseña *</label>
-                        <div style={{ position: 'relative' }}>
-                            <input
-                                type={showPassword ? 'text' : 'password'}
-                                name="contrasena"
-                                className={`form-input ${touched.contrasena && fieldErrors.contrasena ? 'input-error' : ''}`}
-                                value={info.contrasena}
-                                onChange={handleInfoChange}
-                                onBlur={() => handleBlur('contrasena')}
-                                placeholder="Mínimo 8 caracteres (mayúscula, número, carácter especial)"
-                                style={{ paddingRight: '3rem' }}
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowPassword(!showPassword)}
-                                style={{
-                                    position: 'absolute',
-                                    right: '0.75rem',
-                                    top: '50%',
-                                    transform: 'translateY(-50%)',
-                                    background: 'none',
-                                    border: 'none',
-                                    color: 'var(--neutral-500)',
-                                    cursor: 'pointer',
-                                    padding: '0.5rem',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    borderRadius: '4px',
-                                    transition: 'all 0.2s'
-                                }}
-                                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--neutral-50)'}
-                                onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
-                                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                            >
-                                {showPassword ? (
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: '20px', height: '20px' }}>
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
-                                    </svg>
-                                ) : (
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: '20px', height: '20px' }}>
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                )}
-                            </button>
-                        </div>
-                        <FieldError message={touched.contrasena && fieldErrors.contrasena} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-group">
+                    <label className="form-label">Contraseña *</label>
+                    <div style={{ position: 'relative', display: 'flex' }}>
+                        <input
+                            type={showPassword ? 'text' : 'password'}
+                            name="contrasena"
+                            className={`form-input ${touched.contrasena && fieldErrors.contrasena ? 'input-error' : ''}`}
+                            value={info.contrasena}
+                            onChange={handleInfoChange}
+                            onBlur={() => handleBlur('contrasena')}
+                            placeholder="Mínimo 8 caracteres"
+                            style={{ paddingRight: '3rem', width: '100%' }}
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            style={{
+                                position: 'absolute',
+                                right: '0.75rem',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                background: 'none',
+                                border: 'none',
+                                color: 'var(--neutral-500)',
+                                cursor: 'pointer',
+                                padding: '0.5rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderRadius: '4px',
+                                transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--neutral-50)'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                            aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                        >
+                            {showPassword ? (
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: '20px', height: '20px' }}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+                                </svg>
+                            ) : (
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: '20px', height: '20px' }}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                            )}
+                        </button>
                     </div>
-                    <div className="form-group">
-                        <label className="form-label">Confirmar Contraseña *</label>
-                        <div style={{ position: 'relative' }}>
-                            <input
-                                type={showConfirmPassword ? 'text' : 'password'}
-                                name="confirmarContrasena"
-                                className={`form-input ${touched.confirmarContrasena && fieldErrors.confirmarContrasena ? 'input-error' : ''}`}
-                                value={info.confirmarContrasena}
-                                onChange={handleInfoChange}
-                                onBlur={() => handleBlur('confirmarContrasena')}
-                                placeholder="Repetir contraseña"
-                                style={{ paddingRight: '3rem' }}
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                style={{
-                                    position: 'absolute',
-                                    right: '0.75rem',
-                                    top: '50%',
-                                    transform: 'translateY(-50%)',
-                                    background: 'none',
-                                    border: 'none',
-                                    color: 'var(--neutral-500)',
-                                    cursor: 'pointer',
-                                    padding: '0.5rem',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    borderRadius: '4px',
-                                    transition: 'all 0.2s'
-                                }}
-                                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--neutral-50)'}
-                                onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
-                                aria-label={showConfirmPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                            >
-                                {showConfirmPassword ? (
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: '20px', height: '20px' }}>
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
-                                    </svg>
-                                ) : (
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: '20px', height: '20px' }}>
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                )}
-                            </button>
-                        </div>
-                        <FieldError message={touched.confirmarContrasena && fieldErrors.confirmarContrasena} />
-                    </div>
+                    <FieldError message={touched.contrasena && fieldErrors.contrasena} />
                 </div>
-            )}
+                <div className="form-group">
+                    <label className="form-label">Confirmar Contraseña *</label>
+                    <div style={{ position: 'relative', display: 'flex' }}>
+                        <input
+                            type={showConfirmPassword ? 'text' : 'password'}
+                            name="confirmarContrasena"
+                            className={`form-input ${touched.confirmarContrasena && fieldErrors.confirmarContrasena ? 'input-error' : ''}`}
+                            value={info.confirmarContrasena}
+                            onChange={handleInfoChange}
+                            onBlur={() => handleBlur('confirmarContrasena')}
+                            placeholder="Repetir contraseña"
+                            style={{ paddingRight: '3rem', width: '100%' }}
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            style={{
+                                position: 'absolute',
+                                right: '0.75rem',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                background: 'none',
+                                border: 'none',
+                                color: 'var(--neutral-500)',
+                                cursor: 'pointer',
+                                padding: '0.5rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderRadius: '4px',
+                                transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--neutral-50)'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                            aria-label={showConfirmPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                        >
+                            {showConfirmPassword ? (
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: '20px', height: '20px' }}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+                                </svg>
+                            ) : (
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: '20px', height: '20px' }}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                            )}
+                        </button>
+                    </div>
+                    <FieldError message={touched.confirmarContrasena && fieldErrors.confirmarContrasena} />
+                </div>
+            </div>
         </div>
     );
 
@@ -806,6 +808,67 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess, isPublic
 
 
 
+
+    // Render content without modal wrapper for public registration
+    const content = (
+        <>
+            <div className="modal-body" style={{ padding: isPublicRegistration ? '0' : '2rem' }}>
+                <StepTracker steps={steps} currentStep={currentStep} />
+
+                <div style={{ marginTop: isPublicRegistration ? '2rem' : '2rem', textAlign: 'center', marginBottom: '2rem' }}>
+                    <h3 style={{ fontSize: '1.5rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
+                        {steps[currentStep - 1].title}
+                    </h3>
+                    <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                        {currentStep === 1 && 'Ingresa los datos básicos del empleado'}
+                        {currentStep === 2 && 'Ingresa la dirección del empleado'}
+                    </p>
+                </div>
+
+                {error && (
+                    <div className="alert alert-error">
+                        {error}
+                    </div>
+                )}
+
+                {currentStep === 1 && renderStep1()}
+                {currentStep === 2 && renderStep2()}
+            </div>
+
+            <div className="modal-footer" style={{ display: 'flex', justifyContent: 'space-between', padding: isPublicRegistration ? '1.5rem 0 0 0' : '1.5rem 2rem', borderTop: isPublicRegistration ? 'none' : '1px solid var(--border-color)' }}>
+                <div>
+                    {currentStep > 1 && (
+                        <button className="btn btn-secondary" onClick={prevStep}>
+                            Anterior
+                        </button>
+                    )}
+                </div>
+                <div style={{ display: 'flex', gap: '1rem' }}>
+                    {!isPublicRegistration && (
+                        <button className="btn btn-secondary" onClick={onClose}>
+                            Cancelar
+                        </button>
+                    )}
+                    {currentStep < 2 ? (
+                        <button className="btn btn-primary" onClick={nextStep}>
+                            Siguiente
+                        </button>
+                    ) : (
+                        <button className="btn btn-primary" onClick={handleSubmit} disabled={loading}>
+                            {loading ? 'Guardando...' : (isEditMode ? 'Actualizar' : isPublicRegistration ? 'Registrarse' : 'Crear')} {isPublicRegistration ? '' : 'Empleado'}
+                        </button>
+                    )}
+                </div>
+            </div>
+        </>
+    );
+
+    // If public registration, render without modal wrapper
+    if (isPublicRegistration) {
+        return <div>{content}</div>;
+    }
+
+    // Otherwise, render with modal wrapper
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '950px' }}>
@@ -819,53 +882,7 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess, isPublic
                         </svg>
                     </button>
                 </div>
-
-                <div className="modal-body" style={{ padding: '2rem' }}>
-                    <StepTracker steps={steps} currentStep={currentStep} />
-
-                    <div style={{ marginTop: '2rem', textAlign: 'center', marginBottom: '2rem' }}>
-                        <h3 style={{ fontSize: '1.5rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
-                            {steps[currentStep - 1].title}
-                        </h3>
-                        <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                            {currentStep === 1 && 'Ingresa los datos básicos del empleado'}
-                            {currentStep === 2 && 'Ingresa la dirección del empleado'}
-                        </p>
-                    </div>
-
-                    {error && (
-                        <div className="alert alert-error">
-                            {error}
-                        </div>
-                    )}
-
-                    {currentStep === 1 && renderStep1()}
-                    {currentStep === 2 && renderStep2()}
-                </div>
-
-                <div className="modal-footer" style={{ display: 'flex', justifyContent: 'space-between', padding: '1.5rem 2rem', borderTop: '1px solid var(--border-color)' }}>
-                    <div>
-                        {currentStep > 1 && (
-                            <button className="btn btn-secondary" onClick={prevStep}>
-                                Anterior
-                            </button>
-                        )}
-                    </div>
-                    <div style={{ display: 'flex', gap: '1rem' }}>
-                        <button className="btn btn-secondary" onClick={onClose}>
-                            Cancelar
-                        </button>
-                        {currentStep < 2 ? (
-                            <button className="btn btn-primary" onClick={nextStep}>
-                                Siguiente
-                            </button>
-                        ) : (
-                            <button className="btn btn-primary" onClick={handleSubmit} disabled={loading}>
-                                {loading ? 'Guardando...' : (isEditMode ? 'Actualizar' : 'Crear')} Empleado
-                            </button>
-                        )}
-                    </div>
-                </div>
+                {content}
             </div>
         </div>
     );

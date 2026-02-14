@@ -15,6 +15,11 @@ import Evaluaciones from './pages/Evaluaciones';
 import Contactos from './pages/Contactos';
 import Solicitudes from './pages/Solicitudes';
 import Liquidaciones from './pages/Liquidaciones';
+import Dashboard from './pages/Dashboard';
+import Reportes from './pages/Reportes';
+import Roles from './pages/Roles';
+import EspaciosTrabajo from './pages/EspaciosTrabajo';
+
 
 // Component wrapper para rutas protegidas con sidebar
 function ProtectedLayout({ sidebarCollapsed, setSidebarCollapsed, children }) {
@@ -54,7 +59,22 @@ function App() {
 
                 {/* Rutas protegidas */}
                 <Route element={<ProtectedRoute />}>
-                    <Route path="/" element={<Navigate to="/empleados" replace />} />
+                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                    <Route path="/dashboard" element={
+                        <ProtectedLayout sidebarCollapsed={sidebarCollapsed} setSidebarCollapsed={setSidebarCollapsed}>
+                            <Dashboard />
+                        </ProtectedLayout>
+                    } />
+                    <Route path="/reportes" element={
+                        <ProtectedLayout sidebarCollapsed={sidebarCollapsed} setSidebarCollapsed={setSidebarCollapsed}>
+                            <Reportes />
+                        </ProtectedLayout>
+                    } />
+                    <Route path="/espacios-trabajo" element={
+                        <ProtectedLayout sidebarCollapsed={sidebarCollapsed} setSidebarCollapsed={setSidebarCollapsed}>
+                            <EspaciosTrabajo />
+                        </ProtectedLayout>
+                    } />
                     <Route path="/empleados" element={
                         <ProtectedLayout sidebarCollapsed={sidebarCollapsed} setSidebarCollapsed={setSidebarCollapsed}>
                             <Empleados />
@@ -93,6 +113,11 @@ function App() {
                     <Route path="/liquidaciones" element={
                         <ProtectedLayout sidebarCollapsed={sidebarCollapsed} setSidebarCollapsed={setSidebarCollapsed}>
                             <Liquidaciones />
+                        </ProtectedLayout>
+                    } />
+                    <Route path="/roles" element={
+                        <ProtectedLayout sidebarCollapsed={sidebarCollapsed} setSidebarCollapsed={setSidebarCollapsed}>
+                            <Roles />
                         </ProtectedLayout>
                     } />
                 </Route>

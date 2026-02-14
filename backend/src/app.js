@@ -14,7 +14,12 @@ const solicitudRoutes = require('./routes/solicitudRoutes');
 const liquidacionRoutes = require('./routes/liquidacionRoutes');
 const conceptoSalarialRoutes = require('./routes/conceptoSalarialRoutes');
 const parametroLaboralRoutes = require('./routes/parametroLaboralRoutes');
+const feriadoRoutes = require('./routes/feriadoRoutes');
 const prueba_liqRoutes = require('./routes/prueba_liq');
+const rolRoutes = require('./routes/roles');
+const permisoRoutes = require('./routes/permisos');
+const espacioTrabajoRoutes = require('./routes/espacioTrabajoRoutes');
+
 
 // Iniciar cron jobs
 require('./jobs/contrato.cron');
@@ -46,12 +51,14 @@ app.use(session({
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
+    name: 'connect.sid', // Nombre explícito de la cookie
     cookie: {
         secure: false, // Cambiar a true en producción con HTTPS
         httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000, // 24 horas
+        maxAge: 24 * 60 * 60 * 1000, // 24 horas por defecto
         sameSite: 'lax',
     },
+    rolling: true, // Renovar cookie en cada request
 }));
 
 // Exportar sessionStore para sincronizar en index.js
@@ -71,6 +78,11 @@ app.use('/api/solicitudes', solicitudRoutes);
 app.use('/api/liquidaciones', liquidacionRoutes);
 app.use('/api/conceptos-salariales', conceptoSalarialRoutes);
 app.use('/api/parametros-laborales', parametroLaboralRoutes);
+app.use('/api/feriados', feriadoRoutes);
+app.use('/api/roles', rolRoutes);
+app.use('/api/permisos', permisoRoutes);
+app.use('/api/espacios-trabajo', espacioTrabajoRoutes);
+
 
 
 // Ruta de salud

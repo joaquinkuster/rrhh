@@ -11,6 +11,7 @@ import EmpleadoWizard from '../components/EmpleadoWizard';
 import EmpleadoDetail from '../components/EmpleadoDetail';
 import ConfirmDialog from '../components/ConfirmDialog';
 import Alert from '../components/Alert';
+import ubicaciones from '../data/ubicaciones.json';
 
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50];
 
@@ -399,7 +400,11 @@ const Empleados = () => {
                                                 <td><strong>{item.apellido}, {item.nombre}</strong></td>
                                                 {visibleColumns.email && <td>{item.email}</td>}
                                                 {visibleColumns.documento && <td>{item.numeroDocumento}</td>}
-                                                {visibleColumns.nacionalidad && <td>{item.nacionalidad || '-'}</td>}
+                                                {visibleColumns.nacionalidad && <td>{(() => {
+                                                    const id = item.nacionalidadId || item.nacionalidad;
+                                                    const nac = ubicaciones.nacionalidades.find(n => n.id === id);
+                                                    return nac ? nac.nombre : (id || '-');
+                                                })()}</td>}
                                                 <td>
                                                     <div className="table-actions">
                                                         {showingInactive ? (

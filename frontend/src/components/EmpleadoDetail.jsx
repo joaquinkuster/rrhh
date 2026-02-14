@@ -1,4 +1,5 @@
 import { formatDateOnly } from '../utils/formatters';
+import ubicaciones from '../data/ubicaciones.json';
 
 // Icons SVG components
 const Icons = {
@@ -119,6 +120,26 @@ const EmpleadoDetail = ({ empleado, onClose, onEdit, hideEditButton = false }) =
     const getTipoDocLabel = (tipo) => {
         const labels = { cedula: 'Cédula', pasaporte: 'Pasaporte' };
         return labels[tipo] || tipo || '-';
+    };
+
+    const getNacionalidadNombre = (id) => {
+        if (!id) return '-';
+        const nac = ubicaciones.nacionalidades.find(n => n.id === id);
+        return nac ? nac.nombre : id;
+    };
+
+    const getProvinciaNombre = (id) => {
+        if (!id) return '-';
+        const prov = ubicaciones.provincias.find(p => p.id === id);
+        return prov ? prov.nombre : id;
+    };
+
+    const getCiudadNombre = (provinciaId, ciudadId) => {
+        if (!provinciaId || !ciudadId) return '-';
+        const prov = ubicaciones.provincias.find(p => p.id === provinciaId);
+        if (!prov) return ciudadId;
+        const ciudad = prov.ciudades?.find(c => c.id === ciudadId);
+        return ciudad ? ciudad.nombre : ciudadId;
     };
 
     // Field component with icon
@@ -335,7 +356,7 @@ const EmpleadoDetail = ({ empleado, onClose, onEdit, hideEditButton = false }) =
                                 <Field icon={Icons.identification} label="Documento" value={`${getTipoDocLabel(empleado.tipoDocumento)}: ${empleado.numeroDocumento}`} />
                                 <Field icon={Icons.document} label="CUIL" value={empleado.cuil} />
                                 <Field icon={Icons.calendar} label="Fecha de Nacimiento" value={formatDateOnly(empleado.fechaNacimiento)} />
-                                <Field icon={Icons.globe} label="Nacionalidad" value={empleado.nacionalidad} />
+                                <Field icon={Icons.globe} label="Nacionalidad" value={getNacionalidadNombre(empleado.nacionalidadId || empleado.nacionalidad)} />
                                 <Field icon={Icons.users} label="Género" value={getGeneroLabel(empleado.genero)} />
                                 <Field icon={Icons.heart} label="Estado Civil" value={getEstadoCivilLabel(empleado.estadoCivil)} />
                             </div>
@@ -354,8 +375,8 @@ const EmpleadoDetail = ({ empleado, onClose, onEdit, hideEditButton = false }) =
                                 <Field icon={Icons.building} label="Número" value={empleado.numero} />
                                 <Field icon={Icons.building} label="Piso" value={empleado.piso} />
                                 <Field icon={Icons.building} label="Departamento" value={empleado.departamento} />
-                                <Field icon={Icons.mapPin} label="Provincia" value={empleado.provinciaNombre} />
-                                <Field icon={Icons.location} label="Ciudad" value={empleado.ciudadNombre} />
+                                <Field icon={Icons.mapPin} label="Provincia" value={getProvinciaNombre(empleado.provinciaId || empleado.provinciaNombre)} />
+                                <Field icon={Icons.location} label="Ciudad" value={getCiudadNombre(empleado.provinciaId, empleado.ciudadId || empleado.ciudadNombre)} />
                                 <Field icon={Icons.document} label="Código Postal" value={empleado.codigoPostal} />
                             </div>
                         </div>

@@ -18,7 +18,11 @@ const {
     ParametroLaboral,
     Solicitud,
     Vacaciones,
+    Rol,
+    Permiso,
+    RolPermiso,
 } = require('../models');
+
 
 
 /**
@@ -146,7 +150,7 @@ const runSeed = async () => {
             numeroDocumento: '99999999',
             cuil: '20-99999999-9',
             fechaNacimiento: '1990-01-01',
-            nacionalidad: 'Argentina',
+            nacionalidadId: 1, // Argentina
             genero: 'masculino',
             estadoCivil: 'soltero',
             calle: 'Av. Administración',
@@ -154,10 +158,8 @@ const runSeed = async () => {
             piso: null,
             departamento: null,
             codigoPostal: '1000',
-            provinciaId: '02',
-            provinciaNombre: 'Buenos Aires',
-            ciudadId: '001',
-            ciudadNombre: 'CABA',
+            provinciaId: 1, // CABA
+            ciudadId: 1, // CABA
             activo: true,
             esAdministrador: true,
             contrasena: 'Admin123!',
@@ -182,7 +184,7 @@ const runSeed = async () => {
                 numeroDocumento: '30123456',
                 cuil: '20-30123456-5',
                 fechaNacimiento: '1990-05-15',
-                nacionalidad: 'Argentina',
+                nacionalidadId: 1, // Argentina
                 genero: 'masculino',
                 estadoCivil: 'casado',
                 calle: 'Av. Corrientes',
@@ -190,10 +192,8 @@ const runSeed = async () => {
                 piso: '5',
                 departamento: 'A',
                 codigoPostal: '1043',
-                provinciaId: '02',
-                provinciaNombre: 'Buenos Aires',
-                ciudadId: '001',
-                ciudadNombre: 'CABA',
+                provinciaId: 1, // CABA
+                ciudadId: 1, // CABA
                 contrasena: 'Juan2024!',
                 creadoPorRrhh: true,
                 activo: true,
@@ -207,7 +207,7 @@ const runSeed = async () => {
                 numeroDocumento: '35678901',
                 cuil: '27-35678901-4',
                 fechaNacimiento: '1988-09-22',
-                nacionalidad: 'Argentina',
+                nacionalidadId: 1, // Argentina
                 genero: 'femenino',
                 estadoCivil: 'soltero',
                 calle: 'Calle Florida',
@@ -215,10 +215,8 @@ const runSeed = async () => {
                 piso: null,
                 departamento: null,
                 codigoPostal: '1005',
-                provinciaId: '02',
-                provinciaNombre: 'Buenos Aires',
-                ciudadId: '001',
-                ciudadNombre: 'CABA',
+                provinciaId: 1, // CABA
+                ciudadId: 1, // CABA
                 contrasena: 'Maria2024!',
                 creadoPorRrhh: true,
                 activo: true,
@@ -232,7 +230,7 @@ const runSeed = async () => {
                 numeroDocumento: '28456789',
                 cuil: '20-28456789-3',
                 fechaNacimiento: '1985-03-10',
-                nacionalidad: 'Argentina',
+                nacionalidadId: 1, // Argentina
                 genero: 'masculino',
                 estadoCivil: 'divorciado',
                 calle: 'Av. Santa Fe',
@@ -240,10 +238,8 @@ const runSeed = async () => {
                 piso: '3',
                 departamento: 'B',
                 codigoPostal: '1059',
-                provinciaId: '02',
-                provinciaNombre: 'Buenos Aires',
-                ciudadId: '001',
-                ciudadNombre: 'CABA',
+                provinciaId: 1, // CABA
+                ciudadId: 1, // CABA
                 contrasena: 'Carlos2024!',
                 creadoPorRrhh: true,
                 activo: true,
@@ -257,7 +253,7 @@ const runSeed = async () => {
                 numeroDocumento: '32789012',
                 cuil: '27-32789012-6',
                 fechaNacimiento: '1992-11-30',
-                nacionalidad: 'Argentina',
+                nacionalidadId: 1, // Argentina
                 genero: 'femenino',
                 estadoCivil: 'casado',
                 calle: 'Calle Lavalle',
@@ -265,10 +261,8 @@ const runSeed = async () => {
                 piso: '7',
                 departamento: 'C',
                 codigoPostal: '1047',
-                provinciaId: '02',
-                provinciaNombre: 'Buenos Aires',
-                ciudadId: '001',
-                ciudadNombre: 'CABA',
+                provinciaId: 1, // CABA
+                ciudadId: 1, // CABA
                 contrasena: 'Ana2024!',
                 creadoPorRrhh: true,
                 activo: true,
@@ -282,7 +276,7 @@ const runSeed = async () => {
                 numeroDocumento: 'M1234567',
                 cuil: '20-91234567-8',
                 fechaNacimiento: '1995-07-08',
-                nacionalidad: 'Paraguay',
+                nacionalidadId: 7, // Paraguay
                 genero: 'masculino',
                 estadoCivil: 'soltero',
                 calle: 'Av. Belgrano',
@@ -290,10 +284,8 @@ const runSeed = async () => {
                 piso: null,
                 departamento: null,
                 codigoPostal: '1092',
-                provinciaId: '02',
-                provinciaNombre: 'Buenos Aires',
-                ciudadId: '001',
-                ciudadNombre: 'CABA',
+                provinciaId: 1, // CABA
+                ciudadId: 1, // CABA
                 contrasena: 'Pedro2024!',
                 creadoPorRrhh: true,
                 activo: true,
@@ -307,7 +299,7 @@ const runSeed = async () => {
                 numeroDocumento: '37890123',
                 cuil: '27-37890123-7',
                 fechaNacimiento: '1998-02-14',
-                nacionalidad: 'Argentina',
+                nacionalidadId: 1, // Argentina
                 genero: 'femenino',
                 estadoCivil: 'soltero',
                 calle: 'Calle Tucumán',
@@ -315,10 +307,8 @@ const runSeed = async () => {
                 piso: '2',
                 departamento: 'D',
                 codigoPostal: '1050',
-                provinciaId: '02',
-                provinciaNombre: 'Buenos Aires',
-                ciudadId: '001',
-                ciudadNombre: 'CABA',
+                provinciaId: 1, // CABA
+                ciudadId: 1, // CABA
                 contrasena: 'Laura2024!',
                 creadoPorRrhh: true,
                 activo: true,
@@ -530,13 +520,31 @@ const runSeed = async () => {
         // ==========================================
         // EVALUACIONES
         // ==========================================
+        // Helper function to get a business day
+        const { esDiaHabil } = require('../utils/fechas');
+
+        const getBusinessDay = (date) => {
+            let testDate = new Date(date);
+            let attempts = 0;
+            while (attempts < 14) { // Try up to 2 weeks
+                const dateStr = testDate.toISOString().split('T')[0];
+                if (esDiaHabil(dateStr)) {
+                    return dateStr;
+                }
+                testDate.setDate(testDate.getDate() - 1);
+                attempts++;
+            }
+            // Fallback to a known business day
+            return '2025-11-03'; // Monday
+        };
+
         const fechaEvalAnterior = new Date(hoy);
         fechaEvalAnterior.setMonth(hoy.getMonth() - 2);
-        const fechaEvalAnteriorStr = fechaEvalAnterior.toISOString().split('T')[0];
+        const fechaEvalAnteriorStr = getBusinessDay(fechaEvalAnterior);
 
         const fechaEvalReciente = new Date(hoy);
         fechaEvalReciente.setDate(hoy.getDate() - 7);
-        const fechaEvalRecienteStr = fechaEvalReciente.toISOString().split('T')[0];
+        const fechaEvalRecienteStr = getBusinessDay(fechaEvalReciente);
 
         const evaluacionesData = [
             {
@@ -798,6 +806,56 @@ const runSeed = async () => {
         await Vacaciones.bulkCreate(vacacionesData);
 
         // ==========================================
+        // PERMISOS Y ROLES
+        // ==========================================
+        console.log('🔐 Inicializando permisos...');
+
+        const modulos = [
+            { key: 'empleados', label: 'Empleados' },
+            { key: 'empresas', label: 'Empresas' },
+            { key: 'contratos', label: 'Contratos' },
+            { key: 'registros_salud', label: 'Registros de Salud' },
+            { key: 'evaluaciones', label: 'Evaluaciones' },
+            { key: 'contactos', label: 'Contactos' },
+            { key: 'solicitudes', label: 'Solicitudes' },
+            { key: 'liquidaciones', label: 'Liquidaciones' },
+            { key: 'conceptos_salariales', label: 'Conceptos Salariales' },
+            { key: 'roles', label: 'Roles y Permisos' },
+        ];
+
+        const acciones = [
+            { key: 'crear', label: 'Crear' },
+            { key: 'leer', label: 'Leer' },
+            { key: 'actualizar', label: 'Actualizar' },
+            { key: 'eliminar', label: 'Eliminar' },
+        ];
+
+        const permisos = [];
+        for (const modulo of modulos) {
+            for (const accion of acciones) {
+                const permiso = await Permiso.create({
+                    modulo: modulo.key,
+                    accion: accion.key,
+                    descripcion: `${accion.label} ${modulo.label}`,
+                });
+                permisos.push(permiso);
+            }
+        }
+
+        // Crear rol de Administrador con todos los permisos
+        const rolAdmin = await Rol.create({
+            nombre: 'Administrador',
+            descripcion: 'Rol con acceso completo a todas las funcionalidades del sistema',
+            activo: true,
+        });
+
+        // Asignar todos los permisos al rol de Administrador
+        await rolAdmin.setPermisos(permisos.map(p => p.id));
+
+        console.log(`✅ ${permisos.length} permisos creados`);
+        console.log(`✅ Rol de Administrador creado con todos los permisos`);
+
+        // ==========================================
         // PARÁMETROS LABORALES (Singleton)
         // ==========================================
         await ParametroLaboral.create({
@@ -816,7 +874,10 @@ const runSeed = async () => {
         console.log(`   📊 ${contactosData.length} contactos`);
         console.log(`   📊 ${conceptosSalariales.length} conceptos salariales`);
         console.log(`   📊 ${solicitudesVacaciones.length} solicitudes de vacaciones`);
+        console.log(`   📊 ${permisos.length} permisos`);
+        console.log(`   📊 1 rol (Administrador)`);
         console.log(`   📊 1 parámetro laboral`);
+
 
 
         return true;

@@ -369,6 +369,9 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
             if (formData.fechaFin && formData.fechaInicio && formData.fechaFin < formData.fechaInicio) {
                 errors.fechaFin = 'La fecha de fin no puede ser anterior a la de inicio';
             }
+            if (formData.descripcion && formData.descripcion.length > 500) {
+                errors.descripcion = 'La descripción no puede exceder los 500 caracteres';
+            }
         } else if (selectedTipo === 'vacaciones') {
             if (!formData.periodo) errors.periodo = 'El período es requerido';
             if (!formData.fechaInicio) errors.fechaInicio = 'La fecha de inicio es requerida';
@@ -383,6 +386,9 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
             if (formData.diasSolicitud && formData.diasDisponibles && formData.diasSolicitud > formData.diasDisponibles) {
                 errors.fechaFin = `Los días solicitados (${formData.diasSolicitud}) exceden los disponibles (${formData.diasDisponibles})`;
             }
+            if (formData.descripcion && formData.descripcion.length > 500) {
+                errors.descripcion = 'La descripción no puede exceder los 500 caracteres';
+            }
         } else if (selectedTipo === 'horas_extras') {
             if (!formData.fecha) errors.fecha = 'La fecha es requerida';
             if (formData.fecha && formData.fecha > today) {
@@ -394,10 +400,16 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
                 errors.horaFin = 'La hora de fin debe ser posterior a la de inicio';
             }
             if (!formData.tipoHorasExtra) errors.tipoHorasExtra = 'El tipo es requerido';
+            if (formData.motivo && formData.motivo.length > 500) {
+                errors.motivo = 'El motivo no puede exceder los 500 caracteres';
+            }
         } else if (selectedTipo === 'renuncia') {
             // Usar valor de formData o valor por defecto (hoy)
             const fechaNot = formData.fechaNotificacion || getTodayStr();
             if (!fechaNot) errors.fechaNotificacion = 'La fecha de notificación es requerida';
+            if (formData.motivo && formData.motivo.length > 500) {
+                errors.motivo = 'El motivo no puede exceder los 500 caracteres';
+            }
         }
 
         // Preservar solo los errores de días hábiles de campos que NO están siendo validados ahora
@@ -641,6 +653,8 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
                         maxLength={500}
                         disabled={isReadOnly()}
                     />
+                    <FieldError message={touched.descripcion && fieldErrors.descripcion} />
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block' }}>{(formData.descripcion || '').length}/500</span>
                 </div>
             </div>
         );
@@ -777,6 +791,8 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
                         maxLength={500}
                         disabled={isReadOnly()}
                     />
+                    <FieldError message={touched.descripcion && fieldErrors.descripcion} />
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block' }}>{(formData.descripcion || '').length}/500</span>
                 </div>
             </div>
         );
@@ -877,6 +893,8 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
                     maxLength={500}
                     disabled={isReadOnly()}
                 />
+                <FieldError message={touched.motivo && fieldErrors.motivo} />
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block' }}>{(formData.motivo || '').length}/500</span>
             </div>
         </div>
     );
@@ -960,6 +978,8 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
                     maxLength={500}
                     disabled={isReadOnly()}
                 />
+                <FieldError message={touched.motivo && fieldErrors.motivo} />
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block' }}>{(formData.motivo || '').length}/500</span>
             </div>
         </div>
     );

@@ -467,8 +467,10 @@ const ContactoWizard = ({ contacto, onClose, onSuccess }) => {
                     placeholder="Dirección completa (opcional)"
                     rows={3}
                     style={{ resize: 'vertical' }}
+                    maxLength={300}
                 />
                 <FieldError message={touched.direccion && fieldErrors.direccion} />
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block' }}>{formData.direccion.length}/300</span>
             </div>
         </div>
     );

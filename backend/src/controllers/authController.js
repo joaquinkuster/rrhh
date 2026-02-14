@@ -57,9 +57,29 @@ const login = async (req, res) => {
                     nombre: empleado.nombre,
                     apellido: empleado.apellido,
                     email: empleado.email,
+                    telefono: empleado.telefono,
                     genero: empleado.genero,
                     esAdministrador: empleado.esAdministrador,
                     creadoPorRrhh: empleado.creadoPorRrhh,
+                    activo: empleado.activo,
+                    // Datos personales
+                    tipoDocumento: empleado.tipoDocumento,
+                    numeroDocumento: empleado.numeroDocumento,
+                    cuil: empleado.cuil,
+                    fechaNacimiento: empleado.fechaNacimiento,
+                    nacionalidadId: empleado.nacionalidadId,
+                    estadoCivil: empleado.estadoCivil,
+                    // Dirección
+                    calle: empleado.calle,
+                    numero: empleado.numero,
+                    piso: empleado.piso,
+                    departamento: empleado.departamento,
+                    codigoPostal: empleado.codigoPostal,
+                    provinciaId: empleado.provinciaId,
+                    ciudadId: empleado.ciudadId,
+                    // Timestamps
+                    createdAt: empleado.createdAt,
+                    updatedAt: empleado.updatedAt,
                 }
             });
         });
@@ -108,8 +128,8 @@ const register = [
 
             const empleadoData = {
                 ...req.body,
-                creadoPorRrhh: false,
-                esAdministrador: false,
+                creadoPorRrhh: false, // Registro público siempre es false
+                esAdministrador: false, // Registro público nunca es admin
                 activo: true,
             };
 
@@ -133,9 +153,29 @@ const register = [
                         nombre: nuevoEmpleado.nombre,
                         apellido: nuevoEmpleado.apellido,
                         email: nuevoEmpleado.email,
+                        telefono: nuevoEmpleado.telefono,
                         genero: nuevoEmpleado.genero,
                         esAdministrador: false,
                         creadoPorRrhh: false,
+                        activo: true,
+                        // Datos personales
+                        tipoDocumento: nuevoEmpleado.tipoDocumento,
+                        numeroDocumento: nuevoEmpleado.numeroDocumento,
+                        cuil: nuevoEmpleado.cuil,
+                        fechaNacimiento: nuevoEmpleado.fechaNacimiento,
+                        nacionalidadId: nuevoEmpleado.nacionalidadId,
+                        estadoCivil: nuevoEmpleado.estadoCivil,
+                        // Dirección
+                        calle: nuevoEmpleado.calle,
+                        numero: nuevoEmpleado.numero,
+                        piso: nuevoEmpleado.piso,
+                        departamento: nuevoEmpleado.departamento,
+                        codigoPostal: nuevoEmpleado.codigoPostal,
+                        provinciaId: nuevoEmpleado.provinciaId,
+                        ciudadId: nuevoEmpleado.ciudadId,
+                        // Timestamps
+                        createdAt: nuevoEmpleado.createdAt,
+                        updatedAt: nuevoEmpleado.updatedAt,
                     }
                 });
             });
@@ -167,22 +207,8 @@ const register = [
  */
 const getCurrentUser = async (req, res) => {
     try {
-        const { Provincia, Ciudad } = require('../models');
-
         const empleado = await Empleado.findByPk(req.session.empleadoId, {
-            attributes: { exclude: ['contrasena'] },
-            include: [
-                {
-                    model: Provincia,
-                    as: 'provincia',
-                    attributes: ['id', 'nombre']
-                },
-                {
-                    model: Ciudad,
-                    as: 'ciudad',
-                    attributes: ['id', 'nombre']
-                }
-            ]
+            attributes: { exclude: ['contrasena'] }
         });
 
         if (!empleado) {
@@ -205,7 +231,7 @@ const getCurrentUser = async (req, res) => {
             numeroDocumento: empleado.numeroDocumento,
             cuil: empleado.cuil,
             fechaNacimiento: empleado.fechaNacimiento,
-            nacionalidad: empleado.nacionalidad,
+            nacionalidadId: empleado.nacionalidadId,
             estadoCivil: empleado.estadoCivil,
             // Dirección
             calle: empleado.calle,
@@ -214,9 +240,7 @@ const getCurrentUser = async (req, res) => {
             departamento: empleado.departamento,
             codigoPostal: empleado.codigoPostal,
             provinciaId: empleado.provinciaId,
-            provinciaNombre: empleado.provincia?.nombre,
             ciudadId: empleado.ciudadId,
-            ciudadNombre: empleado.ciudad?.nombre,
             // Timestamps
             createdAt: empleado.createdAt,
             updatedAt: empleado.updatedAt,

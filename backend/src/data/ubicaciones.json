@@ -1,0 +1,518 @@
+{
+    "nacionalidades": [
+        {
+            "id": 1,
+            "nombre": "Argentina"
+        },
+        {
+            "id": 2,
+            "nombre": "Boliviana"
+        },
+        {
+            "id": 3,
+            "nombre": "Brasileña"
+        },
+        {
+            "id": 4,
+            "nombre": "Chilena"
+        },
+        {
+            "id": 5,
+            "nombre": "Colombiana"
+        },
+        {
+            "id": 6,
+            "nombre": "Ecuatoriana"
+        },
+        {
+            "id": 7,
+            "nombre": "Paraguaya"
+        },
+        {
+            "id": 8,
+            "nombre": "Peruana"
+        },
+        {
+            "id": 9,
+            "nombre": "Uruguaya"
+        },
+        {
+            "id": 10,
+            "nombre": "Venezolana"
+        },
+        {
+            "id": 11,
+            "nombre": "Española"
+        },
+        {
+            "id": 12,
+            "nombre": "Italiana"
+        },
+        {
+            "id": 13,
+            "nombre": "Otra"
+        }
+    ],
+    "provincias": [
+        {
+            "id": 1,
+            "nombre": "Ciudad Autónoma de Buenos Aires",
+            "ciudades": [
+                {
+                    "id": 1,
+                    "nombre": "Ciudad Autónoma de Buenos Aires"
+                }
+            ]
+        },
+        {
+            "id": 2,
+            "nombre": "Buenos Aires",
+            "ciudades": [
+                {
+                    "id": 2,
+                    "nombre": "La Plata"
+                },
+                {
+                    "id": 3,
+                    "nombre": "Mar del Plata"
+                },
+                {
+                    "id": 4,
+                    "nombre": "Bahía Blanca"
+                },
+                {
+                    "id": 5,
+                    "nombre": "Tandil"
+                },
+                {
+                    "id": 6,
+                    "nombre": "San Nicolás"
+                },
+                {
+                    "id": 7,
+                    "nombre": "Olavarría"
+                },
+                {
+                    "id": 8,
+                    "nombre": "Junín"
+                },
+                {
+                    "id": 9,
+                    "nombre": "Pergamino"
+                }
+            ]
+        },
+        {
+            "id": 3,
+            "nombre": "Catamarca",
+            "ciudades": [
+                {
+                    "id": 10,
+                    "nombre": "San Fernando del Valle de Catamarca"
+                },
+                {
+                    "id": 11,
+                    "nombre": "Andalgalá"
+                },
+                {
+                    "id": 12,
+                    "nombre": "Tinogasta"
+                }
+            ]
+        },
+        {
+            "id": 4,
+            "nombre": "Chaco",
+            "ciudades": [
+                {
+                    "id": 13,
+                    "nombre": "Resistencia"
+                },
+                {
+                    "id": 14,
+                    "nombre": "Sáenz Peña"
+                },
+                {
+                    "id": 15,
+                    "nombre": "Villa Ángela"
+                }
+            ]
+        },
+        {
+            "id": 5,
+            "nombre": "Chubut",
+            "ciudades": [
+                {
+                    "id": 16,
+                    "nombre": "Rawson"
+                },
+                {
+                    "id": 17,
+                    "nombre": "Comodoro Rivadavia"
+                },
+                {
+                    "id": 18,
+                    "nombre": "Trelew"
+                },
+                {
+                    "id": 19,
+                    "nombre": "Puerto Madryn"
+                },
+                {
+                    "id": 20,
+                    "nombre": "Esquel"
+                }
+            ]
+        },
+        {
+            "id": 6,
+            "nombre": "Córdoba",
+            "ciudades": [
+                {
+                    "id": 21,
+                    "nombre": "Córdoba Capital"
+                },
+                {
+                    "id": 22,
+                    "nombre": "Río Cuarto"
+                },
+                {
+                    "id": 23,
+                    "nombre": "Villa María"
+                },
+                {
+                    "id": 24,
+                    "nombre": "Villa Carlos Paz"
+                },
+                {
+                    "id": 25,
+                    "nombre": "San Francisco"
+                }
+            ]
+        },
+        {
+            "id": 7,
+            "nombre": "Corrientes",
+            "ciudades": [
+                {
+                    "id": 26,
+                    "nombre": "Corrientes"
+                },
+                {
+                    "id": 27,
+                    "nombre": "Goya"
+                },
+                {
+                    "id": 28,
+                    "nombre": "Paso de los Libres"
+                }
+            ]
+        },
+        {
+            "id": 8,
+            "nombre": "Entre Ríos",
+            "ciudades": [
+                {
+                    "id": 29,
+                    "nombre": "Paraná"
+                },
+                {
+                    "id": 30,
+                    "nombre": "Concordia"
+                },
+                {
+                    "id": 31,
+                    "nombre": "Gualeguaychú"
+                },
+                {
+                    "id": 32,
+                    "nombre": "Concepción del Uruguay"
+                }
+            ]
+        },
+        {
+            "id": 9,
+            "nombre": "Formosa",
+            "ciudades": [
+                {
+                    "id": 33,
+                    "nombre": "Formosa"
+                },
+                {
+                    "id": 34,
+                    "nombre": "Clorinda"
+                }
+            ]
+        },
+        {
+            "id": 10,
+            "nombre": "Jujuy",
+            "ciudades": [
+                {
+                    "id": 35,
+                    "nombre": "San Salvador de Jujuy"
+                },
+                {
+                    "id": 36,
+                    "nombre": "Palpalá"
+                },
+                {
+                    "id": 37,
+                    "nombre": "Perico"
+                }
+            ]
+        },
+        {
+            "id": 11,
+            "nombre": "La Pampa",
+            "ciudades": [
+                {
+                    "id": 38,
+                    "nombre": "Santa Rosa"
+                },
+                {
+                    "id": 39,
+                    "nombre": "General Pico"
+                }
+            ]
+        },
+        {
+            "id": 12,
+            "nombre": "La Rioja",
+            "ciudades": [
+                {
+                    "id": 40,
+                    "nombre": "La Rioja"
+                },
+                {
+                    "id": 41,
+                    "nombre": "Chilecito"
+                }
+            ]
+        },
+        {
+            "id": 13,
+            "nombre": "Mendoza",
+            "ciudades": [
+                {
+                    "id": 42,
+                    "nombre": "Mendoza"
+                },
+                {
+                    "id": 43,
+                    "nombre": "San Rafael"
+                },
+                {
+                    "id": 44,
+                    "nombre": "Godoy Cruz"
+                },
+                {
+                    "id": 45,
+                    "nombre": "Guaymallén"
+                }
+            ]
+        },
+        {
+            "id": 14,
+            "nombre": "Misiones",
+            "ciudades": [
+                {
+                    "id": 46,
+                    "nombre": "Posadas"
+                },
+                {
+                    "id": 47,
+                    "nombre": "Puerto Iguazú"
+                },
+                {
+                    "id": 48,
+                    "nombre": "Oberá"
+                },
+                {
+                    "id": 49,
+                    "nombre": "Eldorado"
+                }
+            ]
+        },
+        {
+            "id": 15,
+            "nombre": "Neuquén",
+            "ciudades": [
+                {
+                    "id": 50,
+                    "nombre": "Neuquén"
+                },
+                {
+                    "id": 51,
+                    "nombre": "San Martín de los Andes"
+                },
+                {
+                    "id": 52,
+                    "nombre": "Cutral Có"
+                }
+            ]
+        },
+        {
+            "id": 16,
+            "nombre": "Río Negro",
+            "ciudades": [
+                {
+                    "id": 53,
+                    "nombre": "Viedma"
+                },
+                {
+                    "id": 54,
+                    "nombre": "San Carlos de Bariloche"
+                },
+                {
+                    "id": 55,
+                    "nombre": "General Roca"
+                },
+                {
+                    "id": 56,
+                    "nombre": "Cipolletti"
+                }
+            ]
+        },
+        {
+            "id": 17,
+            "nombre": "Salta",
+            "ciudades": [
+                {
+                    "id": 57,
+                    "nombre": "Salta"
+                },
+                {
+                    "id": 58,
+                    "nombre": "San Ramón de la Nueva Orán"
+                },
+                {
+                    "id": 59,
+                    "nombre": "Tartagal"
+                }
+            ]
+        },
+        {
+            "id": 18,
+            "nombre": "San Juan",
+            "ciudades": [
+                {
+                    "id": 60,
+                    "nombre": "San Juan"
+                },
+                {
+                    "id": 61,
+                    "nombre": "Caucete"
+                }
+            ]
+        },
+        {
+            "id": 19,
+            "nombre": "San Luis",
+            "ciudades": [
+                {
+                    "id": 62,
+                    "nombre": "San Luis"
+                },
+                {
+                    "id": 63,
+                    "nombre": "Villa Mercedes"
+                },
+                {
+                    "id": 64,
+                    "nombre": "Merlo"
+                }
+            ]
+        },
+        {
+            "id": 20,
+            "nombre": "Santa Cruz",
+            "ciudades": [
+                {
+                    "id": 65,
+                    "nombre": "Río Gallegos"
+                },
+                {
+                    "id": 66,
+                    "nombre": "El Calafate"
+                },
+                {
+                    "id": 67,
+                    "nombre": "Caleta Olivia"
+                }
+            ]
+        },
+        {
+            "id": 21,
+            "nombre": "Santa Fe",
+            "ciudades": [
+                {
+                    "id": 68,
+                    "nombre": "Santa Fe"
+                },
+                {
+                    "id": 69,
+                    "nombre": "Rosario"
+                },
+                {
+                    "id": 70,
+                    "nombre": "Rafaela"
+                },
+                {
+                    "id": 71,
+                    "nombre": "Venado Tuerto"
+                }
+            ]
+        },
+        {
+            "id": 22,
+            "nombre": "Santiago del Estero",
+            "ciudades": [
+                {
+                    "id": 72,
+                    "nombre": "Santiago del Estero"
+                },
+                {
+                    "id": 73,
+                    "nombre": "La Banda"
+                },
+                {
+                    "id": 74,
+                    "nombre": "Termas de Río Hondo"
+                }
+            ]
+        },
+        {
+            "id": 23,
+            "nombre": "Tierra del Fuego",
+            "ciudades": [
+                {
+                    "id": 75,
+                    "nombre": "Ushuaia"
+                },
+                {
+                    "id": 76,
+                    "nombre": "Río Grande"
+                }
+            ]
+        },
+        {
+            "id": 24,
+            "nombre": "Tucumán",
+            "ciudades": [
+                {
+                    "id": 77,
+                    "nombre": "San Miguel de Tucumán"
+                },
+                {
+                    "id": 78,
+                    "nombre": "Tafí Viejo"
+                },
+                {
+                    "id": 79,
+                    "nombre": "Yerba Buena"
+                }
+            ]
+        }
+    ]
+}

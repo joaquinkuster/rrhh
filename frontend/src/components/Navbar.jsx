@@ -2,14 +2,16 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import EmpleadoDetail from './EmpleadoDetail';
+import EmpleadoWizard from './EmpleadoWizard';
 import ConfirmDialog from './ConfirmDialog';
 import './Navbar.css';
 
 const Navbar = () => {
     const navigate = useNavigate();
-    const { user, logout } = useAuth();
+    const { user, logout, checkAuth } = useAuth();
     const [showMenu, setShowMenu] = useState(false);
     const [showProfile, setShowProfile] = useState(false);
+    const [showEditWizard, setShowEditWizard] = useState(false);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [avatarPath, setAvatarPath] = useState('');
     const menuRef = useRef(null);
@@ -56,6 +58,16 @@ const Navbar = () => {
     const handleViewProfile = () => {
         setShowMenu(false);
         setShowProfile(true);
+    };
+
+    const handleEditProfile = () => {
+        setShowProfile(false);
+        setShowEditWizard(true);
+    };
+
+    const handleEditSuccess = async () => {
+        setShowEditWizard(false);
+        await checkAuth(); // Recargar datos del usuario
     };
 
     const handleLogoutClick = () => {
@@ -139,12 +151,22 @@ const Navbar = () => {
                 </div>
             </nav>
 
-            {/* Modal de perfil - sin botón de editar */}
+            {/* Modal de perfil */}
             {showProfile && user && (
                 <EmpleadoDetail
                     empleado={user}
                     onClose={() => setShowProfile(false)}
-                    hideEditButton={true}
+                    onEdit={handleEditProfile}
+                    hideEditButton={!user.esAdministrador && user.creadoPorRrhh}
+                />
+            )}
+
+            {/* Wizard de edición */}
+            {showEditWizard && user && (
+                <EmpleadoWizard
+                    empleado={user}
+                    onClose={() => setShowEditWizard(false)}
+                    onSuccess={handleEditSuccess}
                 />
             )}
 

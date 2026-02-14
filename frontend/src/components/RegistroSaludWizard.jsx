@@ -257,7 +257,11 @@ const RegistroSaludWizard = ({ registro, onClose, onSuccess }) => {
             if (!formData.empleadoId) errors.empleadoId = 'Debe seleccionar un empleado';
             if (!formData.tipoExamen) errors.tipoExamen = 'El tipo de examen es requerido';
             if (!formData.resultado) errors.resultado = 'El resultado es requerido';
-            if (!formData.fechaRealizacion) errors.fechaRealizacion = 'La fecha de realización es requerida';
+            if (!formData.fechaRealizacion) {
+                errors.fechaRealizacion = 'La fecha de realización es requerida';
+            } else if (new Date(formData.fechaRealizacion) > new Date()) {
+                errors.fechaRealizacion = 'La fecha de realización no puede ser mayor a la fecha actual';
+            }
             if (!formData.fechaVencimiento) {
                 errors.fechaVencimiento = 'La fecha de vencimiento es requerida';
             } else if (formData.fechaRealizacion && new Date(formData.fechaVencimiento) < new Date(formData.fechaRealizacion)) {

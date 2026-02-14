@@ -17,6 +17,11 @@ const Renuncia = require('./Renuncia');
 const Liquidacion = require('./Liquidacion');
 const ConceptoSalarial = require('./ConceptoSalarial');
 const ParametroLaboral = require('./ParametroLaboral');
+const Rol = require('./Rol');
+const Permiso = require('./Permiso');
+const RolPermiso = require('./RolPermiso');
+const EspacioTrabajo = require('./EspacioTrabajo');
+
 
 
 
@@ -112,6 +117,30 @@ RegistroSalud.hasMany(Licencia, { foreignKey: 'registroSaludId', as: 'licencias'
 Contrato.hasMany(Liquidacion, { foreignKey: 'contratoId', as: 'liquidaciones', onDelete: 'CASCADE' });
 Liquidacion.belongsTo(Contrato, { foreignKey: 'contratoId', as: 'contrato' });
 
+// Rol <-> Permiso (Many-to-Many via RolPermiso)
+Rol.belongsToMany(Permiso, {
+    through: RolPermiso,
+    foreignKey: 'rolId',
+    otherKey: 'permisoId',
+    as: 'permisos'
+});
+Permiso.belongsToMany(Rol, {
+    through: RolPermiso,
+    foreignKey: 'permisoId',
+    otherKey: 'rolId',
+    as: 'roles'
+});
+
+// RolPermiso associations for direct access
+RolPermiso.belongsTo(Rol, { foreignKey: 'rolId', as: 'rol' });
+RolPermiso.belongsTo(Permiso, { foreignKey: 'permisoId', as: 'permiso' });
+Rol.hasMany(RolPermiso, { foreignKey: 'rolId', as: 'rolPermisos' });
+Permiso.hasMany(RolPermiso, { foreignKey: 'permisoId', as: 'rolPermisos' });
+
+// EspacioTrabajo -> Empleado (propietario)
+EspacioTrabajo.belongsTo(Empleado, { foreignKey: 'propietarioId', as: 'propietario' });
+Empleado.hasMany(EspacioTrabajo, { foreignKey: 'propietarioId', as: 'espaciosTrabajo' });
+
 
 module.exports = {
     sequelize,
@@ -133,6 +162,10 @@ module.exports = {
     Liquidacion,
     ConceptoSalarial,
     ParametroLaboral,
+    Rol,
+    Permiso,
+    RolPermiso,
+    EspacioTrabajo,
 };
 
 

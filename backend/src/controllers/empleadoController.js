@@ -31,7 +31,7 @@ const getAll = async (req, res) => {
             where.email = { [Op.like]: `%${email}%` };
         }
         if (nacionalidad) {
-            where.nacionalidad = { [Op.like]: `%${nacionalidad}%` };
+            where.nacionalidadId = { [Op.like]: `%${nacionalidad}%` };
         }
         if (genero) {
             where.genero = genero;

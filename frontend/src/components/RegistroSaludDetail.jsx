@@ -343,81 +343,95 @@ const RegistroSaludDetail = ({ registro, onClose, onEdit }) => {
                                         </div>
                                     </div>
                                 </div>
-                                {/* Comprobantes Section */}
-                                {(() => {
-                                    // Collect all comprobantes (legacy single + new array format)
-                                    const allComprobantes = [];
-                                    if (registro.comprobante) {
-                                        allComprobantes.push({
-                                            data: registro.comprobante,
-                                            nombre: registro.comprobanteNombre || 'Comprobante',
-                                            tipo: registro.comprobanteTipo || 'application/pdf',
-                                        });
-                                    }
-                                    if (registro.comprobantes && Array.isArray(registro.comprobantes)) {
-                                        allComprobantes.push(...registro.comprobantes);
-                                    }
-
-                                    if (allComprobantes.length === 0) return null;
-
-                                    return (
-                                        <div style={{
-                                            display: 'flex',
-                                            alignItems: 'flex-start',
-                                            gap: '0.75rem',
-                                            padding: '0.75rem 0'
-                                        }}>
-                                            <div style={{ color: 'var(--primary-color)', flexShrink: 0, marginTop: '2px' }}>{Icons.document}</div>
-                                            <div style={{ flex: 1, minWidth: 0 }}>
-                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
-                                                    Comprobantes Médicos ({allComprobantes.length})
-                                                </div>
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                                    {allComprobantes.map((file, index) => (
-                                                        <a
-                                                            key={index}
-                                                            href={file.data}
-                                                            download={file.nombre}
-                                                            style={{
-                                                                display: 'inline-flex',
-                                                                alignItems: 'center',
-                                                                gap: '0.5rem',
-                                                                color: 'var(--primary-color)',
-                                                                textDecoration: 'none',
-                                                                fontWeight: 500,
-                                                                padding: '0.5rem 0.75rem',
-                                                                background: 'var(--bg-secondary)',
-                                                                borderRadius: '0.375rem',
-                                                                fontSize: '0.875rem',
-                                                            }}
-                                                        >
-                                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
-                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                                                            </svg>
-                                                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px', display: 'inline-block' }} title={file.nombre}>
-                                                                {file.nombre}
-                                                            </span>
-                                                        </a>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })()}
                             </div>
                         </div>
 
-                        {/* Column 2: Empleado */}
+                        {/* Column 2 */}
                         <div>
-                            <SectionHeader title="Datos del Empleado" subtitle={`Últimos cambios hace ${getRelativeTime(registro.empleado?.updatedAt || registro.updatedAt)}`} />
-                            <div style={{
-                                background: 'var(--card-bg)',
-                                borderRadius: '0.5rem',
-                                border: '1px solid var(--border-color)',
-                                padding: '0 1rem'
-                            }}>
-                                <Field icon={Icons.user} label="Nombre Completo" value={`${registro.empleado?.nombre} ${registro.empleado?.apellido}`} />
-                                <Field icon={Icons.document} label="Documento" value={registro.empleado?.numeroDocumento} />
+                            {/* Datos del Empleado */}
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <SectionHeader title="Datos del Empleado" subtitle={`Últimos cambios hace ${getRelativeTime(registro.empleado?.updatedAt || registro.updatedAt)}`} />
+                                <div style={{
+                                    background: 'var(--card-bg)',
+                                    borderRadius: '0.5rem',
+                                    border: '1px solid var(--border-color)',
+                                    padding: '0 1rem'
+                                }}>
+                                    <Field icon={Icons.user} label="Nombre Completo" value={`${registro.empleado?.nombre} ${registro.empleado?.apellido}`} />
+                                    <Field icon={Icons.document} label="Documento" value={registro.empleado?.numeroDocumento} />
+                                </div>
+                            </div>
+
+                            {/* Comprobantes Section */}
+                            <div>
+                                <SectionHeader title="Comprobantes Médicos" subtitle={`Últimos cambios hace ${getRelativeTime(registro.empleado?.updatedAt || registro.updatedAt)}`} />
+                                <div style={{
+                                    background: 'var(--card-bg)',
+                                    borderRadius: '0.5rem',
+                                    border: '1px solid var(--border-color)',
+                                    padding: '0 1rem'
+                                }}>
+                                    {(() => {
+                                        // Collect all comprobantes (legacy single + new array format)
+                                        const allComprobantes = [];
+                                        if (registro.comprobante) {
+                                            allComprobantes.push({
+                                                data: registro.comprobante,
+                                                nombre: registro.comprobanteNombre || 'Comprobante',
+                                                tipo: registro.comprobanteTipo || 'application/pdf',
+                                            });
+                                        }
+                                        if (registro.comprobantes && Array.isArray(registro.comprobantes)) {
+                                            allComprobantes.push(...registro.comprobantes);
+                                        }
+
+                                        if (allComprobantes.length === 0) return null;
+
+                                        return (
+                                            <div style={{
+                                                display: 'flex',
+                                                alignItems: 'flex-start',
+                                                gap: '0.75rem',
+                                                padding: '0.75rem 0'
+                                            }}>
+                                                <div style={{ color: 'var(--primary-color)', flexShrink: 0, marginTop: '2px' }}>{Icons.document}</div>
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                                                        Comprobantes Médicos ({allComprobantes.length})
+                                                    </div>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                        {allComprobantes.map((file, index) => (
+                                                            <a
+                                                                key={index}
+                                                                href={file.data}
+                                                                download={file.nombre}
+                                                                style={{
+                                                                    display: 'inline-flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '0.5rem',
+                                                                    color: 'var(--primary-color)',
+                                                                    textDecoration: 'none',
+                                                                    fontWeight: 500,
+                                                                    padding: '0.5rem 0.75rem',
+                                                                    background: 'var(--bg-secondary)',
+                                                                    borderRadius: '0.375rem',
+                                                                    fontSize: '0.875rem',
+                                                                }}
+                                                            >
+                                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                                                                </svg>
+                                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px', display: 'inline-block' }} title={file.nombre}>
+                                                                    {file.nombre}
+                                                                </span>
+                                                            </a>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
                             </div>
                         </div>
                     </div>

@@ -765,3 +765,173 @@ export const updateParametrosLaborales = async (parametros) => {
     if (!response.ok) throw new Error(result.error || 'Error al actualizar parámetros laborales');
     return result;
 };
+
+// ===== FERIADOS =====
+export const getFeriados = async () => {
+    const response = await fetch(`${API_URL}/feriados`);
+    if (!response.ok) throw new Error('Error al obtener feriados');
+    return response.json();
+};
+
+// ===== DASHBOARD =====
+export const getDashboardStats = async () => {
+    const response = await fetch(`${API_URL}/dashboard/stats`);
+    if (!response.ok) throw new Error('Error al obtener estadísticas del dashboard');
+    return response.json();
+};
+
+// ===== REPORTES =====
+export const getReportesEmpresa = async (empresaId) => {
+    const response = await fetch(`${API_URL}/reportes/empresa/${empresaId}`);
+    if (!response.ok) throw new Error('Error al obtener reportes de empresa');
+    return response.json();
+};
+
+// ===== ROLES =====
+export const getRoles = async (params = {}) => {
+    const queryParams = new URLSearchParams(params);
+    const response = await fetch(`${API_URL}/roles?${queryParams.toString()}`);
+    if (!response.ok) throw new Error('Error al obtener roles');
+    return response.json();
+};
+
+export const getRolById = async (id) => {
+    const response = await fetch(`${API_URL}/roles/${id}`);
+    if (!response.ok) throw new Error('Error al obtener rol');
+    return response.json();
+};
+
+export const createRol = async (rol) => {
+    const response = await fetch(`${API_URL}/roles`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(rol),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al crear rol');
+    return result;
+};
+
+export const updateRol = async (id, rol) => {
+    const response = await fetch(`${API_URL}/roles/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(rol),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al actualizar rol');
+    return result;
+};
+
+export const deleteRol = async (id) => {
+    const response = await fetch(`${API_URL}/roles/${id}`, {
+        method: 'DELETE',
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al eliminar rol');
+    return result;
+};
+
+export const reactivateRol = async (id) => {
+    const response = await fetch(`${API_URL}/roles/${id}/reactivate`, {
+        method: 'PATCH',
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al reactivar rol');
+    return result;
+};
+
+export const deleteRolesBulk = async (ids) => {
+    const response = await fetch(`${API_URL}/roles/bulk`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al eliminar roles');
+    return result;
+};
+
+// ===== PERMISOS =====
+export const getPermisos = async () => {
+    const response = await fetch(`${API_URL}/permisos`);
+    if (!response.ok) throw new Error('Error al obtener permisos');
+    return response.json();
+};
+
+export const getPermisosGrouped = async () => {
+    const response = await fetch(`${API_URL}/permisos/grouped`);
+    if (!response.ok) throw new Error('Error al obtener permisos agrupados');
+    return response.json();
+};
+
+export const initializePermisos = async () => {
+    const response = await fetch(`${API_URL}/permisos/initialize`, {
+        method: 'POST',
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al inicializar permisos');
+    return result;
+};
+
+// ===== ESPACIOS DE TRABAJO =====
+export const getEspaciosTrabajo = async (params = {}) => {
+    const queryParams = new URLSearchParams(params).toString();
+    const response = await fetchWithCredentials(`${API_URL}/espacios-trabajo?${queryParams}`);
+    if (!response.ok) throw new Error('Error al obtener espacios de trabajo');
+    return response.json();
+};
+
+export const getEspacioTrabajoById = async (id) => {
+    const response = await fetchWithCredentials(`${API_URL}/espacios-trabajo/${id}`);
+    if (!response.ok) throw new Error('Error al obtener espacio de trabajo');
+    return response.json();
+};
+
+export const createEspacioTrabajo = async (espacioData) => {
+    const response = await fetchWithCredentials(`${API_URL}/espacios-trabajo`, {
+        method: 'POST',
+        body: JSON.stringify(espacioData),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al crear espacio de trabajo');
+    return result;
+};
+
+export const updateEspacioTrabajo = async (id, espacioData) => {
+    const response = await fetchWithCredentials(`${API_URL}/espacios-trabajo/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(espacioData),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al actualizar espacio de trabajo');
+    return result;
+};
+
+export const deleteEspacioTrabajo = async (id) => {
+    const response = await fetchWithCredentials(`${API_URL}/espacios-trabajo/${id}`, {
+        method: 'DELETE',
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al eliminar espacio de trabajo');
+    return result;
+};
+
+export const reactivateEspacioTrabajo = async (id) => {
+    const response = await fetchWithCredentials(`${API_URL}/espacios-trabajo/${id}/reactivate`, {
+        method: 'PATCH',
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al reactivar espacio de trabajo');
+    return result;
+};
+
+export const deleteEspaciosTrabajoB = async (ids) => {
+    const response = await fetchWithCredentials(`${API_URL}/espacios-trabajo/bulk`, {
+        method: 'DELETE',
+        body: JSON.stringify({ ids }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al eliminar espacios de trabajo');
+    return result;
+};

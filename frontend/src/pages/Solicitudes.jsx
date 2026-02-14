@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
     getSolicitudes,
     deleteSolicitud,
@@ -37,6 +38,8 @@ const ESTADO_STYLES = {
 };
 
 const Solicitudes = () => {
+    const location = useLocation();
+
     // Data State
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -111,6 +114,27 @@ const Solicitudes = () => {
     useEffect(() => {
         loadItems();
     }, [loadItems]);
+
+    // Handle navigation from Dashboard with edit intent
+    useEffect(() => {
+        const editSolicitudId = location.state?.editSolicitudId;
+        if (editSolicitudId) {
+            // Clear the state to prevent re-opening on refresh
+            window.history.replaceState({}, document.title);
+
+            // Load and edit the solicitud
+            const loadAndEdit = async () => {
+                try {
+                    const fullItem = await getSolicitudById(editSolicitudId);
+                    setEditingItem(fullItem);
+                    setShowWizard(true);
+                } catch (err) {
+                    setError('No se pudo cargar la solicitud para editar');
+                }
+            };
+            loadAndEdit();
+        }
+    }, [location.state]);
 
     // Handlers
     const clearFilters = () => {

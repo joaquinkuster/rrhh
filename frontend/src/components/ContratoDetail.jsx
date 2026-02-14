@@ -86,6 +86,11 @@ const Icons = {
             <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
     ),
+    check: (
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 18, height: 18 }}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+    ),
     edit: (
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
@@ -261,7 +266,7 @@ const ContratoDetail = ({ contrato, onClose, onEdit }) => {
                 <div className="modal-body" style={{ padding: '1.5rem 2rem 2rem' }}>
                     {/* Top Section: Employee info + Edit button */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
                             <h2 style={{
                                 fontSize: '1.5rem',
                                 fontWeight: 700,
@@ -279,6 +284,19 @@ const ContratoDetail = ({ contrato, onClose, onEdit }) => {
                                 borderRadius: '0.25rem'
                             }}>
                                 #{contrato.id}
+                            </span>
+                            <span style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.4rem',
+                                fontSize: '0.85rem',
+                                padding: '0.3rem 0.7rem',
+                                borderRadius: '9999px',
+                                background: `${ESTADO_COLORS[contrato.estado]}20`,
+                                color: ESTADO_COLORS[contrato.estado],
+                                fontWeight: 700
+                            }}>
+                                {ESTADO_LABELS[contrato.estado] || contrato.estado}
                             </span>
                         </div>
                         {onEdit && contrato.estado !== 'finalizado' && (
@@ -380,82 +398,62 @@ const ContratoDetail = ({ contrato, onClose, onEdit }) => {
 
                     {/* Main Content: 2 columns */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
-                        {/* Column 1: Resumen */}
                         <div>
-                            <SectionHeader title="Resumen" subtitle={`Últimos cambios hace ${getRelativeTime(contrato.updatedAt)}`} />
-                            <div style={{
-                                background: 'var(--card-bg)',
-                                borderRadius: '0.5rem',
-                                border: '1px solid var(--border-color)',
-                                padding: '0 1rem'
-                            }}>
-                                <Field icon={Icons.money} label="Salario" value={formatCurrency(contrato.salario)} />
-                                {/* Contract Status */}
-                                <div style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.75rem',
-                                    padding: '0.875rem 0',
-                                    borderBottom: '1px solid var(--border-color)'
-                                }}>
-                                    <div style={{ color: 'var(--primary-color)' }}>
-                                        {Icons.circle}
-                                    </div>
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.15rem' }}>
-                                            Estado del Contrato
-                                        </div>
-                                        <span style={{
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                            gap: '0.4rem',
-                                            fontSize: '0.85rem',
-                                            padding: '0.25rem 0.6rem',
-                                            borderRadius: '9999px',
-                                            background: `${getContractStatusColor()}20`,
-                                            color: getContractStatusColor(),
-                                            fontWeight: 700
-                                        }}>
-                                            <span style={{
-                                                width: '7px',
-                                                height: '7px',
-                                                borderRadius: '50%',
-                                                background: getContractStatusColor()
-                                            }} />
-                                            {getContractStatus()}
-                                        </span>
-                                    </div>
-                                </div>
-                                <Field icon={Icons.calendar} label="Fecha de Inicio" value={formatDateOnly(contrato.fechaInicio)} />
-                                <Field icon={Icons.calendar} label="Fecha de Fin" value={contrato.fechaFin ? formatDateOnly(contrato.fechaFin) : 'Indeterminado'} />
-                                <Field icon={Icons.document} label="Tipo de Contrato" value={TIPOS_CONTRATO_LABELS[contrato.tipoContrato] || contrato.tipoContrato} />
-                                <Field icon={Icons.building} label="Categoría" value={categoria} />
-                                <Field icon={Icons.clock} label="Horario" value={contrato.horario} />
-                                {contrato.compensacion && (
-                                    <Field icon={Icons.gift} label="Compensación Adicional" value={contrato.compensacion} />
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Column 2: DatosDelEmpleado + Puestos */}
-                        <div>
-                            {/* Datos del Empleado */}
+                            {/* Column 1: Resumen */}
                             <div style={{ marginBottom: '1.5rem' }}>
-                                <SectionHeader title="Datos del Empleado" subtitle={`Últimos cambios hace ${getRelativeTime(contrato.empleado?.updatedAt || contrato.updatedAt)}`} />
+                                <SectionHeader title="Resumen" subtitle={`Últimos cambios hace ${getRelativeTime(contrato.updatedAt)}`} />
                                 <div style={{
                                     background: 'var(--card-bg)',
                                     borderRadius: '0.5rem',
                                     border: '1px solid var(--border-color)',
                                     padding: '0 1rem'
                                 }}>
-                                    <Field icon={Icons.user} label="Nombre Completo" value={`${contrato.empleado?.nombre} ${contrato.empleado?.apellido}`} />
-                                    <Field icon={Icons.document} label="Documento" value={contrato.empleado?.numeroDocumento} />
+                                    {/* Contract Status */}
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.75rem',
+                                        padding: '0.875rem 0',
+                                        borderBottom: '1px solid var(--border-color)'
+                                    }}>
+                                        <div style={{ color: 'var(--primary-color)' }}>
+                                            {Icons.check}
+                                        </div>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.15rem' }}>
+                                                Estado del Contrato
+                                            </div>
+                                            <span style={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: '0.4rem',
+                                                fontSize: '0.85rem',
+                                                padding: '0.25rem 0.6rem',
+                                                borderRadius: '9999px',
+                                                background: `${getContractStatusColor()}20`,
+                                                color: getContractStatusColor(),
+                                                fontWeight: 700
+                                            }}>
+                                                <span style={{
+                                                    width: '7px',
+                                                    height: '7px',
+                                                    borderRadius: '50%',
+                                                    background: getContractStatusColor()
+                                                }} />
+                                                {getContractStatus()}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <Field icon={Icons.calendar} label="Fecha de Inicio" value={formatDateOnly(contrato.fechaInicio)} />
+                                    <Field icon={Icons.calendar} label="Fecha de Fin" value={contrato.fechaFin ? formatDateOnly(contrato.fechaFin) : 'Indeterminado'} />
+                                    <Field icon={Icons.document} label="Tipo de Contrato" value={TIPOS_CONTRATO_LABELS[contrato.tipoContrato] || contrato.tipoContrato} />
+                                    <Field icon={Icons.building} label="Categoría" value={categoria} />
                                 </div>
                             </div>
 
                             {/* Puestos Asignados */}
                             <div>
-                                <SectionHeader title="Puestos Asignados" subtitle={`Últimos cambios hace ${getRelativeTime(contrato.updatedAt)}`} />
+                                <SectionHeader title={`${contrato.puestos?.length || 0} Puesto(s) Asignado(s)`} subtitle={`Últimos cambios hace ${getRelativeTime(contrato.updatedAt)}`} />
                                 <div style={{
                                     background: 'var(--card-bg)',
                                     borderRadius: '0.5rem',
@@ -488,6 +486,40 @@ const ContratoDetail = ({ contrato, onClose, onEdit }) => {
                                         <div style={{ padding: '1rem', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
                                             Sin puestos asignados
                                         </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Column 2: DatosDelEmpleado + Puestos */}
+                        <div>
+                            {/* Datos del Empleado */}
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <SectionHeader title="Datos del Empleado" subtitle={`Últimos cambios hace ${getRelativeTime(contrato.empleado?.updatedAt || contrato.updatedAt)}`} />
+                                <div style={{
+                                    background: 'var(--card-bg)',
+                                    borderRadius: '0.5rem',
+                                    border: '1px solid var(--border-color)',
+                                    padding: '0 1rem'
+                                }}>
+                                    <Field icon={Icons.user} label="Nombre Completo" value={`${contrato.empleado?.nombre} ${contrato.empleado?.apellido}`} />
+                                    <Field icon={Icons.document} label="Documento" value={contrato.empleado?.numeroDocumento} />
+                                </div>
+                            </div>
+
+                            {/* Condiciones */}
+                            <div>
+                                <SectionHeader title="Condiciones" subtitle={`Últimos cambios hace ${getRelativeTime(contrato.updatedAt)}`} />
+                                <div style={{
+                                    background: 'var(--card-bg)',
+                                    borderRadius: '0.5rem',
+                                    border: '1px solid var(--border-color)',
+                                    padding: '0 1rem'
+                                }}>
+                                    <Field icon={Icons.money} label="Salario" value={formatCurrency(contrato.salario)} />
+                                    <Field icon={Icons.clock} label="Horario" value={contrato.horario} />
+                                    {contrato.compensacion && (
+                                        <Field icon={Icons.gift} label="Compensación Adicional" value={contrato.compensacion} />
                                     )}
                                 </div>
                             </div>

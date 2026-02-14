@@ -310,6 +310,9 @@ const EvaluacionWizard = ({ evaluacion, onClose, onSuccess }) => {
             } else if (formData.feedback.length > 2000) {
                 errors.feedback = 'El feedback no puede exceder 2000 caracteres';
             }
+            if (formData.notas && formData.notas.length > 1000) {
+                errors.notas = 'Las notas no pueden exceder 1000 caracteres';
+            }
         }
 
         // Preservar solo los errores de días hábiles del campo fecha
@@ -557,11 +560,10 @@ const EvaluacionWizard = ({ evaluacion, onClose, onSuccess }) => {
                     onBlur={() => handleBlur('feedback')}
                     rows={4}
                     style={{ resize: 'vertical', minHeight: '100px' }}
+                    maxLength={2000}
                 />
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.25rem' }}>
-                    <FieldError message={touched.feedback && fieldErrors.feedback} />
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{formData.feedback.length}/2000</span>
-                </div>
+                <FieldError message={touched.feedback && fieldErrors.feedback} />
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block' }}>{formData.feedback.length}/2000</span>
             </div>
 
             {/* Notas */}
@@ -573,8 +575,10 @@ const EvaluacionWizard = ({ evaluacion, onClose, onSuccess }) => {
                     onChange={(e) => handleChange('notas', e.target.value)}
                     rows={3}
                     style={{ resize: 'vertical', minHeight: '80px' }}
+                    maxLength={1000}
                 />
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', textAlign: 'right' }}>{formData.notas.length}/1000</span>
+                <FieldError message={touched.notas && fieldErrors.notas} />
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block' }}>{formData.notas.length}/1000</span>
             </div>
         </div>
     );

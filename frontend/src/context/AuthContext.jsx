@@ -11,10 +11,13 @@ export const useAuth = () => {
     return context;
 };
 
+import { useTheme } from './ThemeContext';
+
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const { resetTheme } = useTheme();
 
     // Verificar sesión al cargar
     useEffect(() => {
@@ -57,11 +60,13 @@ export const AuthProvider = ({ children }) => {
             await logoutAPI();
             setUser(null);
             setIsAuthenticated(false);
+            resetTheme();
         } catch (error) {
             console.error('Error al cerrar sesión:', error);
             // Limpiar sesión localmente incluso si falla el logout en servidor
             setUser(null);
             setIsAuthenticated(false);
+            resetTheme();
         }
     };
 

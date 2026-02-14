@@ -90,7 +90,7 @@ const EmpresaDetail = ({ empresa, onClose, onEdit }) => {
     const totalEmpleados = empresa.areas?.reduce((acc, area) =>
         acc + (area.departamentos?.reduce((acc2, depto) =>
             acc2 + (depto.puestos?.reduce((acc3, puesto) =>
-                acc3 + (puesto.contratos?.filter(c => c.activo)?.length || 0), 0) || 0), 0) || 0), 0) || 0;
+                acc3 + (puesto.contratos?.filter(c => c.activo && c.estado === 'en_curso')?.length || 0), 0) || 0), 0) || 0), 0) || 0;
 
     // Field component with icon
     const Field = ({ icon, label, value }) => (

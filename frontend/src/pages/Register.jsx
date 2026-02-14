@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import EmpleadoWizard from '../components/EmpleadoWizard';
+import BackgroundCarousel from '../components/BackgroundCarousel';
 import Alert from '../components/Alert';
 import './Register.css';
 
@@ -19,12 +20,14 @@ const Register = () => {
 
         // Redirigir después de un momento
         setTimeout(() => {
-            navigate('/empleados');
+            navigate('/dashboard');
         }, 1500);
     };
 
     return (
         <>
+            <BackgroundCarousel />
+
             {showSuccessAlert && (
                 <Alert
                     type="success"
@@ -34,17 +37,28 @@ const Register = () => {
                 />
             )}
 
-            <div className="register-container">
-                <div className="register-content">
-                    <div className="register-header">
-                        <h1>Registro de Usuario</h1>
-                        <p>Completá el formulario para registrarte en el sistema</p>
+            <div className="auth-container">
+                <div className="auth-card register-card">
+                    {/* Left side - Branding (30%) */}
+                    <div className="auth-right register-left-side">
+                        <div className="auth-promo">
+                            <img src="/logo.png" alt="CataratasRH" className="register-sidebar-logo" />
+                            <h2>Cataratas<span>RH</span></h2>
+                            <p>Bienvenido al Sistema de Gestión de Recursos Humanos</p>
+                            <Link to="/login" className="register-back-link">
+                                ← Volver al inicio de sesión
+                            </Link>
+                        </div>
                     </div>
-                    <EmpleadoWizard
-                        onClose={() => navigate('/login')}
-                        onSuccess={handleSuccess}
-                        isPublicRegistration={true}
-                    />
+
+                    {/* Right side - Form (70%) */}
+                    <div className="auth-left register-right-side">
+                        <EmpleadoWizard
+                            onClose={() => navigate('/login')}
+                            onSuccess={handleSuccess}
+                            isPublicRegistration={true}
+                        />
+                    </div>
                 </div>
             </div>
         </>

@@ -12,7 +12,7 @@ const PublicRoute = ({ children }) => {
 
     useEffect(() => {
         if (!loading && isAuthenticated) {
-            navigate('/empleados', { replace: true });
+            navigate('/dashboard', { replace: true });
         }
     }, [isAuthenticated, loading, navigate]);
 

@@ -119,8 +119,8 @@ const Empleado = sequelize.define('Empleado', {
             },
         },
     },
-    nacionalidad: {
-        type: DataTypes.STRING(100),
+    nacionalidadId: {
+        type: DataTypes.INTEGER,
         allowNull: false,
         validate: {
             notEmpty: { msg: 'La nacionalidad es requerida' },
@@ -188,29 +188,15 @@ const Empleado = sequelize.define('Empleado', {
         },
     },
     provinciaId: {
-        type: DataTypes.STRING(10),
+        type: DataTypes.INTEGER,
         allowNull: false,
         validate: {
             notEmpty: { msg: 'La provincia es requerida' },
         },
     },
-    provinciaNombre: {
-        type: DataTypes.STRING(100),
-        allowNull: true,
-        validate: {
-            len: { args: [0, 100], msg: 'El nombre de provincia no puede exceder 100 caracteres' },
-        },
-    },
     ciudadId: {
-        type: DataTypes.STRING(10),
+        type: DataTypes.INTEGER,
         allowNull: true,
-    },
-    ciudadNombre: {
-        type: DataTypes.STRING(100),
-        allowNull: true,
-        validate: {
-            len: { args: [0, 100], msg: 'El nombre de ciudad no puede exceder 100 caracteres' },
-        },
     },
     activo: {
         type: DataTypes.BOOLEAN,
@@ -228,7 +214,15 @@ const Empleado = sequelize.define('Empleado', {
         allowNull: false,
         validate: {
             notEmpty: { msg: 'La contraseña es requerida' },
-        },
+            len: {
+                args: [8, 255],
+                msg: 'La contraseña debe tener al menos 8 caracteres'
+            },
+            is: {
+                args: /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])/,
+                msg: 'La contraseña debe contener al menos una mayúscula, un número y un carácter especial (@$!%*?&#)'
+            }
+        }
     },
     creadoPorRrhh: {
         type: DataTypes.BOOLEAN,
