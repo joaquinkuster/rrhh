@@ -219,9 +219,6 @@ const LandingPage = () => {
             <section className="landing-hero">
                 <div className="landing-hero-inner">
                     <div className="landing-hero-content">
-                        <div className="landing-hero-badge">
-                            Gestión de RRHH
-                        </div>
                         <h1 className="landing-hero-title">
                             Sistema de Gestión de{' '}
                             <span className="highlight">Recursos Humanos</span>
@@ -340,36 +337,36 @@ const LandingPage = () => {
                         <div className="landing-footer-section">
                             <h4>Producto</h4>
                             <ul className="landing-footer-links">
-                                <li><a href="#caracteristicas" onClick={(e) => handleNavClick(e, 'caracteristicas')}>Funcionalidades</a></li>
-                                <li><a href="#precios" onClick={(e) => handleNavClick(e, 'precios')}>Precios</a></li>
-                                <li><a href="#">Seguridad</a></li>
-                                <li><a href="#">Hoja de Ruta</a></li>
+                                <li>Funcionalidades</li>
+                                <li>Precios</li>
+                                <li>Seguridad</li>
+                                <li>Hoja de Ruta</li>
                             </ul>
                         </div>
                         <div className="landing-footer-section">
                             <h4>Empresa</h4>
                             <ul className="landing-footer-links">
-                                <li><a href="#">Nosotros</a></li>
-                                <li><a href="#">Blog</a></li>
-                                <li><a href="#">Carreras</a></li>
-                                <li><a href="#">Contacto</a></li>
+                                <li>Nosotros</li>
+                                <li>Blog</li>
+                                <li>Carreras</li>
+                                <li>Contacto</li>
                             </ul>
                         </div>
                         <div className="landing-footer-section">
                             <h4>Conecta</h4>
                             <div className="landing-footer-social">
-                                <a href="#" aria-label="Twitter">
+                                <a aria-label="Twitter">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z" />
                                     </svg>
                                 </a>
-                                <a href="#" aria-label="GitHub">
+                                <a href="https://github.com/joaquinkuster/rrhh" aria-label="GitHub">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M15 22v-4a4.8 4.8 0 00-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 004 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 18c-4.51 2-5-2-7-2" />
                                     </svg>
                                 </a>
-                                <a href="#" aria-label="LinkedIn">
+                                <a aria-label="LinkedIn">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6z" />
                                         <rect x="2" y="9" width="4" height="12" rx="0" strokeLinecap="round" strokeLinejoin="round" />
