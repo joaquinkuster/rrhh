@@ -119,6 +119,9 @@ Contrato.belongsToMany(Evaluacion, {
 Contacto.belongsTo(Empleado, { foreignKey: 'empleadoId', as: 'empleado' });
 Empleado.hasMany(Contacto, { foreignKey: 'empleadoId', as: 'contactos', onDelete: 'CASCADE' });
 
+// Empleado -> Contrato (Último seleccionado)
+Empleado.belongsTo(Contrato, { foreignKey: 'ultimoContratoSeleccionadoId', as: 'ultimoContratoSeleccionado' });
+
 // --- Solicitudes y Novedades ---
 // Contrato -> Solicitudes
 Contrato.hasMany(Solicitud, { foreignKey: 'contratoId', as: 'solicitudes', onDelete: 'CASCADE' });

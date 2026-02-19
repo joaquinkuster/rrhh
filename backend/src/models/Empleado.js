@@ -172,6 +172,11 @@ const Empleado = sequelize.define('Empleado', {
         type: DataTypes.INTEGER,
         allowNull: true,
     },
+    ultimoContratoSeleccionadoId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        comment: 'ID del contrato seleccionado actualmente por el empleado en la UI'
+    },
 }, {
     tableName: 'empleados',
     timestamps: true,

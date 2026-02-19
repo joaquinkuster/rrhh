@@ -11,5 +11,6 @@ router.post('/register', authController.register);
 router.post('/logout', isAuthenticated, authController.logout);
 router.get('/me', isAuthenticated, authController.getCurrentUser);
 router.put('/password', isAuthenticated, authController.updatePassword);
+router.put('/selected-contract', isAuthenticated, authController.updateSelectedContract);
 
 module.exports = router;

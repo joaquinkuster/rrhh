@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { getCurrentUser, login as loginAPI, logout as logoutAPI, register as registerAPI } from '../services/api';
+import { getCurrentUser, login as loginAPI, logout as logoutAPI, register as registerAPI, updateSelectedContract as updateSelectedContractAPI } from '../services/api';
 
 const AuthContext = createContext();
 
@@ -81,6 +81,20 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    const seleccionarContrato = async (contratoId) => {
+        try {
+            await updateSelectedContractAPI(contratoId);
+            setUser(prev => ({
+                ...prev,
+                ultimoContratoSeleccionadoId: contratoId
+            }));
+            return true;
+        } catch (error) {
+            console.error('Error al actualizar contrato seleccionado:', error);
+            throw error;
+        }
+    };
+
     const value = {
         user,
         loading,
@@ -89,6 +103,7 @@ export const AuthProvider = ({ children }) => {
         logout,
         register,
         checkAuth,
+        seleccionarContrato,
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

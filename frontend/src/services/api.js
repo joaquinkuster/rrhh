@@ -59,6 +59,16 @@ export const updatePassword = async (passwordData) => {
     return result;
 };
 
+export const updateSelectedContract = async (contratoId) => {
+    const response = await fetchWithCredentials(`${API_URL}/auth/selected-contract`, {
+        method: 'PUT',
+        body: JSON.stringify({ contratoId }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al actualizar contrato seleccionado');
+    return result;
+};
+
 // ===== Cache para APIs Externas =====
 const cache = {
     nacionalidades: null,

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { getContratos } from '../services/api';
 import EmpleadoDetail from './EmpleadoDetail';
 import EmpleadoWizard from './EmpleadoWizard';
 import ConfirmDialog from './ConfirmDialog';
@@ -8,8 +9,9 @@ import './Navbar.css';
 
 const Navbar = () => {
     const navigate = useNavigate();
-    const { user, logout, checkAuth } = useAuth();
+    const { user, logout, checkAuth, seleccionarContrato } = useAuth();
     const [showMenu, setShowMenu] = useState(false);
+    const [contratos, setContratos] = useState([]);
     const [showProfile, setShowProfile] = useState(false);
     const [showEditWizard, setShowEditWizard] = useState(false);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -35,7 +37,7 @@ const Navbar = () => {
 
     if (!user) return null;
 
-    // Determinar avatar según género
+    // Determinar avatar según género y cargar contratos
     useEffect(() => {
         if (!user) return;
 
@@ -43,7 +45,30 @@ const Navbar = () => {
         const randomIndex = Math.floor(Math.random() * 3) + 1;
 
         setAvatarPath(`/avatares/${genero}/${genero}${randomIndex}.jpg`);
+
+        // Fetch user contracts for selector
+        if (user.esEmpleado && user.empleadoId) {
+            getContratos({ empleadoId: user.empleadoId, activo: true })
+                .then(res => {
+                    setContratos(res.data || []);
+                })
+                .catch(console.error);
+        } else {
+            setContratos([]);
+        }
     }, [user]);
+
+    const handleContractChange = async (e) => {
+        const id = e.target.value;
+        if (id) {
+            try {
+                await seleccionarContrato(parseInt(id));
+                setShowMenu(false); // Close menu after selection or keep it open? User preference usually to keep context. Let's close to feedback success implicitly.
+            } catch (err) {
+                console.error("Failed to select contract", err);
+            }
+        }
+    };
 
     // Truncar nombre si es muy largo
     const truncateName = (name, maxLength = 20) => {
@@ -125,6 +150,34 @@ const Navbar = () => {
 
                             {showMenu && (
                                 <div className="user-menu-dropdown">
+                                    <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--neutral-200)', minWidth: '220px' }}>
+                                        <label style={{ display: 'block', fontSize: '0.70rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--neutral-500)', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>
+                                            Contrato Activo
+                                        </label>
+                                        <select
+                                            className="form-select"
+                                            style={{ width: '100%', fontSize: '0.85rem', padding: '0.5rem', height: 'auto', backgroundColor: 'var(--neutral-50)', borderColor: 'var(--neutral-200)' }}
+                                            value={user.ultimoContratoSeleccionadoId || ''}
+                                            onChange={handleContractChange}
+                                            disabled={!contratos.length}
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            {contratos.length === 0 ? (
+                                                <option value="">Sin contratos</option>
+                                            ) : (
+                                                contratos.map(c => {
+                                                    const puesto = c.puestos && c.puestos.length > 0 ? c.puestos[0].nombre : 'Sin Puesto';
+                                                    const empresa = c.puestos && c.puestos.length > 0 ? c.puestos[0].departamento?.area?.empresa?.nombre : 'Empresa';
+                                                    return (
+                                                        <option key={c.id} value={c.id}>
+                                                            {puesto} - {empresa}
+                                                        </option>
+                                                    );
+                                                })
+                                            )}
+                                        </select>
+                                    </div>
+
                                     <button
                                         className="menu-item"
                                         onClick={handleViewProfile}

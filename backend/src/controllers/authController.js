@@ -1,4 +1,4 @@
-const { Usuario, Empleado } = require('../models');
+const { Usuario, Empleado, Contrato } = require('../models');
 const { body, validationResult } = require('express-validator');
 const bcrypt = require('bcrypt');
 
@@ -49,9 +49,20 @@ const login = async (req, res) => {
         const emp = await Empleado.findOne({
             where: {
                 usuarioId: usuario.id
-                // idealmente filtrar por espacioTrabajoId si lo tenemos
             }
         });
+
+        // Lógica de contrato seleccionado por defecto
+        if (emp && !emp.ultimoContratoSeleccionadoId) {
+            const ultimoContrato = await Contrato.findOne({
+                where: { empleadoId: emp.id, activo: true },
+                order: [['fechaInicio', 'DESC'], ['createdAt', 'DESC']]
+            });
+            if (ultimoContrato) {
+                await emp.update({ ultimoContratoSeleccionadoId: ultimoContrato.id });
+                emp.ultimoContratoSeleccionadoId = ultimoContrato.id;
+            }
+        }
 
         const userData = {
             id: usuario.id,
@@ -82,6 +93,7 @@ const login = async (req, res) => {
                 codigoPostal: emp.codigoPostal,
                 provinciaId: emp.provinciaId,
                 ciudadId: emp.ciudadId,
+                ultimoContratoSeleccionadoId: emp.ultimoContratoSeleccionadoId,
             } : {})
         };
 
@@ -214,6 +226,18 @@ const getCurrentUser = async (req, res) => {
         // Buscar empleado asociado por separado (evita problemas con limit en hasMany)
         const empleado = await Empleado.findOne({ where: { usuarioId } });
         if (empleado) {
+            // Lógica de contrato seleccionado por defecto si es nulo
+            if (!empleado.ultimoContratoSeleccionadoId) {
+                const ultimoContrato = await Contrato.findOne({
+                    where: { empleadoId: empleado.id, activo: true },
+                    order: [['fechaInicio', 'DESC'], ['createdAt', 'DESC']]
+                });
+                if (ultimoContrato) {
+                    await empleado.update({ ultimoContratoSeleccionadoId: ultimoContrato.id });
+                    empleado.ultimoContratoSeleccionadoId = ultimoContrato.id;
+                }
+            }
+
             const emp = empleado.get({ plain: true });
             Object.assign(result, {
                 empleadoId: emp.id,
@@ -233,6 +257,7 @@ const getCurrentUser = async (req, res) => {
                 codigoPostal: emp.codigoPostal,
                 provinciaId: emp.provinciaId,
                 ciudadId: emp.ciudadId,
+                ultimoContratoSeleccionadoId: emp.ultimoContratoSeleccionadoId,
             });
         }
 
@@ -309,10 +334,51 @@ const updatePassword = [
     }
 ];
 
+/**
+ * Actualizar contrato seleccionado
+ */
+const updateSelectedContract = async (req, res) => {
+    try {
+        const { contratoId } = req.body;
+        const usuarioSesionId = req.session.usuarioId || req.session.empleadoId;
+
+        if (!usuarioSesionId) return res.status(401).json({ error: 'No autorizado' });
+
+        const emp = await Empleado.findOne({ where: { usuarioId: usuarioSesionId } });
+
+        if (!emp) {
+            return res.status(404).json({ error: 'Empleado no encontrado' });
+        }
+
+        if (contratoId) {
+            // Validar que el contrato sea del empleado
+            const contrato = await Contrato.findOne({
+                where: {
+                    id: contratoId,
+                    empleadoId: emp.id
+                }
+            });
+
+            if (!contrato) {
+                return res.status(403).json({ error: 'Contrato no válido o no pertenece al empleado' });
+            }
+
+            await emp.update({ ultimoContratoSeleccionadoId: contratoId });
+        }
+
+        res.json({ success: true, contratoId });
+
+    } catch (error) {
+        console.error('Error updating selected contract:', error);
+        res.status(500).json({ error: 'Error interno al actualizar contrato seleccionado' });
+    }
+};
+
 module.exports = {
     login,
     logout,
     register,
     getCurrentUser,
     updatePassword,
+    updateSelectedContract,
 };
