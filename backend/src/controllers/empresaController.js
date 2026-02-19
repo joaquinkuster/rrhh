@@ -1,4 +1,4 @@
-const { Empresa, Area, Departamento, Puesto, Contrato } = require('../models');
+const { Empresa, Area, Departamento, Puesto, Contrato, EspacioTrabajo, Empleado } = require('../models');
 const { Op } = require('sequelize');
 
 const includeStructure = [{
@@ -40,10 +40,43 @@ const getAll = async (req, res) => {
             where.nombre = { [Op.like]: `%${search}%` };
         }
 
+        const usuarioSesionId = req.session.usuarioId || req.session.empleadoId;
+        const esAdmin = req.session.esAdministrador;
+
+        if (req.query.espacioTrabajoId) {
+            where.espacioTrabajoId = req.query.espacioTrabajoId;
+        } else if (!esAdmin) {
+            // Si NO es admin y no hay filtro explícito, buscar sus espacios
+            const empleadoSesion = await Empleado.findOne({ where: { usuarioId: usuarioSesionId } });
+
+            if (empleadoSesion) {
+                where.espacioTrabajoId = empleadoSesion.espacioTrabajoId;
+            } else {
+                // Si es propietario
+                const espaciosPropios = await EspacioTrabajo.findAll({
+                    where: { propietarioId: usuarioSesionId },
+                    attributes: ['id']
+                });
+
+                if (espaciosPropios.length > 0) {
+                    const espaciosIds = espaciosPropios.map(e => e.id);
+                    where.espacioTrabajoId = { [Op.in]: espaciosIds };
+                } else {
+                    // Si no tiene espacios propios ni es empleado, no debe ver nada
+                    where.espacioTrabajoId = -1;
+                }
+            }
+        }
+
         const offset = (parseInt(page) - 1) * parseInt(limit);
 
         const { count, rows } = await Empresa.findAndCountAll({
             where,
+            include: [{
+                model: EspacioTrabajo,
+                as: 'espacioTrabajo',
+                attributes: ['id', 'nombre']
+            }],
             order: [['nombre', 'ASC']],
             limit: parseInt(limit),
             offset,
@@ -83,7 +116,11 @@ const getById = async (req, res) => {
 // Crear empresa con estructura anidada
 const create = async (req, res) => {
     try {
-        const { nombre, email, telefono, industria, direccion, areas } = req.body;
+        let { nombre, email, telefono, industria, direccion, areas, espacioTrabajoId } = req.body;
+
+        if (!espacioTrabajoId) {
+            return res.status(400).json({ error: 'Debe pertenecer a un espacio de trabajo para crear una empresa. Por favor cree un Espacio de Trabajo primero.' });
+        }
 
         const nuevaEmpresa = await Empresa.create({
             nombre,
@@ -91,7 +128,8 @@ const create = async (req, res) => {
             telefono,
             industria,
             direccion,
-            areas
+            areas,
+            espacioTrabajoId
         }, {
             include: includeStructure
         });

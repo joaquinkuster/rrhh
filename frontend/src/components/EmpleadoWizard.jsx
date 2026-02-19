@@ -35,7 +35,7 @@ const FieldError = ({ message }) => {
     return <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>{message}</span>;
 };
 
-const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess, isPublicRegistration = false }) => {
+const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess }) => {
     const isEditMode = !!empleadoToEdit;
     const [currentStep, setCurrentStep] = useState(1);
     const [error, setError] = useState('');
@@ -327,8 +327,8 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess, isPublic
                 }
             }
 
-            // Validación de espacio de trabajo (no requerido en registro público)
-            if (!isPublicRegistration && !espacioTrabajoId) {
+            // Validación de espacio de trabajo
+            if (!espacioTrabajoId) {
                 errors.espacioTrabajoId = 'El espacio de trabajo es requerido';
             }
         }
@@ -386,11 +386,6 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess, isPublic
 
                 await updateEmpleado(empleadoToEdit.id, data);
                 onSuccess();
-            } else if (isPublicRegistration) {
-                // Para registro público, usar la API de registro que no requiere autenticación
-                const { register } = await import('../services/api');
-                const nuevoEmpleado = await register(data);
-                onSuccess(nuevoEmpleado);
             } else {
                 const nuevoEmpleado = await createEmpleado(data);
                 onSuccess(nuevoEmpleado);
@@ -732,18 +727,15 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess, isPublic
             </div>
 
             {/* Espacio de Trabajo */}
-            {!isPublicRegistration && (
-                <EspacioTrabajoSelector
-                    value={espacioTrabajoId}
-                    onChange={(e) => setEspacioTrabajoId(e.target.value)}
-                    onBlur={() => handleBlur('espacioTrabajoId')}
-                    canChange={!isEditMode || canChangeWorkspace}
-                    changeRestrictionMessage={workspaceChangeMessage}
-                    touched={touched.espacioTrabajoId}
-                    error={fieldErrors.espacioTrabajoId}
-                    disabled={isPublicRegistration}
-                />
-            )}
+            <EspacioTrabajoSelector
+                value={espacioTrabajoId}
+                onChange={(e) => setEspacioTrabajoId(e.target.value)}
+                onBlur={() => handleBlur('espacioTrabajoId')}
+                canChange={!isEditMode || canChangeWorkspace}
+                changeRestrictionMessage={workspaceChangeMessage}
+                touched={touched.espacioTrabajoId}
+                error={fieldErrors.espacioTrabajoId}
+            />
         </div>
     );
 
@@ -855,13 +847,12 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess, isPublic
 
 
 
-    // Render content without modal wrapper for public registration
     const content = (
         <>
-            <div className="modal-body" style={{ padding: isPublicRegistration ? '0' : '2rem' }}>
+            <div className="modal-body" style={{ padding: '2rem' }}>
                 <StepTracker steps={steps} currentStep={currentStep} />
 
-                <div style={{ marginTop: isPublicRegistration ? '2rem' : '2rem', textAlign: 'center', marginBottom: '2rem' }}>
+                <div style={{ marginTop: '2rem', textAlign: 'center', marginBottom: '2rem' }}>
                     <h3 style={{ fontSize: '1.5rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
                         {steps[currentStep - 1].title}
                     </h3>
@@ -881,7 +872,7 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess, isPublic
                 {currentStep === 2 && renderStep2()}
             </div>
 
-            <div className="modal-footer" style={{ display: 'flex', justifyContent: 'space-between', padding: isPublicRegistration ? '1.5rem 0 0 0' : '1.5rem 2rem', borderTop: isPublicRegistration ? 'none' : '1px solid var(--border-color)' }}>
+            <div className="modal-footer" style={{ display: 'flex', justifyContent: 'space-between', padding: '1.5rem 2rem', borderTop: '1px solid var(--border-color)' }}>
                 <div>
                     {currentStep > 1 && (
                         <button className="btn btn-secondary" onClick={prevStep}>
@@ -890,18 +881,16 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess, isPublic
                     )}
                 </div>
                 <div style={{ display: 'flex', gap: '1rem' }}>
-                    {!isPublicRegistration && (
-                        <button className="btn btn-secondary" onClick={onClose}>
-                            Cancelar
-                        </button>
-                    )}
+                    <button className="btn btn-secondary" onClick={onClose}>
+                        Cancelar
+                    </button>
                     {currentStep < 2 ? (
                         <button className="btn btn-primary" onClick={nextStep}>
                             Siguiente
                         </button>
                     ) : (
                         <button className="btn btn-primary" onClick={handleSubmit} disabled={loading}>
-                            {loading ? 'Guardando...' : (isEditMode ? 'Actualizar' : isPublicRegistration ? 'Registrarse' : 'Crear')} {isPublicRegistration ? '' : 'Empleado'}
+                            {loading ? 'Guardando...' : (isEditMode ? 'Actualizar' : 'Crear')} Empleado
                         </button>
                     )}
                 </div>
@@ -909,12 +898,7 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess, isPublic
         </>
     );
 
-    // If public registration, render without modal wrapper
-    if (isPublicRegistration) {
-        return <div>{content}</div>;
-    }
-
-    // Otherwise, render with modal wrapper
+    // Render with modal wrapper
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '950px' }}>

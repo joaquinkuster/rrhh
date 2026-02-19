@@ -8,7 +8,7 @@ const includeEmpleado = [{
     include: [{
         model: Usuario,
         as: 'usuario',
-        attributes: ['nombre', 'apellido', 'numeroDocumento']
+        attributes: ['nombre', 'apellido']
     }]
 }];
 

@@ -2,7 +2,7 @@
 .register-card {
     grid-template-columns: 3fr 7fr !important;
     /* 30/70 split - REVERSED */
-    max-width: 1400px !important;
+    /* max-width: 1400px !important; */
     /* Increased width */
 }
 

@@ -139,11 +139,16 @@ const ContactoWizard = ({ contacto, onClose, onSuccess }) => {
         }
     }, [contacto]);
 
-    const empleadoOptions = empleados.map(emp => ({
-        value: emp.id,
-        label: `${emp.nombre} ${emp.apellido} (${emp.numeroDocumento || 'Sin doc'})`,
-        empleado: emp,
-    }));
+    const empleadoOptions = Object.values(empleados.reduce((acc, emp) => {
+        const wsName = emp.espacioTrabajo?.nombre || 'Sin Espacio';
+        if (!acc[wsName]) acc[wsName] = { label: wsName, options: [] };
+        acc[wsName].options.push({
+            value: emp.id,
+            label: `${emp.apellido}, ${emp.nombre} - ${emp.numeroDocumento || 'Sin doc'}`,
+            empleado: emp,
+        });
+        return acc;
+    }, {}));
 
     const handleEmpleadoChange = (option) => {
         setSelectedEmpleado(option);
@@ -299,6 +304,11 @@ const ContactoWizard = ({ contacto, onClose, onSuccess }) => {
                     placeholder="Buscar y seleccionar empleado..."
                     noOptionsMessage={() => "No se encontraron empleados"}
                     styles={getSelectStyles(isDark)}
+                    formatGroupLabel={data => (
+                        <div style={{ fontWeight: 'bold', textTransform: 'uppercase', fontSize: '0.75rem', color: '#64748b' }}>
+                            {data.label}
+                        </div>
+                    )}
                     isClearable
                     menuPortalTarget={document.body}
                     menuPosition="fixed"

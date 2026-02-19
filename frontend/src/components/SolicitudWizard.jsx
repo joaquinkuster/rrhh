@@ -98,7 +98,7 @@ const getSelectStyles = (isDark) => ({
         border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
         borderRadius: '0.5rem',
         boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-        zIndex: 1000,
+        zIndex: 9999,
     }),
     option: (base, state) => ({
         ...base,
@@ -184,73 +184,65 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
         loadData();
     }, []);
 
+    const contratoOptions = Object.values(contratos.reduce((acc, contrato) => {
+        const wsName = contrato.empleado?.espacioTrabajo?.nombre || 'Sin Espacio';
+        if (!acc[wsName]) acc[wsName] = { label: wsName, options: [] };
+
+        const nombreEmpleado = contrato.empleado?.usuario ? `${contrato.empleado.usuario.apellido}, ${contrato.empleado.usuario.nombre}` : 'Sin nombre';
+        const puesto = contrato.puestos && contrato.puestos.length > 0 ? contrato.puestos[0].nombre : 'Sin puesto';
+        const empresa = contrato.puestos && contrato.puestos.length > 0 && contrato.puestos[0].departamento?.area?.empresa?.nombre;
+        const label = `${nombreEmpleado} - ${puesto}${empresa ? ` (${empresa})` : ''}`;
+
+        acc[wsName].options.push({
+            value: contrato.id,
+            label: label,
+            contrato: contrato
+        });
+        return acc;
+    }, {}));
+
+    // Helper to find option for editing or initial values
+    const findContratoOption = (id) => {
+        for (const group of contratoOptions) {
+            const found = group.options.find(opt => opt.value === id);
+            if (found) return found;
+        }
+        return null;
+    };
+
+    // Initialize form
     useEffect(() => {
         if (solicitud) {
-            const contratoOpt = formatContratoOption(solicitud.contrato);
-            setSelectedContrato(contratoOpt);
+            setFormData(prev => ({
+                ...prev,
+                contratoId: solicitud.contratoId || '',
+                tipo: solicitud.tipo || '',
+                fechaInicio: solicitud.fechaInicio ? solicitud.fechaInicio.split('T')[0] : '',
+                fechaFin: solicitud.fechaFin ? solicitud.fechaFin.split('T')[0] : '',
+                motivo: solicitud.motivo || '',
+                descripcion: solicitud.descripcion || '',
+                documentos: solicitud.documentos || [],
+                estado: solicitud.estado || 'pendiente',
+                fechaSolicitud: solicitud.fechaSolicitud || new Date().toISOString().split('T')[0],
+                diasHabiles: solicitud.diasHabiles || 0,
+            }));
             setSelectedTipo(solicitud.tipoSolicitud);
 
-            const typeData = solicitud.licencia || solicitud.vacaciones || solicitud.horasExtras || solicitud.renuncia || {};
-            setFormData({ ...typeData });
+            if (solicitud.contrato) {
+                const c = solicitud.contrato;
+                const nombre = c.empleado?.usuario ? `${c.empleado.usuario.apellido}, ${c.empleado.usuario.nombre}` : 'Sin nombre';
+                const puesto = c.puestos?.[0]?.nombre || 'Sin puesto';
+                const empresa = c.puestos?.[0]?.departamento?.area?.empresa?.nombre;
+                setSelectedContrato({
+                    value: c.id,
+                    label: `${nombre} - ${puesto}${empresa ? ` (${empresa})` : ''}`,
+                    contrato: c
+                });
+            }
         }
     }, [solicitud]);
 
-    // Load vacation info when contrato or periodo changes and type is vacaciones
-    useEffect(() => {
-        const loadVacacionesDisponiblesInfo = async () => {
-            if (selectedContrato && selectedTipo === 'vacaciones') {
-                const periodo = formData.periodo || new Date().getFullYear();
-                try {
-                    const info = await getDiasDisponiblesVacaciones(selectedContrato.value, periodo);
-                    setFormData(prev => ({
-                        ...prev,
-                        diasCorrespondientes: info.diasCorrespondientes || 0,
-                        diasTomados: info.diasTomados || 0,
-                        diasDisponibles: info.diasDisponibles || 0,
-                        periodo: periodo,
-                    }));
-                } catch (err) {
-                    console.error('Error loading vacation info:', err);
-                }
-            }
-        };
-        loadVacacionesDisponiblesInfo();
-    }, [selectedContrato, selectedTipo, formData.periodo]);
-
-    // Calculate vacation return date and days when dates change
-    useEffect(() => {
-        const loadVacacionesSolicitadosInfo = async () => {
-            if (selectedTipo === 'vacaciones' && formData.fechaInicio && formData.fechaFin) {
-                const fechaInicio = formData.fechaInicio;
-                const fechaFin = formData.fechaFin;
-
-                try {
-                    const info = await getDiasSolicitadosVacaciones(fechaInicio, fechaFin);
-                    setFormData(prev => ({
-                        ...prev,
-                        fechaRegreso: info.fechaRegreso,
-                        diasSolicitud: info.diasSolicitud || 0,
-                    }));
-                } catch (err) {
-                    console.error('Error loading vacation info:', err);
-                }
-            }
-        };
-        loadVacacionesSolicitadosInfo();
-    }, [formData.fechaInicio, formData.fechaFin, selectedTipo]);
-
-    // Calculate overtime hours when times change
-    useEffect(() => {
-        if (selectedTipo === 'horas_extras' && formData.horaInicio && formData.horaFin) {
-            const cantidadHoras = calcularHoras(formData.horaInicio, formData.horaFin);
-            setFormData(prev => ({
-                ...prev,
-                cantidadHoras,
-            }));
-        }
-    }, [formData.horaInicio, formData.horaFin, selectedTipo]);
-
-    // Calculate license days when dates change
+    // Calcular días hábiles automáticamente al cambiar fechas
     useEffect(() => {
         if (selectedTipo === 'licencia' && formData.fechaInicio && formData.fechaFin) {
             const inicio = new Date(formData.fechaInicio);
@@ -290,19 +282,7 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
         loadRegistros();
     }, [formData.motivoLegal, selectedTipo, selectedContrato]);
 
-    const formatContratoOption = (contrato) => {
-        if (!contrato) return null;
-        const nombre = contrato.empleado ? `${contrato.empleado.apellido}, ${contrato.empleado.nombre}` : 'Sin nombre';
-        const puesto = contrato.puestos?.[0]?.nombre || 'Sin puesto';
-        const empresa = contrato.puestos?.[0]?.departamento?.area?.empresa?.nombre;
-        return {
-            value: contrato.id,
-            label: `${nombre} - ${puesto}${empresa ? ` (${empresa})` : ''}`,
-            contrato,
-        };
-    };
 
-    const contratoOptions = contratos.map(formatContratoOption);
 
     const handleChange = (field, value) => { // ✅ Síncrono ahora
         setFormData(prev => ({ ...prev, [field]: value }));
@@ -491,17 +471,28 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
         <div style={{ display: 'grid', gap: '1.5rem' }}>
             <div className="form-group">
                 <label className="form-label">Contrato *</label>
-                <Select
-                    isLoading={loadingContratos}
-                    options={contratoOptions}
-                    value={selectedContrato}
-                    onChange={setSelectedContrato}
-                    onBlur={() => setTouched(prev => ({ ...prev, contrato: true }))}
-                    placeholder="Buscar contrato por empleado..."
-                    noOptionsMessage={() => "No se encontraron contratos"}
-                    styles={getSelectStyles(isDark)}
-                    isDisabled={isEditing}
-                />
+                {loadingContratos ? (
+                    <div className="form-input" style={{ display: 'flex', alignItems: 'center', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+                        Cargando contratos...
+                    </div>
+                ) : (
+                    <Select
+                        options={contratoOptions}
+                        value={selectedContrato}
+                        onChange={setSelectedContrato}
+                        onBlur={() => setTouched(prev => ({ ...prev, contrato: true }))}
+                        placeholder="Buscar contrato por empleado..."
+                        noOptionsMessage={() => "No se encontraron contratos"}
+                        styles={getSelectStyles(isDark)}
+                        isDisabled={isEditing}
+                        isClearable={!isEditing}
+                        formatGroupLabel={data => (
+                            <div style={{ fontWeight: 'bold', textTransform: 'uppercase', fontSize: '0.75rem', color: '#64748b' }}>
+                                {data.label}
+                            </div>
+                        )}
+                    />
+                )}
                 <FieldError message={touched.contrato && fieldErrors.contrato} />
             </div>
 

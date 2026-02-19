@@ -21,7 +21,7 @@ const includeContrato = {
             include: [{
                 model: Usuario,
                 as: 'usuario',
-                attributes: ['id', 'nombre', 'apellido', 'numeroDocumento']
+                attributes: ['id', 'nombre', 'apellido']
             }]
         },
         {

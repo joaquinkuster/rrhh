@@ -1,7 +1,6 @@
 const express = require('express');
 const cors = require('cors');
 const session = require('express-session');
-const SequelizeStore = require('connect-session-sequelize')(session.Store);
 const sequelize = require('./config/database');
 const authRoutes = require('./routes/authRoutes');
 const empleadoRoutes = require('./routes/empleadoRoutes');
@@ -37,32 +36,22 @@ app.use(cors({
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Configurar session store con Sequelize
-const sessionStore = new SequelizeStore({
-    db: sequelize,
-    tableName: 'sessions', // Nombre de tabla en minúsculas
-    checkExpirationInterval: 15 * 60 * 1000, // Limpiar sesiones expiradas cada 15 minutos
-    expiration: 24 * 60 * 60 * 1000, // Sesiones expiran en 24 horas
-});
-
-// Configurar express-session
+// Configurar express-session con MemoryStore (suficiente para desarrollo)
 app.use(session({
     secret: process.env.SESSION_SECRET || 'cataratas-rh-secret-key-change-in-production',
-    store: sessionStore,
     resave: false,
     saveUninitialized: false,
-    name: 'connect.sid', // Nombre explícito de la cookie
+    name: 'connect.sid',
     cookie: {
-        secure: false, // Cambiar a true en producción con HTTPS
+        secure: false,
         httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000, // 24 horas por defecto
+        maxAge: 24 * 60 * 60 * 1000, // 24 horas
         sameSite: 'lax',
     },
-    rolling: true, // Renovar cookie en cada request
 }));
 
-// Exportar sessionStore para sincronizar en index.js
-module.exports.sessionStore = sessionStore;
+// sessionStore placeholder (no se usa MemoryStore externo)
+app.sessionStore = null;
 
 // Rutas de autenticación (públicas)
 app.use('/api/auth', authRoutes);

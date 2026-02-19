@@ -1,4 +1,4 @@
-const { Contrato, Empleado, Puesto, Departamento, Area, Empresa, ContratoPuesto, Rol, Usuario } = require('../models');
+const { Contrato, Empleado, Puesto, Departamento, Area, Empresa, ContratoPuesto, Rol, Usuario, EspacioTrabajo } = require('../models');
 const { Op } = require('sequelize');
 const sequelize = require('../config/database');
 
@@ -7,11 +7,18 @@ const includeRelations = [
     {
         model: Empleado,
         as: 'empleado',
-        include: [{
-            model: Usuario,
-            as: 'usuario',
-            attributes: ['id', 'nombre', 'apellido', 'numeroDocumento']
-        }]
+        include: [
+            {
+                model: Usuario,
+                as: 'usuario',
+                attributes: ['id', 'nombre', 'apellido']
+            },
+            {
+                model: EspacioTrabajo,
+                as: 'espacioTrabajo',
+                attributes: ['id', 'nombre']
+            }
+        ]
     },
     {
         model: Rol,
@@ -62,6 +69,42 @@ const getAll = async (req, res) => {
 
         if (estado) {
             where.estado = estado;
+        }
+
+        // --- Filtrado por Espacio de Trabajo (via Empleado) ---
+        const usuarioSesionId = req.session.usuarioId || req.session.empleadoId;
+        const esAdmin = req.session.esAdministrador;
+
+        if (!esAdmin && !empleadoId) {
+            // Solo aplicar filtro de workspace si no se pidió un empleadoId específico
+            const empleadoSesion = await Empleado.findOne({ where: { usuarioId: usuarioSesionId } });
+
+            if (empleadoSesion) {
+                // Es empleado → solo contratos de empleados de su mismo workspace
+                const empleadosDelWorkspace = await Empleado.findAll({
+                    where: { espacioTrabajoId: empleadoSesion.espacioTrabajoId },
+                    attributes: ['id']
+                });
+                where.empleadoId = { [Op.in]: empleadosDelWorkspace.map(e => e.id) };
+            } else {
+                // Es propietario (no empleado) → contratos de todos sus workspaces
+                const espaciosPropios = await EspacioTrabajo.findAll({
+                    where: { propietarioId: usuarioSesionId },
+                    attributes: ['id']
+                });
+
+                if (espaciosPropios.length > 0) {
+                    const espaciosIds = espaciosPropios.map(e => e.id);
+                    const empleadosDeWorkspaces = await Empleado.findAll({
+                        where: { espacioTrabajoId: { [Op.in]: espaciosIds } },
+                        attributes: ['id']
+                    });
+                    where.empleadoId = { [Op.in]: empleadosDeWorkspaces.map(e => e.id) };
+                } else {
+                    // Sin workspace → no ve nada
+                    where.empleadoId = -1;
+                }
+            }
         }
 
         const offset = (parseInt(page) - 1) * parseInt(limit);

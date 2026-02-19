@@ -1,4 +1,4 @@
-const { Rol, Permiso, RolPermiso, EspacioTrabajo } = require('../models');
+const { Rol, Permiso, RolPermiso, EspacioTrabajo, Empleado } = require('../models');
 const { Op } = require('sequelize');
 
 /**
@@ -21,6 +21,35 @@ const getAll = async (req, res) => {
         // Filtro de estado activo
         if (activo !== undefined) {
             whereClause.activo = activo === 'true';
+        }
+
+        const usuarioSesionId = req.session.usuarioId || req.session.empleadoId;
+        const esAdmin = req.session.esAdministrador;
+
+        // Filtro de Espacio de Trabajo
+        if (req.query.espacioTrabajoId) {
+            whereClause.espacioTrabajoId = req.query.espacioTrabajoId;
+        } else if (!esAdmin) {
+            // Si NO es admin y no hay filtro explícito, buscar sus espacios
+            const empleadoSesion = await Empleado.findOne({ where: { usuarioId: usuarioSesionId } });
+
+            if (empleadoSesion) {
+                whereClause.espacioTrabajoId = empleadoSesion.espacioTrabajoId;
+            } else {
+                // Si es propietario
+                const espaciosPropios = await EspacioTrabajo.findAll({
+                    where: { propietarioId: usuarioSesionId },
+                    attributes: ['id']
+                });
+
+                if (espaciosPropios.length > 0) {
+                    const espaciosIds = espaciosPropios.map(e => e.id);
+                    whereClause.espacioTrabajoId = { [Op.in]: espaciosIds };
+                } else {
+                    // Si no tiene espacios propios ni es empleado, no debe ver nada
+                    whereClause.espacioTrabajoId = -1;
+                }
+            }
         }
 
         const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -91,11 +120,15 @@ const getById = async (req, res) => {
  */
 const create = async (req, res) => {
     try {
-        const { nombre, descripcion, permisos = [] } = req.body;
+        let { nombre, descripcion, permisos = [], espacioTrabajoId } = req.body;
 
         // Validar datos requeridos
         if (!nombre) {
             return res.status(400).json({ error: 'El nombre del rol es requerido' });
+        }
+
+        if (!espacioTrabajoId) {
+            return res.status(400).json({ error: 'Debe pertenecer a un espacio de trabajo para crear un rol.' });
         }
 
         // Crear el rol
@@ -103,6 +136,7 @@ const create = async (req, res) => {
             nombre,
             descripcion,
             activo: true,
+            espacioTrabajoId
         });
 
         // Asignar permisos si se proporcionaron

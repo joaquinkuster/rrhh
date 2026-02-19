@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import EmpleadoWizard from '../components/EmpleadoWizard';
+import RegistroPublicoForm from '../components/RegistroPublicoForm';
 import BackgroundCarousel from '../components/BackgroundCarousel';
 import Alert from '../components/Alert';
 import './Register.css';
@@ -11,14 +11,9 @@ const Register = () => {
     const { checkAuth } = useAuth();
     const [showSuccessAlert, setShowSuccessAlert] = useState(false);
 
-    const handleSuccess = async (empleado) => {
-        // Mostrar alerta de éxito
+    const handleSuccess = async () => {
         setShowSuccessAlert(true);
-
-        // Verificar autenticación (el backend ya creó la sesión)
         await checkAuth();
-
-        // Redirigir después de un momento
         setTimeout(() => {
             navigate('/dashboard');
         }, 1500);
@@ -44,20 +39,16 @@ const Register = () => {
                         <div className="auth-promo">
                             <img src="/logo.png" alt="CataratasRH" className="register-sidebar-logo" />
                             <h2>Cataratas<span>RH</span></h2>
-                            <p>Bienvenido al Sistema de Gestión de Recursos Humanos</p>
+                            <p>Registrate en el sistema</p>
                             <Link to="/login" className="register-back-link">
-                                ← Volver al inicio de sesión
+                                ← Iniciar sesión
                             </Link>
                         </div>
                     </div>
 
                     {/* Right side - Form (70%) */}
                     <div className="auth-left register-right-side">
-                        <EmpleadoWizard
-                            onClose={() => navigate('/login')}
-                            onSuccess={handleSuccess}
-                            isPublicRegistration={true}
-                        />
+                        <RegistroPublicoForm onSuccess={handleSuccess} />
                     </div>
                 </div>
             </div>

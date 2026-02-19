@@ -13,7 +13,7 @@ const includeContratoDetalle = (alias) => ({
             include: [{
                 model: Usuario,
                 as: 'usuario',
-                attributes: ['nombre', 'apellido', 'numeroDocumento']
+                attributes: ['nombre', 'apellido']
             }]
         },
         {

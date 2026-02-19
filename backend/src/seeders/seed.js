@@ -63,19 +63,8 @@ const runSeed = async () => {
             email: 'admin@cataratasrh.com',
             contrasena: 'Admin123!',
             esAdministrador: true,
-            esEmpleado: false, // Es solo usuario sistema
+            esEmpleado: false,
             activo: true,
-            // Datos personales dummy para cumplir validaciones
-            tipoDocumento: 'cedula',
-            numeroDocumento: '00000000',
-            cuil: '20-00000000-0',
-            fechaNacimiento: '1980-01-01',
-            nacionalidadId: 1, // Asumiendo tabla nacionalidades pre-cargada o id 1 válido
-            genero: 'otro',
-            estadoCivil: 'soltero',
-            calle: 'Sistema',
-            numero: '0',
-            provinciaId: 1 // Dummy
         });
 
         // 2. Crear Espacio de Trabajo Principal
@@ -169,7 +158,12 @@ const runSeed = async () => {
             activo: true,
             esAdministrador: false,
             esEmpleado: true,
-            // Datos personales movidos desde Empleado
+        });
+
+        // Empleado con datos personales y dirección
+        const empleadoJuan = await Empleado.create({
+            usuarioId: usuarioJuan.id,
+            espacioTrabajoId: espacioTrabajo.id,
             tipoDocumento: 'cedula',
             numeroDocumento: '30123456',
             cuil: '20-30123456-5',
@@ -180,13 +174,6 @@ const runSeed = async () => {
             calle: 'Av. Corrientes',
             numero: '1234',
             provinciaId: 1
-        });
-
-        // Empleado ahora es solo vinculación
-        const empleadoJuan = await Empleado.create({
-            usuarioId: usuarioJuan.id,
-            espacioTrabajoId: espacioTrabajo.id,
-            activo: true
         });
 
         // 6. Contratos

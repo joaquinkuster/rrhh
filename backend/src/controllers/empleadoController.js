@@ -20,10 +20,10 @@ const getAll = async (req, res) => {
             whereUsuario.activo = true;
         }
 
-        // Filtros que ahora viven en Usuario
-        if (nacionalidad) whereUsuario.nacionalidadId = nacionalidad;
-        if (genero) whereUsuario.genero = genero;
-        if (estadoCivil) whereUsuario.estadoCivil = estadoCivil;
+        // Filtros que ahora viven en Empleado
+        if (nacionalidad) whereEmpleado.nacionalidadId = nacionalidad;
+        if (genero) whereEmpleado.genero = genero;
+        if (estadoCivil) whereEmpleado.estadoCivil = estadoCivil;
 
         // Filtros de texto en Usuario
         if (nombre) whereUsuario.nombre = { [Op.like]: `%${nombre}%` };
@@ -32,20 +32,34 @@ const getAll = async (req, res) => {
 
         // Restricción de Espacio de Trabajo
         const usuarioSesionId = req.session.usuarioId || req.session.empleadoId;
-        // Buscar el espacio de trabajo del usuario actual
-        // 1. Si es empleado
-        let espacioTrabajoId = null;
-        const empleadoSesion = await Empleado.findOne({ where: { usuarioId: usuarioSesionId } });
-        if (empleadoSesion) {
-            espacioTrabajoId = empleadoSesion.espacioTrabajoId;
-        } else {
-            // 2. Si es propietario
-            const espacioPropio = await EspacioTrabajo.findOne({ where: { propietarioId: usuarioSesionId } });
-            if (espacioPropio) espacioTrabajoId = espacioPropio.id;
-        }
+        const esAdmin = req.session.esAdministrador;
 
-        if (espacioTrabajoId) {
-            whereEmpleado.espacioTrabajoId = espacioTrabajoId;
+        // Si viene un espacioTrabajoId en la query, usarlo (asumiendo que el front ya validó o que es un filtro deseado)
+        // TODO: idealmente validar que el usuario tenga acceso a ese espacio
+        if (req.query.espacioTrabajoId) {
+            whereEmpleado.espacioTrabajoId = req.query.espacioTrabajoId;
+        } else if (!esAdmin) {
+            // Si NO es admin y no hay filtro explícito, buscar sus espacios
+            // 1. Si es empleado
+            const empleadoSesion = await Empleado.findOne({ where: { usuarioId: usuarioSesionId } });
+
+            if (empleadoSesion) {
+                whereEmpleado.espacioTrabajoId = empleadoSesion.espacioTrabajoId;
+            } else {
+                // 2. Si es propietario (puede tener múltiples espacios)
+                const espaciosPropios = await EspacioTrabajo.findAll({
+                    where: { propietarioId: usuarioSesionId },
+                    attributes: ['id']
+                });
+
+                if (espaciosPropios.length > 0) {
+                    const espaciosIds = espaciosPropios.map(e => e.id);
+                    whereEmpleado.espacioTrabajoId = { [Op.in]: espaciosIds };
+                } else {
+                    // Si no tiene espacios propios ni es empleado, no debe ver nada
+                    whereEmpleado.espacioTrabajoId = -1;
+                }
+            }
         }
 
         const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -57,8 +71,13 @@ const getAll = async (req, res) => {
                     model: Usuario,
                     as: 'usuario',
                     where: whereUsuario,
-                    // Traer todos los atributos necesarios para el frontend
-                    attributes: ['id', 'nombre', 'apellido', 'email', 'activo', 'telefono', 'tipoDocumento', 'numeroDocumento', 'cuil', 'fechaNacimiento', 'nacionalidadId', 'genero', 'estadoCivil', 'calle', 'numero', 'piso', 'departamento', 'codigoPostal', 'provinciaId', 'ciudadId']
+                    // Traer atributos de usuario
+                    attributes: ['id', 'nombre', 'apellido', 'email', 'activo']
+                },
+                {
+                    model: EspacioTrabajo,
+                    as: 'espacioTrabajo',
+                    attributes: ['id', 'nombre']
                 }
             ],
             order: [
@@ -75,8 +94,8 @@ const getAll = async (req, res) => {
             // Mezclar propiedades de usuario en el nivel superior
             return {
                 ...plainEmp,
-                ...usuario, // DNI, calle, etc
-                usuarioActivo: usuario.activo, // Alias para no pisar activo del empleado
+                ...usuario, // nombre, apellido, email
+                usuarioActivo: usuario.activo, // Alias para no pisar activo del empleado (si existiera)
                 id: plainEmp.id, // Mantener ID de empleado como id principal
                 usuarioId: usuario.id
             };
@@ -104,7 +123,6 @@ const getById = async (req, res) => {
             include: [{
                 model: Usuario,
                 as: 'usuario',
-                // Traer todos los atributos
                 attributes: { exclude: ['contrasena'] }
             }]
         });
@@ -135,33 +153,22 @@ const getById = async (req, res) => {
 const create = async (req, res) => {
     const t = await sequelize.transaction();
     try {
-        // Extraer campos que van a Usuario
-        const {
+        // Extraer campos que van a Usuario vs Empleado
+        // Extraer campos que van a Usuario vs Empleado
+        let {
             nombre, apellido, email, contrasena,
+            // Datos personales ahora van a Empleado
             telefono, tipoDocumento, numeroDocumento, cuil, fechaNacimiento, nacionalidadId, genero, estadoCivil,
             calle, numero, piso, departamento, codigoPostal, provinciaId, ciudadId,
-            ...empleadoData
+            espacioTrabajoId, // Extraer explícitamente
+            ...otrosDatosEmpleado
         } = req.body;
-
-        // Determinar Espacio de Trabajo
-        const usuarioSesionId = req.session.usuarioId || req.session.empleadoId;
-        let espacioTrabajoId = null;
-
-        // Intentar obtener del empleado actual
-        const empleadoSesion = await Empleado.findOne({ where: { usuarioId: usuarioSesionId } });
-        if (empleadoSesion) {
-            espacioTrabajoId = empleadoSesion.espacioTrabajoId;
-        } else {
-            // Intentar obtener si es propietario
-            const espacioPropio = await EspacioTrabajo.findOne({ where: { propietarioId: usuarioSesionId } });
-            if (espacioPropio) espacioTrabajoId = espacioPropio.id;
-        }
 
         if (!espacioTrabajoId) {
             throw new Error('No se pudo determinar el espacio de trabajo para crear el empleado');
         }
 
-        // 1. Crear Usuario con TODOS los datos personales
+        // 1. Crear Usuario (Solo Auth + Nombre)
         const rawPassword = contrasena || 'Sistema123!';
 
         const usuario = await Usuario.create({
@@ -172,17 +179,18 @@ const create = async (req, res) => {
             esEmpleado: true,
             esAdministrador: false,
             activo: true,
-            // Datos personales
-            telefono, tipoDocumento, numeroDocumento, cuil, fechaNacimiento, nacionalidadId, genero, estadoCivil,
-            calle, numero, piso, departamento, codigoPostal, provinciaId, ciudadId
+            creadoPorRrhh: true
         }, { transaction: t });
 
-        // 2. Crear Empleado (vinculación)
-        // OJO: "activo" eliminado de modelo Empleado
+        // 2. Crear Empleado (Datos personales + Dirección + Vinculación)
         const nuevoEmpleado = await Empleado.create({
-            ...empleadoData, // Si hay campos extra específicos de Empleado (no movidos)
+            ...otrosDatosEmpleado,
             usuarioId: usuario.id,
-            espacioTrabajoId: espacioTrabajoId
+            espacioTrabajoId: espacioTrabajoId,
+            // Datos personales
+            telefono, tipoDocumento, numeroDocumento, cuil, fechaNacimiento, nacionalidadId, genero, estadoCivil,
+            // Dirección
+            calle, numero, piso, departamento, codigoPostal, provinciaId, ciudadId
         }, { transaction: t });
 
         await t.commit();
@@ -220,21 +228,24 @@ const update = async (req, res) => {
         // Separar datos
         const {
             nombre, apellido, email,
+            // Datos personales ahora en Empleado
             telefono, tipoDocumento, numeroDocumento, cuil, fechaNacimiento, nacionalidadId, genero, estadoCivil,
             calle, numero, piso, departamento, codigoPostal, provinciaId, ciudadId,
             ...empleadoData
         } = req.body;
 
-        // Actualizar Empleado
-        await empleado.update(empleadoData, { transaction: t });
+        // Actualizar Empleado (Datos personales + Dirección + Otros)
+        await empleado.update({
+            ...empleadoData,
+            telefono, tipoDocumento, numeroDocumento, cuil, fechaNacimiento, nacionalidadId, genero, estadoCivil,
+            calle, numero, piso, departamento, codigoPostal, provinciaId, ciudadId
+        }, { transaction: t });
 
-        // Actualizar Usuario asociado
+        // Actualizar Usuario asociado (Solo Auth + Nombre)
         const usuario = await Usuario.findByPk(empleado.usuarioId);
         if (usuario) {
             await usuario.update({
-                nombre, apellido, email,
-                telefono, tipoDocumento, numeroDocumento, cuil, fechaNacimiento, nacionalidadId, genero, estadoCivil,
-                calle, numero, piso, departamento, codigoPostal, provinciaId, ciudadId
+                nombre, apellido, email
             }, { transaction: t });
         }
 

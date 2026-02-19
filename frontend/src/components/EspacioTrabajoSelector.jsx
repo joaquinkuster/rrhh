@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getEspaciosTrabajo } from '../services/api';
+import { getEspaciosTrabajo, getEspacioTrabajoById } from '../services/api';
 
 /**
  * Componente selector de Espacio de Trabajo
@@ -24,18 +24,23 @@ const EspacioTrabajoSelector = ({
     const [espacios, setEspacios] = useState([]);
     const [loading, setLoading] = useState(true);
     const [autoAssigned, setAutoAssigned] = useState(false);
+    const [workspaceName, setWorkspaceName] = useState('');
 
     useEffect(() => {
-        loadEspacios();
-    }, []);
+        if (user) {
+            loadEspacios();
+        }
+    }, [user]);
 
     useEffect(() => {
         // Si el usuario es empleado y no se ha auto-asignado, asignar su espacio automáticamente
-        if (user?.esEmpleado && user?.empleado?.espacioTrabajoId && !autoAssigned && !value) {
+        const espacioId = user?.empleado?.espacioTrabajoId || user?.espacioTrabajoId;
+
+        if (user?.esEmpleado && espacioId && !autoAssigned && !value) {
             onChange({
                 target: {
                     name: 'espacioTrabajoId',
-                    value: user.empleado.espacioTrabajoId
+                    value: espacioId
                 }
             });
             setAutoAssigned(true);
@@ -45,8 +50,22 @@ const EspacioTrabajoSelector = ({
     const loadEspacios = async () => {
         try {
             setLoading(true);
-            const response = await getEspaciosTrabajo({ activo: 'true', limit: 100 });
-            setEspacios(response.data || []);
+
+            if (user?.esEmpleado) {
+                const espacioId = user?.empleado?.espacioTrabajoId || user?.espacioTrabajoId;
+                if (espacioId) {
+                    try {
+                        const data = await getEspacioTrabajoById(espacioId);
+                        setWorkspaceName(data.nombre);
+                    } catch (error) {
+                        console.error('Error al obtener info del espacio:', error);
+                        setWorkspaceName('Error al cargar');
+                    }
+                }
+            } else {
+                const response = await getEspaciosTrabajo({ activo: 'true', limit: 100 });
+                setEspacios(response.data || []);
+            }
         } catch (err) {
             console.error('Error al cargar espacios de trabajo:', err);
         } finally {
@@ -56,7 +75,9 @@ const EspacioTrabajoSelector = ({
 
     // Si el usuario es empleado, mostrar el espacio de trabajo asignado (solo lectura)
     if (user?.esEmpleado) {
-        const espacioNombre = user?.empleado?.espacioTrabajo?.nombre || 'Cargando...';
+        // Usar el nombre obtenido o mostrar loading/placeholder
+        const displayText = workspaceName || (loading ? 'Cargando...' : 'Sin asignar');
+
         return (
             <div className="form-group">
                 <label className="form-label">
@@ -65,7 +86,7 @@ const EspacioTrabajoSelector = ({
                 <input
                     type="text"
                     className="form-input"
-                    value={espacioNombre}
+                    value={displayText}
                     disabled
                     readOnly
                 />
@@ -116,7 +137,7 @@ const EspacioTrabajoSelector = ({
                     borderRadius: '0.375rem',
                     border: '1px solid rgba(245, 158, 11, 0.3)'
                 }}>
-                    <strong>⚠️ Cambio restringido:</strong> {changeRestrictionMessage}
+                    <strong>Cambio restringido:</strong> {changeRestrictionMessage}
                 </div>
             )}
 

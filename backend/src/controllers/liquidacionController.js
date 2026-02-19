@@ -59,7 +59,7 @@ const getAll = async (req, res) => {
                     include: [{
                         model: Usuario,
                         as: 'usuario',
-                        attributes: ['nombre', 'apellido', 'numeroDocumento']
+                        attributes: ['nombre', 'apellido']
                     }]
                 }],
                 attributes: ['id', 'tipoContrato', 'fechaInicio', 'fechaFin', 'estado'],
@@ -96,7 +96,7 @@ const getById = async (req, res) => {
                     include: [{
                         model: Usuario,
                         as: 'usuario',
-                        attributes: ['nombre', 'apellido', 'numeroDocumento']
+                        attributes: ['nombre', 'apellido']
                     }]
                 }],
             }],
@@ -168,7 +168,7 @@ const update = async (req, res) => {
                     include: [{
                         model: Usuario,
                         as: 'usuario',
-                        attributes: ['nombre', 'apellido', 'numeroDocumento']
+                        attributes: ['nombre', 'apellido']
                     }]
                 }],
             }],
@@ -226,7 +226,7 @@ const reactivate = async (req, res) => {
                     include: [{
                         model: Usuario,
                         as: 'usuario',
-                        attributes: ['nombre', 'apellido', 'numeroDocumento']
+                        attributes: ['nombre', 'apellido']
                     }]
                 }],
             }],

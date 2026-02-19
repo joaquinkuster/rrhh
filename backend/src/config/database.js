@@ -14,9 +14,9 @@ const sequelize = new Sequelize(
       collate: 'utf8mb4_unicode_ci',
     },
     pool: {
-      max: 5,
-      min: 0,
-      acquire: 30000,
+      max: 20,
+      min: 2,
+      acquire: 60000,
       idle: 10000
     }
   }

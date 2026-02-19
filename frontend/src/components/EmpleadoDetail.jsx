@@ -352,34 +352,75 @@ const EmpleadoDetail = ({ empleado, onClose, onEdit, hideEditButton = false }) =
                             }}>
                                 <Field icon={Icons.user} label="Nombre Completo" value={`${empleado.apellido}, ${empleado.nombre}`} />
                                 <Field icon={Icons.mail} label="Email" value={empleado.email} />
-                                <Field icon={Icons.phone} label="Teléfono" value={empleado.telefono} />
-                                <Field icon={Icons.identification} label="Documento" value={`${getTipoDocLabel(empleado.tipoDocumento)}: ${empleado.numeroDocumento}`} />
-                                <Field icon={Icons.document} label="CUIL" value={empleado.cuil} />
-                                <Field icon={Icons.calendar} label="Fecha de Nacimiento" value={formatDateOnly(empleado.fechaNacimiento)} />
-                                <Field icon={Icons.globe} label="Nacionalidad" value={getNacionalidadNombre(empleado.nacionalidadId || empleado.nacionalidad)} />
-                                <Field icon={Icons.users} label="Género" value={getGeneroLabel(empleado.genero)} />
-                                <Field icon={Icons.heart} label="Estado Civil" value={getEstadoCivilLabel(empleado.estadoCivil)} />
                             </div>
+
+                            {empleado.esEmpleado && (
+                                <div style={{ marginTop: '1.5rem' }}>
+                                    <SectionHeader title="Identificación" subtitle={`Últimos cambios hace ${getRelativeTime(empleado.updatedAt)}`} />
+                                    <div style={{
+                                        background: 'var(--card-bg)',
+                                        borderRadius: '0.5rem',
+                                        border: '1px solid var(--border-color)',
+                                        padding: '0 1rem'
+                                    }}>
+                                        <Field icon={Icons.identification} label="Documento" value={`${getTipoDocLabel(empleado.tipoDocumento)}: ${empleado.numeroDocumento}`} />
+                                        <Field icon={Icons.document} label="CUIL" value={empleado.cuil} />
+                                        <Field icon={Icons.globe} label="Nacionalidad" value={getNacionalidadNombre(empleado.nacionalidadId || empleado.nacionalidad)} />
+                                    </div>
+                                </div>
+                            )}
+
+                            {empleado.esEmpleado && (
+                                <div style={{ marginTop: '1.5rem' }}>
+                                    <SectionHeader title="Datos Personales" subtitle={`Últimos cambios hace ${getRelativeTime(empleado.updatedAt)}`} />
+                                    <div style={{
+                                        background: 'var(--card-bg)',
+                                        borderRadius: '0.5rem',
+                                        border: '1px solid var(--border-color)',
+                                        padding: '0 1rem'
+                                    }}>
+                                        <Field icon={Icons.calendar} label="Fecha de Nacimiento" value={formatDateOnly(empleado.fechaNacimiento)} />
+                                        <Field icon={Icons.users} label="Género" value={getGeneroLabel(empleado.genero)} />
+                                        <Field icon={Icons.heart} label="Estado Civil" value={getEstadoCivilLabel(empleado.estadoCivil)} />
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* Column 2: Dirección Legal */}
-                        <div>
-                            <SectionHeader title="Dirección Legal" subtitle={`Últimos cambios hace ${getRelativeTime(empleado.updatedAt)}`} />
-                            <div style={{
-                                background: 'var(--card-bg)',
-                                borderRadius: '0.5rem',
-                                border: '1px solid var(--border-color)',
-                                padding: '0 1rem'
-                            }}>
-                                <Field icon={Icons.home} label="Calle" value={empleado.calle} />
-                                <Field icon={Icons.building} label="Número" value={empleado.numero} />
-                                <Field icon={Icons.building} label="Piso" value={empleado.piso} />
-                                <Field icon={Icons.building} label="Departamento" value={empleado.departamento} />
-                                <Field icon={Icons.mapPin} label="Provincia" value={getProvinciaNombre(empleado.provinciaId || empleado.provinciaNombre)} />
-                                <Field icon={Icons.location} label="Ciudad" value={getCiudadNombre(empleado.provinciaId, empleado.ciudadId || empleado.ciudadNombre)} />
-                                <Field icon={Icons.document} label="Código Postal" value={empleado.codigoPostal} />
+                        {empleado.esEmpleado && (
+                            <div>
+                                <SectionHeader title="Dirección Legal" subtitle={`Últimos cambios hace ${getRelativeTime(empleado.updatedAt)}`} />
+                                <div style={{
+                                    background: 'var(--card-bg)',
+                                    borderRadius: '0.5rem',
+                                    border: '1px solid var(--border-color)',
+                                    padding: '0 1rem'
+                                }}>
+                                    <Field icon={Icons.home} label="Calle" value={empleado.calle} />
+                                    <Field icon={Icons.building} label="Número" value={empleado.numero} />
+                                    <Field icon={Icons.building} label="Piso" value={empleado.piso} />
+                                    <Field icon={Icons.building} label="Departamento" value={empleado.departamento} />
+                                    <Field icon={Icons.mapPin} label="Provincia" value={getProvinciaNombre(empleado.provinciaId || empleado.provinciaNombre)} />
+                                    <Field icon={Icons.location} label="Ciudad" value={getCiudadNombre(empleado.provinciaId, empleado.ciudadId || empleado.ciudadNombre)} />
+                                    <Field icon={Icons.document} label="Código Postal" value={empleado.codigoPostal} />
+                                </div>
+
+                                {empleado.esEmpleado && (
+                                    <div style={{ marginTop: '1.5rem' }}>
+                                        <SectionHeader title="Contacto" subtitle={`Últimos cambios hace ${getRelativeTime(empleado.updatedAt)}`} />
+                                        <div style={{
+                                            background: 'var(--card-bg)',
+                                            borderRadius: '0.5rem',
+                                            border: '1px solid var(--border-color)',
+                                            padding: '0 1rem'
+                                        }}>
+                                            <Field icon={Icons.phone} label="Teléfono" value={empleado.telefono} />
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                        </div>
+                        )}
                     </div>
                 </div>
 
@@ -394,7 +435,7 @@ const EmpleadoDetail = ({ empleado, onClose, onEdit, hideEditButton = false }) =
                     </button>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

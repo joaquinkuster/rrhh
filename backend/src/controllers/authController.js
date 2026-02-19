@@ -46,7 +46,7 @@ const login = async (req, res) => {
         }
 
         // Buscar un empleo asociado para mezclar datos (compatibilidad frontend)
-        const empleoAsociado = await Empleado.findOne({
+        const emp = await Empleado.findOne({
             where: {
                 usuarioId: usuario.id
                 // idealmente filtrar por espacioTrabajoId si lo tenemos
@@ -58,18 +58,30 @@ const login = async (req, res) => {
             nombre: usuario.nombre,
             apellido: usuario.apellido,
             email: usuario.email,
-            tipoDocumento: usuario.tipoDocumento,
-            numeroDocumento: usuario.numeroDocumento,
-            cuil: usuario.cuil,
             esAdministrador: usuario.esAdministrador,
             esEmpleado: usuario.esEmpleado,
             activo: usuario.activo,
             createdAt: usuario.createdAt,
             updatedAt: usuario.updatedAt,
             // Datos de empleo si existen
-            ...(empleoAsociado ? {
-                empleadoId: empleoAsociado.id,
-                espacioTrabajoId: empleoAsociado.espacioTrabajoId,
+            ...(emp ? {
+                empleadoId: emp.id,
+                espacioTrabajoId: emp.espacioTrabajoId,
+                telefono: emp.telefono,
+                tipoDocumento: emp.tipoDocumento,
+                numeroDocumento: emp.numeroDocumento,
+                cuil: emp.cuil,
+                fechaNacimiento: emp.fechaNacimiento,
+                nacionalidadId: emp.nacionalidadId,
+                genero: emp.genero,
+                estadoCivil: emp.estadoCivil,
+                calle: emp.calle,
+                numero: emp.numero,
+                piso: emp.piso,
+                departamento: emp.departamento,
+                codigoPostal: emp.codigoPostal,
+                provinciaId: emp.provinciaId,
+                ciudadId: emp.ciudadId,
             } : {})
         };
 
@@ -138,47 +150,24 @@ const register = [
                 esEmpleado: false, // Registro público
                 esAdministrador: false,
                 activo: true,
-                // Campos obligatorios nuevos - Valores por defecto temporales para evitar bloqueo en registro público
-                tipoDocumento: req.body.tipoDocumento || 'cedula',
-                numeroDocumento: req.body.numeroDocumento || '00000000',
-                cuil: req.body.cuil,
-                fechaNacimiento: req.body.fechaNacimiento || '2000-01-01',
-                nacionalidadId: req.body.nacionalidadId || 1,
-                genero: req.body.genero || 'otro',
-                estadoCivil: req.body.estadoCivil || 'soltero',
-                calle: req.body.calle || 'Sin especificar',
-                numero: req.body.numero || '0',
-                provinciaId: req.body.provinciaId || 1, // Asumiendo ID 1 existe
             };
 
             // Crear usuario
             const nuevoUsuario = await Usuario.create(usuarioData);
 
-            // Auto-login después del registro
-            req.session.usuarioId = nuevoUsuario.id;
-            req.session.empleadoId = nuevoUsuario.id; // Retrocompatibilidad
-            req.session.esAdministrador = false;
-
-            req.session.save((err) => {
-                if (err) {
-                    console.error('Error al guardar sesión:', err);
-                    return res.status(500).json({ error: 'Registro exitoso pero error al iniciar sesión' });
+            return res.status(201).json({
+                message: 'Registro exitoso',
+                usuario: {
+                    id: nuevoUsuario.id,
+                    nombre: nuevoUsuario.nombre,
+                    apellido: nuevoUsuario.apellido,
+                    email: nuevoUsuario.email,
+                    esAdministrador: false,
+                    esEmpleado: false,
+                    activo: true,
+                    createdAt: nuevoUsuario.createdAt,
+                    updatedAt: nuevoUsuario.updatedAt,
                 }
-
-                res.status(201).json({
-                    message: 'Registro exitoso',
-                    usuario: {
-                        id: nuevoUsuario.id,
-                        nombre: nuevoUsuario.nombre,
-                        apellido: nuevoUsuario.apellido,
-                        email: nuevoUsuario.email,
-                        esAdministrador: false,
-                        esEmpleado: false,
-                        activo: true,
-                        createdAt: nuevoUsuario.createdAt,
-                        updatedAt: nuevoUsuario.updatedAt,
-                    }
-                });
             });
 
         } catch (error) {
@@ -207,34 +196,44 @@ const register = [
 const getCurrentUser = async (req, res) => {
     try {
         const usuarioId = req.session.usuarioId || req.session.empleadoId;
+
+        if (!usuarioId) {
+            return res.status(401).json({ error: 'No autorizado' });
+        }
+
         const usuario = await Usuario.findByPk(usuarioId, {
             attributes: { exclude: ['contrasena'] },
-            include: [{
-                model: Empleado,
-                as: 'empleos',
-                required: false,
-                limit: 1
-            }]
         });
 
         if (!usuario) {
             return res.status(404).json({ error: 'Usuario no encontrado' });
         }
 
-        const plainUser = usuario.get({ plain: true });
-        // Aplanar si tiene empleo
-        let result = { ...plainUser };
-        if (plainUser.empleos && plainUser.empleos.length > 0) {
-            const emp = plainUser.empleos[0];
-            result = {
-                ...result,
+        const result = usuario.get({ plain: true });
+
+        // Buscar empleado asociado por separado (evita problemas con limit en hasMany)
+        const empleado = await Empleado.findOne({ where: { usuarioId } });
+        if (empleado) {
+            const emp = empleado.get({ plain: true });
+            Object.assign(result, {
                 empleadoId: emp.id,
+                espacioTrabajoId: emp.espacioTrabajoId,
+                telefono: emp.telefono,
                 tipoDocumento: emp.tipoDocumento,
                 numeroDocumento: emp.numeroDocumento,
                 cuil: emp.cuil,
-                espacioTrabajoId: emp.espacioTrabajoId
-            };
-            delete result.empleos;
+                fechaNacimiento: emp.fechaNacimiento,
+                nacionalidadId: emp.nacionalidadId,
+                genero: emp.genero,
+                estadoCivil: emp.estadoCivil,
+                calle: emp.calle,
+                numero: emp.numero,
+                piso: emp.piso,
+                departamento: emp.departamento,
+                codigoPostal: emp.codigoPostal,
+                provinciaId: emp.provinciaId,
+                ciudadId: emp.ciudadId,
+            });
         }
 
         res.json(result);

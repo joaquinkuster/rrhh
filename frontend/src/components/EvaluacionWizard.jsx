@@ -189,22 +189,36 @@ const EvaluacionWizard = ({ evaluacion, onClose, onSuccess }) => {
         loadRequests();
     }, []);
 
-    const formatContratoOption = (contrato) => {
-        if (!contrato) return null;
-        const nombreEmpleado = contrato.empleado ? `${contrato.empleado.nombre} ${contrato.empleado.apellido}` : 'Sin nombre';
+    const contratoOptions = Object.values(contratos.reduce((acc, contrato) => {
+        const wsName = contrato.empleado?.espacioTrabajo?.nombre || 'Sin Espacio';
+        if (!acc[wsName]) acc[wsName] = { label: wsName, options: [] };
+
+        const nombreEmpleado = contrato.empleado?.usuario ? `${contrato.empleado.usuario.apellido}, ${contrato.empleado.usuario.nombre}` : 'Sin nombre';
         const puesto = contrato.puestos && contrato.puestos.length > 0 ? contrato.puestos[0].nombre : 'Sin puesto';
         const empresa = contrato.puestos && contrato.puestos.length > 0 && contrato.puestos[0].departamento?.area?.empresa?.nombre;
         const label = `${nombreEmpleado} - ${puesto}${empresa ? ` (${empresa})` : ''}`;
-        return {
+
+        acc[wsName].options.push({
             value: contrato.id,
             label: label,
             contrato: contrato
-        };
+        });
+        return acc;
+    }, {}));
+
+    // Helper to find option for editing or initial values
+    const findContratoOption = (id) => {
+        for (const group of contratoOptions) {
+            const found = group.options.find(opt => opt.value === id);
+            if (found) return found;
+        }
+        return null;
     };
 
     // Initialize form
     useEffect(() => {
         if (evaluacion) {
+            // ... existing init logic ...
             setFormData(prev => ({
                 ...prev,
                 periodo: evaluacion.periodo || '',
@@ -221,18 +235,37 @@ const EvaluacionWizard = ({ evaluacion, onClose, onSuccess }) => {
             }));
 
             if (evaluacion.contratoEvaluado) {
-                setSelectedSingleContratoEvaluado(formatContratoOption(evaluacion.contratoEvaluado));
+                // Reconstruct option manually if not found in list yet (though list should cover it)
+                // or try to find in loaded groups
+                // Simple reconstruction for display if list not ready
+                const c = evaluacion.contratoEvaluado;
+                const nombre = c.empleado ? `${c.empleado.apellido}, ${c.empleado.nombre}` : 'Sin nombre';
+                const puesto = c.puestos?.[0]?.nombre || 'Sin puesto';
+                const empresa = c.puestos?.[0]?.departamento?.area?.empresa?.nombre;
+                setSelectedSingleContratoEvaluado({
+                    value: c.id,
+                    label: `${nombre} - ${puesto}${empresa ? ` (${empresa})` : ''}`,
+                    contrato: c
+                });
             }
 
             if (evaluacion.evaluadores && evaluacion.evaluadores.length > 0) {
-                const evalOpts = evaluacion.evaluadores.map(ev => formatContratoOption(ev));
+                // Similarly reconstruction
+                const evalOpts = evaluacion.evaluadores.map(c => {
+                    const nombre = c.empleado ? `${c.empleado.apellido}, ${c.empleado.nombre}` : 'Sin nombre';
+                    const puesto = c.puestos?.[0]?.nombre || 'Sin puesto';
+                    const empresa = c.puestos?.[0]?.departamento?.area?.empresa?.nombre;
+                    return {
+                        value: c.id,
+                        label: `${nombre} - ${puesto}${empresa ? ` (${empresa})` : ''}`,
+                        contrato: c
+                    };
+                });
                 setSelectedEvaluadores(evalOpts);
                 setFormData(prev => ({ ...prev, evaluadoresIds: evalOpts.map(o => o.value) }));
             }
         }
     }, [evaluacion]);
-
-    const contratoOptions = contratos.map(c => formatContratoOption(c));
 
     const handleEvaluadoresChange = (options) => {
         const opts = options || [];
@@ -241,38 +274,44 @@ const EvaluacionWizard = ({ evaluacion, onClose, onSuccess }) => {
         if (touched.evaluadoresIds) validateStep();
     };
 
+    const validateStep = (newFormData = formData) => {
+        // Validation logic can be here if needed for real-time feedback
+        // currently nextStep handles main validation
+    };
+
+
+
     const handleContratosEvaluadosChange = (options) => {
         const opts = options || [];
         setSelectedContratosEvaluados(opts);
         setFormData(prev => ({ ...prev, contratosEvaluadosIds: opts.map(o => o.value) }));
-        if (touched.contratosEvaluadosIds) validateStep();
     };
 
     const handleBlur = (field) => {
         setTouched(prev => ({ ...prev, [field]: true }));
-        validateStep();
     };
 
-    const handleChange = (field, value) => { // ✅ Síncrono ahora
+    const handleChange = (field, value) => {
         setFormData(prev => ({ ...prev, [field]: value }));
         setError('');
 
-        // Validar día hábil en tiempo real SÍNCRONO
         if (field === 'fecha' && value) {
             try {
-                validarDiaHabil(value, 'La fecha de evaluación'); // ✅ Síncrono
+                const nombresCampos = {
+                    fecha: 'La fecha de evaluación'
+                };
+                validarDiaHabil(value, nombresCampos[field]);
                 setFieldErrors(prev => ({ ...prev, fecha: null }));
             } catch (error) {
                 setFieldErrors(prev => ({ ...prev, fecha: error.message }));
-                setTouched(prev => ({ ...prev, fecha: true })); // Marcar como touched para mostrar error
+                setTouched(prev => ({ ...prev, fecha: true }));
             }
         }
-
-        if (touched[field]) validateStep();
     };
 
-    const validateStep = () => {
+    const nextStep = () => {
         const errors = {};
+        let isValid = true;
 
         if (currentStep === 1) {
             if (!formData.periodo) errors.periodo = 'El período es requerido';
@@ -280,6 +319,9 @@ const EvaluacionWizard = ({ evaluacion, onClose, onSuccess }) => {
             if (!formData.fecha) errors.fecha = 'La fecha es requerida';
             else if (new Date(formData.fecha) > new Date()) errors.fecha = 'La fecha no puede ser futura';
             if (!formData.estado) errors.estado = 'El estado es requerido';
+            // Validar dia habil error
+            if (fieldErrors.fecha) isValid = false;
+
         } else if (currentStep === 2) {
             if (!formData.evaluadoresIds || formData.evaluadoresIds.length === 0) {
                 errors.evaluadoresIds = 'Debe seleccionar al menos un evaluador';
@@ -288,68 +330,61 @@ const EvaluacionWizard = ({ evaluacion, onClose, onSuccess }) => {
                 if (!formData.contratosEvaluadosIds || formData.contratosEvaluadosIds.length === 0) {
                     errors.contratosEvaluadosIds = 'Debe seleccionar al menos un contrato a evaluar';
                 }
-                if (formData.contratosEvaluadosIds && formData.evaluadoresIds) {
+                // Check intersection
+                if (formData.contratosEvaluadosIds.length > 0 && formData.evaluadoresIds.length > 0) {
                     const intersection = formData.contratosEvaluadosIds.filter(id => formData.evaluadoresIds.includes(id));
                     if (intersection.length > 0) {
-                        errors.contratosEvaluadosIds = 'No puede seleccionar la misma persona como evaluador y evaluado';
+                        errors.contratosEvaluadosIds = 'No puede evaluar a quien lo evalúa (conflicto de intereses)';
                     }
                 }
             }
-        } else if (currentStep === 3) {
-            if (!formData.puntaje) {
-                errors.puntaje = 'El puntaje es requerido';
-            } else {
-                const p = parseInt(formData.puntaje, 10);
-                if (isNaN(p) || p < 0 || p > 100) errors.puntaje = 'El puntaje debe estar entre 0 y 100';
-            }
-            if (!formData.escala) errors.escala = 'La escala es requerida';
-            if (!formData.feedback) {
-                errors.feedback = 'El feedback es requerido';
-            } else if (formData.feedback.length < 10) {
-                errors.feedback = 'El feedback debe tener al menos 10 caracteres';
-            } else if (formData.feedback.length > 2000) {
-                errors.feedback = 'El feedback no puede exceder 2000 caracteres';
-            }
-            if (formData.notas && formData.notas.length > 1000) {
-                errors.notas = 'Las notas no pueden exceder 1000 caracteres';
-            }
         }
-
-        // Preservar solo los errores de días hábiles del campo fecha
-        setFieldErrors(prev => {
-            const erroresDiasHabiles = {};
-
-            // Preservar error de día hábil en campo fecha si existe
-            if (prev['fecha'] && prev['fecha'].includes('día hábil')) {
-                erroresDiasHabiles['fecha'] = prev['fecha'];
-            }
-
-            // Combinar: errores de la validación actual + error de día hábil preservado
-            return { ...erroresDiasHabiles, ...errors };
-        });
 
         if (Object.keys(errors).length > 0) {
-            const allTouched = {};
-            Object.keys(errors).forEach(key => { allTouched[key] = true; });
-            setTouched(prev => ({ ...prev, ...allTouched }));
+            setFieldErrors(prev => ({ ...prev, ...errors }));
+            setTouched(prev => Object.keys(errors).reduce((acc, key) => ({ ...acc, [key]: true }), prev));
             setError('Por favor completa todos los campos obligatorios');
+            isValid = false;
         }
 
-        return Object.keys(errors).length === 0;
-    };
-
-    const nextStep = () => {
-        if (validateStep()) {
+        if (isValid) {
             setCurrentStep(prev => prev + 1);
             setTouched({});
             setError('');
         }
     };
 
+
     const prevStep = () => setCurrentStep(prev => prev - 1);
 
+    const validateFinalStep = () => {
+        const errors = {};
+        if (!formData.puntaje) {
+            errors.puntaje = 'El puntaje es requerido';
+        } else {
+            const p = parseInt(formData.puntaje, 10);
+            if (isNaN(p) || p < 0 || p > 100) errors.puntaje = 'El puntaje debe estar entre 0 y 100';
+        }
+        if (!formData.escala) errors.escala = 'La escala es requerida';
+        if (!formData.feedback) {
+            errors.feedback = 'El feedback es requerido';
+        } else if (formData.feedback.length < 10) {
+            errors.feedback = 'El feedback debe tener al menos 10 caracteres';
+        } else if (formData.feedback.length > 2000) {
+            errors.feedback = 'El feedback no puede exceder 2000 caracteres';
+        }
+
+        if (Object.keys(errors).length > 0) {
+            setFieldErrors(prev => ({ ...prev, ...errors }));
+            setTouched(prev => Object.keys(errors).reduce((acc, key) => ({ ...acc, [key]: true }), prev));
+            setError('Por favor completa todos los campos obligatorios');
+            return false;
+        }
+        return true;
+    };
+
     const handleSubmit = async () => {
-        if (!validateStep()) return;
+        if (!validateFinalStep()) return;
 
         try {
             setSubmitting(true);
@@ -358,7 +393,9 @@ const EvaluacionWizard = ({ evaluacion, onClose, onSuccess }) => {
                 puntaje: parseInt(formData.puntaje, 10),
             };
 
+            // Remove contracts logic if is editing (readonly)
             if (isEditing) {
+                // Keep only editable fields for update? Actually backend handles update
                 await updateEvaluacion(evaluacion.id, payload);
             } else {
                 await createEvaluacion(payload);
@@ -371,8 +408,6 @@ const EvaluacionWizard = ({ evaluacion, onClose, onSuccess }) => {
         }
     };
 
-    const toggleTooltip = (name) => setActiveTooltip(prev => prev === name ? null : name);
-
     const renderStep1 = () => (
         <div style={{ display: 'grid', gap: '1.5rem' }}>
             {/* Período y Tipo */}
@@ -380,7 +415,7 @@ const EvaluacionWizard = ({ evaluacion, onClose, onSuccess }) => {
                 <div className="form-group">
                     <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         Período *
-                        <TooltipIcon content={TOOLTIP_PERIODO} isOpen={activeTooltip === 'periodo'} onToggle={() => toggleTooltip('periodo')} />
+                        <TooltipIcon content={TOOLTIP_PERIODO} isOpen={activeTooltip === 'periodo'} onToggle={() => setActiveTooltip(activeTooltip === 'periodo' ? null : 'periodo')} />
                     </label>
                     <TooltipContent content={TOOLTIP_PERIODO} isOpen={activeTooltip === 'periodo'} />
                     <select
@@ -397,7 +432,7 @@ const EvaluacionWizard = ({ evaluacion, onClose, onSuccess }) => {
                 <div className="form-group">
                     <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         Tipo *
-                        <TooltipIcon content={TOOLTIP_TIPO_EVALUACION} isOpen={activeTooltip === 'tipoEvaluacion'} onToggle={() => toggleTooltip('tipoEvaluacion')} />
+                        <TooltipIcon content={TOOLTIP_TIPO_EVALUACION} isOpen={activeTooltip === 'tipoEvaluacion'} onToggle={() => setActiveTooltip(activeTooltip === 'tipoEvaluacion' ? null : 'tipoEvaluacion')} />
                     </label>
                     <TooltipContent content={TOOLTIP_TIPO_EVALUACION} isOpen={activeTooltip === 'tipoEvaluacion'} />
                     <select
@@ -430,7 +465,7 @@ const EvaluacionWizard = ({ evaluacion, onClose, onSuccess }) => {
                 <div className="form-group">
                     <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         Estado *
-                        <TooltipIcon content={TOOLTIP_ESTADO} isOpen={activeTooltip === 'estado'} onToggle={() => toggleTooltip('estado')} />
+                        <TooltipIcon content={TOOLTIP_ESTADO} isOpen={activeTooltip === 'estado'} onToggle={() => setActiveTooltip(activeTooltip === 'estado' ? null : 'estado')} />
                     </label>
                     <TooltipContent content={TOOLTIP_ESTADO} isOpen={activeTooltip === 'estado'} />
                     <select
@@ -463,6 +498,11 @@ const EvaluacionWizard = ({ evaluacion, onClose, onSuccess }) => {
                     placeholder="Buscar..."
                     noOptionsMessage={() => "No se encontraron contratos"}
                     styles={getSelectStyles(isDark)}
+                    formatGroupLabel={data => (
+                        <div style={{ fontWeight: 'bold', textTransform: 'uppercase', fontSize: '0.75rem', color: '#64748b' }}>
+                            {data.label}
+                        </div>
+                    )}
                     isClearable
                     menuPortalTarget={document.body}
                     menuPosition="fixed"
@@ -491,6 +531,11 @@ const EvaluacionWizard = ({ evaluacion, onClose, onSuccess }) => {
                             placeholder="Buscar..."
                             noOptionsMessage={() => "No se encontraron contratos"}
                             styles={getSelectStyles(isDark)}
+                            formatGroupLabel={data => (
+                                <div style={{ fontWeight: 'bold', textTransform: 'uppercase', fontSize: '0.75rem', color: '#64748b' }}>
+                                    {data.label}
+                                </div>
+                            )}
                             isClearable
                             menuPortalTarget={document.body}
                             menuPosition="fixed"

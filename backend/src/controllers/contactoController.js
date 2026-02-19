@@ -34,7 +34,7 @@ const getAll = async (req, res) => {
                 include: [{
                     model: Usuario,
                     as: 'usuario',
-                    attributes: ['nombre', 'apellido', 'numeroDocumento']
+                    attributes: ['nombre', 'apellido']
                 }]
             }],
             order: [['nombreCompleto', 'ASC']],
@@ -66,7 +66,7 @@ const getById = async (req, res) => {
                 include: [{
                     model: Usuario,
                     as: 'usuario',
-                    attributes: ['nombre', 'apellido', 'numeroDocumento']
+                    attributes: ['nombre', 'apellido']
                 }]
             }],
         });
@@ -120,7 +120,7 @@ const create = async (req, res) => {
                 include: [{
                     model: Usuario,
                     as: 'usuario',
-                    attributes: ['nombre', 'apellido', 'numeroDocumento']
+                    attributes: ['nombre', 'apellido']
                 }]
             }],
         });
@@ -168,7 +168,7 @@ const update = async (req, res) => {
                 include: [{
                     model: Usuario,
                     as: 'usuario',
-                    attributes: ['nombre', 'apellido', 'numeroDocumento']
+                    attributes: ['nombre', 'apellido']
                 }]
             }],
         });
@@ -217,7 +217,7 @@ const reactivate = async (req, res) => {
                 include: [{
                     model: Usuario,
                     as: 'usuario',
-                    attributes: ['nombre', 'apellido', 'numeroDocumento']
+                    attributes: ['nombre', 'apellido']
                 }]
             }],
         });

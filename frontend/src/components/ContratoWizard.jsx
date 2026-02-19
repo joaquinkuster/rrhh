@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Select from 'react-select';
 import StepTracker from './StepTracker';
+import { useAuth } from '../context/AuthContext';
 import {
     createContrato,
     updateContrato,
@@ -115,6 +116,7 @@ const getSelectStyles = (isDark) => ({
 });
 
 const ContratoWizard = ({ contrato: contratoToEdit, onClose, onSuccess, empleadoPreseleccionado = null }) => {
+    const { user } = useAuth();
     const isEditMode = !!contratoToEdit;
     const [currentStep, setCurrentStep] = useState(1);
     const [error, setError] = useState('');
@@ -168,8 +170,10 @@ const ContratoWizard = ({ contrato: contratoToEdit, onClose, onSuccess, empleado
 
     // Load initial data
     useEffect(() => {
-        loadInitialData();
-    }, []);
+        if (user) {
+            loadInitialData();
+        }
+    }, [user]);
 
     // Preseleccionar empleado
     useEffect(() => {
@@ -223,10 +227,33 @@ const ContratoWizard = ({ contrato: contratoToEdit, onClose, onSuccess, empleado
 
     const loadInitialData = async () => {
         try {
+            // Determine workspace ID filter
+            let filters = { limit: 500, activo: 'true' };
+
+            // Si NO es admin, filtrar por el espacio de trabajo del usuario
+            if (user && user.esEmpleado) {
+                const espacioId = user.empleado?.espacioTrabajoId;
+                if (espacioId) {
+                    filters.espacioTrabajoId = espacioId;
+                }
+            }
+
+            // Para roles, usamos el mismo filtro
+            const roleFilters = { limit: 100, activo: 'true' };
+            if (filters.espacioTrabajoId) {
+                roleFilters.espacioTrabajoId = filters.espacioTrabajoId;
+            }
+
+            // Para empresas, también usamos el mismo filtro
+            const empresaFilters = { limit: 100, activo: 'true' };
+            if (filters.espacioTrabajoId) {
+                empresaFilters.espacioTrabajoId = filters.espacioTrabajoId;
+            }
+
             const [empleadosRes, empresasRes, rolesRes] = await Promise.all([
-                getEmpleados({ limit: 500, activo: 'true' }),
-                getEmpresas({ limit: 100, activo: 'true' }),
-                getRoles({ limit: 100, activo: 'true' })
+                getEmpleados(filters),
+                getEmpresas(empresaFilters),
+                getRoles(roleFilters)
             ]);
             setEmpleados(empleadosRes.data || []);
             setEmpresas(empresasRes.data || []);
@@ -312,13 +339,13 @@ const ContratoWizard = ({ contrato: contratoToEdit, onClose, onSuccess, empleado
         if (touched.empleados) validateStep();
     };
 
-    const handleEmpresaChange = async (e) => {
-        const empresaId = e.target.value;
+    const handleEmpresaChange = async (option) => {
+        const empresaId = option ? option.value : null;
         setSelectedPuestos([]);
         if (empresaId) {
             await loadEmpresaData(parseInt(empresaId));
         } else {
-            setSelectedEmpresa(null);
+            setSelectedEmpresa(option ? option.empresa : null);
             setPuestosDisponibles([]);
         }
     };
@@ -326,6 +353,12 @@ const ContratoWizard = ({ contrato: contratoToEdit, onClose, onSuccess, empleado
     const handlePuestosChange = (options) => {
         setSelectedPuestos(options || []);
         if (touched.puestos) validateStep();
+    };
+
+    const handleRolChange = (option) => {
+        const value = option ? option.value : '';
+        setFormData(prev => ({ ...prev, rolId: value }));
+        if (touched.rolId) validateStep();
     };
 
     const validateStep = () => {
@@ -574,7 +607,16 @@ const ContratoWizard = ({ contrato: contratoToEdit, onClose, onSuccess, empleado
                 <Select
                     isMulti={!isEditMode}
                     isDisabled={isEmpleadoLocked}
-                    options={empleadoOptions}
+                    options={Object.values(empleados.reduce((acc, emp) => {
+                        const wsName = emp.espacioTrabajo?.nombre || 'Sin Espacio';
+                        if (!acc[wsName]) acc[wsName] = { label: wsName, options: [] };
+                        acc[wsName].options.push({
+                            value: emp.id,
+                            label: `${emp.apellido}, ${emp.nombre} - ${emp.numeroDocumento}`,
+                            empleado: emp,
+                        });
+                        return acc;
+                    }, {}))}
                     value={selectedEmpleados}
                     onChange={handleEmpleadoChange}
                     onBlur={() => handleBlur('empleados')}
@@ -583,6 +625,11 @@ const ContratoWizard = ({ contrato: contratoToEdit, onClose, onSuccess, empleado
                     styles={getSelectStyles(isDark)}
                     isClearable={!isEmpleadoLocked}
                     closeMenuOnSelect={isEditMode}
+                    formatGroupLabel={data => (
+                        <div style={{ fontWeight: 'bold', textTransform: 'uppercase', fontSize: '0.75rem', color: '#64748b' }}>
+                            {data.label}
+                        </div>
+                    )}
                 />
                 <FieldError message={touched.empleados && fieldErrors.empleados} />
             </div>
@@ -591,16 +638,29 @@ const ContratoWizard = ({ contrato: contratoToEdit, onClose, onSuccess, empleado
             {selectedEmpleados.length > 0 && (
                 <div className="form-group">
                     <label className="form-label">Empresa *</label>
-                    <select
-                        className="form-input"
-                        value={selectedEmpresa?.id || ''}
+                    <Select
+                        options={Object.values(empresas.reduce((acc, emp) => {
+                            const wsName = emp.espacioTrabajo?.nombre || 'General';
+                            if (!acc[wsName]) acc[wsName] = { label: wsName, options: [] };
+                            acc[wsName].options.push({
+                                value: emp.id,
+                                label: emp.nombre,
+                                empresa: emp
+                            });
+                            return acc;
+                        }, {}))}
+                        value={selectedEmpresa ? { value: selectedEmpresa.id, label: selectedEmpresa.nombre, empresa: selectedEmpresa } : null}
                         onChange={handleEmpresaChange}
-                    >
-                        <option value="">Seleccionar empresa</option>
-                        {empresas.map(emp => (
-                            <option key={emp.id} value={emp.id}>{emp.nombre}</option>
-                        ))}
-                    </select>
+                        placeholder="Seleccionar empresa..."
+                        noOptionsMessage={() => "No se encontraron empresas"}
+                        styles={getSelectStyles(isDark)}
+                        isClearable
+                        formatGroupLabel={data => (
+                            <div style={{ fontWeight: 'bold', textTransform: 'uppercase', fontSize: '0.75rem', color: '#64748b' }}>
+                                {data.label}
+                            </div>
+                        )}
+                    />
                 </div>
             )}
 
@@ -766,27 +826,31 @@ const ContratoWizard = ({ contrato: contratoToEdit, onClose, onSuccess, empleado
             {/* Rol de Sistema */}
             <div className="form-group">
                 <label className="form-label">Rol en la Empresa *</label>
-                <select
-                    name="rolId"
-                    className={`form-input ${touched.rolId && fieldErrors.rolId ? 'input-error' : ''}`}
-                    value={formData.rolId}
-                    onChange={handleChange}
-                    onBlur={() => handleBlur('rolId')}
-                >
-                    <option value="">Seleccionar rol</option>
-                    {Object.entries(roles.reduce((acc, rol) => {
+                <Select
+                    options={Object.values(roles.reduce((acc, rol) => {
                         const wsName = rol.espacioTrabajo?.nombre || 'General';
-                        if (!acc[wsName]) acc[wsName] = [];
-                        acc[wsName].push(rol);
+                        if (!acc[wsName]) acc[wsName] = { label: wsName, options: [] };
+                        acc[wsName].options.push({
+                            value: rol.id,
+                            label: rol.nombre,
+                        });
                         return acc;
-                    }, {})).map(([wsName, rolesGroup]) => (
-                        <optgroup key={wsName} label={wsName}>
-                            {rolesGroup.map(rol => (
-                                <option key={rol.id} value={rol.id}>{rol.nombre}</option>
-                            ))}
-                        </optgroup>
-                    ))}
-                </select>
+                    }, {}))}
+                    value={roles.find(r => r.id === parseInt(formData.rolId)) ? {
+                        value: parseInt(formData.rolId),
+                        label: roles.find(r => r.id === parseInt(formData.rolId))?.nombre
+                    } : null}
+                    onChange={handleRolChange}
+                    onBlur={() => handleBlur('rolId')}
+                    placeholder="Seleccionar rol..."
+                    noOptionsMessage={() => "No se encontraron roles"}
+                    styles={getSelectStyles(isDark)}
+                    formatGroupLabel={data => (
+                        <div style={{ fontWeight: 'bold', textTransform: 'uppercase', fontSize: '0.75rem', color: '#64748b' }}>
+                            {data.label}
+                        </div>
+                    )}
+                />
                 <FieldError message={touched.rolId && fieldErrors.rolId} />
                 <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>
                     Asigna permisos de sistema al usuario mientras dure el contrato.
