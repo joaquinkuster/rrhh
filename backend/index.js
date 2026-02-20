@@ -24,8 +24,6 @@ const startServer = async () => {
 
         app.listen(PORT, () => {
             console.log(`🚀 Servidor CataratasRH corriendo en http://localhost:${PORT}`);
-            console.log(`📋 API Empleados: http://localhost:${PORT}/api/empleados`);
-            console.log(`🌍 API Nacionalidades: http://localhost:${PORT}/api/nacionalidades`);
         });
     } catch (error) {
         console.error('❌ Error al iniciar el servidor:', error);

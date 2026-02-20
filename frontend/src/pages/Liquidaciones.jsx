@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../context/AuthContext';
+import Select from 'react-select';
 import {
     getLiquidaciones,
     getLiquidacionById,
@@ -6,12 +8,25 @@ import {
     getConceptosSalariales,
     getParametrosLaborales,
     updateParametrosLaborales,
+    getEmpleados,
+    getEspaciosTrabajo,
 } from '../services/api';
-import { formatDateOnly, formatCurrency } from '../utils/formatters';
+import { formatDateOnly, formatCurrency, truncateText } from '../utils/formatters';
 import LiquidacionFormulario from '../components/LiquidacionFormulario';
 import LiquidacionDetail from '../components/LiquidacionDetail';
 import ConceptosSalarialesModal from '../components/ConceptosSalarialesModal';
 import ParametrosLaboralesModal from '../components/ParametrosLaboralesModal';
+
+const buildSelectStyles = (isDark) => ({
+    control: (b, s) => ({ ...b, backgroundColor: isDark ? '#1e293b' : 'white', borderColor: s.isFocused ? '#0d9488' : (isDark ? '#334155' : '#e2e8f0'), boxShadow: 'none', '&:hover': { borderColor: '#0d9488' }, minHeight: '36px', fontSize: '0.875rem', borderRadius: '0.5rem' }),
+    menu: (b) => ({ ...b, backgroundColor: isDark ? '#1e293b' : 'white', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`, borderRadius: '0.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 9999 }),
+    option: (b, s) => ({ ...b, backgroundColor: s.isSelected ? '#0d9488' : s.isFocused ? (isDark ? '#334155' : '#f1f5f9') : 'transparent', color: s.isSelected ? 'white' : (isDark ? '#e2e8f0' : '#1e293b'), fontSize: '0.875rem', cursor: 'pointer' }),
+    groupHeading: (b) => ({ ...b, fontWeight: 'bold', textTransform: 'uppercase', fontSize: '0.7rem', color: '#64748b' }),
+    input: (b) => ({ ...b, color: isDark ? '#e2e8f0' : '#1e293b', fontSize: '0.875rem' }),
+    singleValue: (b) => ({ ...b, color: isDark ? '#e2e8f0' : '#1e293b' }),
+    placeholder: (b) => ({ ...b, color: '#94a3b8', fontSize: '0.875rem' }),
+    valueContainer: (b) => ({ ...b, padding: '0 8px' }),
+});
 
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50];
 
@@ -24,6 +39,7 @@ const getStatusInfo = (estaPagada) => {
 };
 
 const Liquidaciones = () => {
+    const { user } = useAuth();
     // Data State
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -37,15 +53,22 @@ const Liquidaciones = () => {
     const [total, setTotal] = useState(0);
 
     // Filters
-    const [searchInput, setSearchInput] = useState('');
-    const [search, setSearch] = useState('');
-    const [filterEstado, setFilterEstado] = useState(''); // Only estaPagada filter now
+    const [filterEspacio, setFilterEspacio] = useState(null);
+    const [filterEmpleado, setFilterEmpleado] = useState(null);
+    const [filterEstado, setFilterEstado] = useState('');
+    const [filterPeriodo, setFilterPeriodo] = useState('');
+
+    // Filter lists
+    const [empleadosList, setEmpleadosList] = useState([]);
+    const [espaciosList, setEspaciosList] = useState([]);
+    const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
 
     // Selection
     const [selectedIds, setSelectedIds] = useState(new Set());
 
     // Column Visibility
     const [visibleColumns, setVisibleColumns] = useState({
+        espacio: false,
         periodo: true,
         totalBruto: true,
         retenciones: true,
@@ -53,6 +76,9 @@ const Liquidaciones = () => {
         estado: true,
     });
     const [showColumnSelector, setShowColumnSelector] = useState(false);
+
+    // Delete Confirmation (not used in Liquidaciones but keep pattern)
+    const [confirmMarkPaid, setConfirmMarkPaid] = useState(null);
 
     // Modal State
     const [showFormulario, setShowFormulario] = useState(false);
@@ -62,29 +88,84 @@ const Liquidaciones = () => {
     const [showConceptosModal, setShowConceptosModal] = useState(false);
     const [showParametrosModal, setShowParametrosModal] = useState(false);
 
-    // Debounce Search
+
+    // Theme observer
     useEffect(() => {
-        const timer = setTimeout(() => {
-            setSearch(searchInput);
-            setPage(1);
-        }, 300);
-        return () => clearTimeout(timer);
-    }, [searchInput]);
+        const obs = new MutationObserver(() => setIsDark(document.documentElement.classList.contains('dark')));
+        obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+        return () => obs.disconnect();
+    }, []);
+
+    // Load filter data
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const [empRes, espRes] = await Promise.all([
+                    getEmpleados({ limit: 500, activo: 'true' }),
+                    getEspaciosTrabajo({ limit: 200, activo: 'true' }),
+                ]);
+                setEmpleadosList(empRes.data || []);
+                setEspaciosList(espRes.data || []);
+            } catch (e) { console.error(e); }
+        };
+        load();
+    }, []);
+
+    // Permisos y restricciones
+    const isRestricted = user?.esEmpleado && !user?.esAdministrador;
+    const hasFullAccess = user?.esAdministrador || (user?.rol?.permisos?.some(p => p.modulo === 'liquidaciones' && ['crear', 'editar', 'eliminar'].includes(p.accion)));
+    const isSingleEmployee = (empleadosList.length === 1 && isRestricted) || (isRestricted && !hasFullAccess);
+    const isSingleWorkspace = espaciosList.length === 1 && isRestricted;
+
+    // Auto-select espacio y empleado para usuarios restringidos
+    useEffect(() => {
+        if (isRestricted) {
+            if (espaciosList.length === 1 && !filterEspacio) {
+                setFilterEspacio({ value: espaciosList[0].id, label: espaciosList[0].nombre });
+            }
+            if (!filterEmpleado) {
+                if (empleadosList.length === 1) {
+                    const emp = empleadosList[0];
+                    const label = `${emp.usuario?.apellido || emp.apellido}, ${emp.usuario?.nombre || emp.nombre}`;
+                    setFilterEmpleado({ value: emp.id, label });
+                } else if (!hasFullAccess && user?.empleadoId) {
+                    const myEmp = empleadosList.find(e => e.id === user.empleadoId);
+                    if (myEmp) {
+                        const label = `${myEmp.usuario?.apellido || myEmp.apellido}, ${myEmp.usuario?.nombre || myEmp.nombre}`;
+                        setFilterEmpleado({ value: myEmp.id, label });
+                    }
+                }
+            }
+        }
+    }, [user, espaciosList, empleadosList, filterEspacio, filterEmpleado, isRestricted, hasFullAccess]);
+
+    // Build select options
+    const empleadoOptions = Object.values(
+        (empleadosList).reduce((acc, emp) => {
+            const ws = emp.espacioTrabajo?.nombre || 'Sin Espacio';
+            if (!acc[ws]) acc[ws] = { label: ws, options: [] };
+            const ap = emp.usuario?.apellido || emp.apellido || '';
+            const nm = emp.usuario?.nombre || emp.nombre || '';
+            acc[ws].options.push({ value: emp.id, label: `${ap}, ${nm}` });
+            return acc;
+        }, {})
+    );
+    const espacioOptions = espaciosList.map(e => ({ value: e.id, label: e.nombre }));
+    const selectStyles = buildSelectStyles(isDark);
 
     // Load Items
     const loadItems = useCallback(async () => {
         try {
             setLoading(true);
             const params = {
-                search,
-                activo: 'true', // Always filter active only
+                activo: 'true',
                 page,
                 limit,
             };
-            // Only add estaPagada filter if filterEstado is not empty
-            if (filterEstado !== '') {
-                params.estaPagada = filterEstado;
-            }
+            if (filterEspacio) params.espacioTrabajoId = filterEspacio.value;
+            if (filterEmpleado) params.empleadoId = filterEmpleado.value;
+            if (filterEstado !== '') params.estaPagada = filterEstado;
+            if (filterPeriodo) params.periodo = filterPeriodo;
             const result = await getLiquidaciones(params);
             setItems(result.liquidaciones);
             setTotalPages(result.totalPages);
@@ -95,7 +176,7 @@ const Liquidaciones = () => {
         } finally {
             setLoading(false);
         }
-    }, [search, filterEstado, page, limit]);
+    }, [filterEstado, page, limit, filterEspacio, filterEmpleado, filterPeriodo]);
 
     useEffect(() => {
         loadItems();
@@ -103,13 +184,14 @@ const Liquidaciones = () => {
 
     // Handlers
     const clearFilters = () => {
-        setSearchInput('');
-        setSearch('');
+        if (!isSingleWorkspace) setFilterEspacio(null);
+        if (!isSingleEmployee) setFilterEmpleado(null);
         setFilterEstado('');
+        setFilterPeriodo('');
         setPage(1);
     };
 
-    const hasActiveFilters = searchInput || filterEstado;
+    const hasActiveFilters = filterEstado || (!isSingleWorkspace && filterEspacio) || (!isSingleEmployee && filterEmpleado) || filterPeriodo;
 
     // Selection Handlers
     const handleSelectAll = (e) => {
@@ -233,9 +315,15 @@ const Liquidaciones = () => {
                 </div>
 
                 {/* Filters */}
-                <div className="filters-bar">
+                <div className="filters-bar" style={{ flexWrap: 'wrap' }}>
+                    <div className="filter-group" style={{ minWidth: '160px' }}>
+                        <Select isDisabled={isSingleWorkspace} options={espacioOptions} value={filterEspacio} onChange={opt => { setFilterEspacio(opt); setPage(1); }} placeholder="Espacio..." isClearable={!isSingleWorkspace} styles={selectStyles} noOptionsMessage={() => 'Sin resultados'} />
+                    </div>
+                    <div className="filter-group" style={{ minWidth: '200px' }}>
+                        <Select isDisabled={isSingleEmployee} options={empleadoOptions} value={filterEmpleado} onChange={opt => { setFilterEmpleado(opt); setPage(1); }} placeholder="Empleado..." isClearable={!isSingleEmployee} styles={selectStyles} noOptionsMessage={() => 'Sin resultados'} />
+                    </div>
                     <div className="filter-group">
-                        <input type="text" className="filter-input" placeholder="Buscar por empleado..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} style={{ minWidth: '200px' }} />
+                        <input type="text" className="filter-input" placeholder="Período (ej: 2024-12)" value={filterPeriodo} onChange={(e) => { setFilterPeriodo(e.target.value); setPage(1); }} style={{ minWidth: '150px' }} />
                     </div>
                     <div className="filter-group">
                         <select className="filter-input" value={filterEstado} onChange={(e) => { setFilterEstado(e.target.value); setPage(1); }}>
@@ -255,7 +343,7 @@ const Liquidaciones = () => {
                             </button>
                             {showColumnSelector && (
                                 <div className="column-selector-dropdown">
-                                    {Object.entries({ periodo: 'Período', totalBruto: 'Total Bruto', retenciones: 'Retenciones', neto: 'Neto', estado: 'Estado' }).map(([key, label]) => (
+                                    {Object.entries({ espacio: 'Espacio', periodo: 'Período', totalBruto: 'Total Bruto', retenciones: 'Retenciones', neto: 'Neto', estado: 'Estado' }).map(([key, label]) => (
                                         <label key={key} className="column-option">
                                             <input type="checkbox" checked={visibleColumns[key]} onChange={() => toggleColumn(key)} />
                                             <span>{label}</span>
@@ -296,12 +384,14 @@ const Liquidaciones = () => {
                                             <input type="checkbox" checked={allSelected} ref={input => { if (input) input.indeterminate = someSelected; }} onChange={handleSelectAll} />
                                         </th>
                                         <th>Empleado</th>
+                                        {visibleColumns.espacio && <th>Espacio</th>}
                                         {visibleColumns.periodo && <th>Período</th>}
                                         {visibleColumns.totalBruto && <th>Total Bruto</th>}
                                         {visibleColumns.retenciones && <th>Retenciones</th>}
                                         {visibleColumns.neto && <th>Neto</th>}
                                         {visibleColumns.estado && <th>Estado</th>}
                                         <th>Acciones</th>
+
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -314,6 +404,7 @@ const Liquidaciones = () => {
                                                     {item.contrato?.empleado?.usuario?.numeroDocumento}
                                                 </div>
                                             </td>
+                                            {visibleColumns.espacio && <td>{truncateText(item.contrato?.empleado?.espacioTrabajo?.nombre || '-')}</td>}
                                             {visibleColumns.periodo && (
                                                 <td>
                                                     {formatDateOnly(item.fechaInicio)} - {formatDateOnly(item.fechaFin)}
@@ -404,36 +495,44 @@ const Liquidaciones = () => {
             </div>
 
             {/* Modals */}
-            {showFormulario && (
-                <LiquidacionFormulario liquidacion={editingItem} onClose={handleCloseFormulario} onSuccess={handleFormularioSuccess} />
-            )}
+            {
+                showFormulario && (
+                    <LiquidacionFormulario liquidacion={editingItem} onClose={handleCloseFormulario} onSuccess={handleFormularioSuccess} />
+                )
+            }
 
-            {showDetail && selectedItem && (
-                <LiquidacionDetail
-                    liquidacion={selectedItem}
-                    onClose={() => { setShowDetail(false); setSelectedItem(null); }}
-                    onEdit={(liquidacion) => {
-                        setShowDetail(false);
-                        setSelectedItem(null);
-                        setEditingItem(liquidacion);
-                        setShowFormulario(true);
-                    }}
-                />
-            )}
+            {
+                showDetail && selectedItem && (
+                    <LiquidacionDetail
+                        liquidacion={selectedItem}
+                        onClose={() => { setShowDetail(false); setSelectedItem(null); }}
+                        onEdit={(liquidacion) => {
+                            setShowDetail(false);
+                            setSelectedItem(null);
+                            setEditingItem(liquidacion);
+                            setShowFormulario(true);
+                        }}
+                    />
+                )
+            }
 
-            {showConceptosModal && (
-                <ConceptosSalarialesModal
-                    onClose={() => setShowConceptosModal(false)}
-                />
-            )}
+            {
+                showConceptosModal && (
+                    <ConceptosSalarialesModal
+                        onClose={() => setShowConceptosModal(false)}
+                    />
+                )
+            }
 
-            {showParametrosModal && (
-                <ParametrosLaboralesModal
-                    onClose={() => setShowParametrosModal(false)}
-                />
-            )}
+            {
+                showParametrosModal && (
+                    <ParametrosLaboralesModal
+                        onClose={() => setShowParametrosModal(false)}
+                    />
+                )
+            }
 
-        </div>
+        </div >
     );
 };
 

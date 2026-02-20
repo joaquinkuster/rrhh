@@ -1,6 +1,19 @@
-const { Evaluacion, Contrato, Empleado, Puesto, Empresa, Departamento, Area, Usuario } = require('../models');
+const { Evaluacion, Contrato, Empleado, Puesto, Empresa, Departamento, Area, Usuario, EspacioTrabajo, Rol, Permiso } = require('../models');
 const { Op } = require('sequelize');
 const sequelize = require('../config/database');
+
+// Helper: verifica si el usuario en sesión tiene un permiso específico en el módulo evaluaciones
+const tienePermiso = async (session, accion) => {
+    if (session.esAdministrador) return true;
+    const usuarioId = session.usuarioId || session.empleadoId;
+    const empleado = await Empleado.findOne({ where: { usuarioId } });
+    if (!empleado || !empleado.ultimoContratoSeleccionadoId) return false;
+    const contrato = await Contrato.findByPk(empleado.ultimoContratoSeleccionadoId, {
+        include: [{ model: Rol, as: 'rol', include: [{ model: Permiso, as: 'permisos', through: { attributes: [] } }] }]
+    });
+    if (!contrato?.rol?.permisos) return false;
+    return contrato.rol.permisos.some(p => p.modulo === 'evaluaciones' && p.accion === accion);
+};
 
 // Includes para obtener detalle completo del contrato (empleado + puesto + empresa)
 const includeContratoDetalle = (alias) => ({
@@ -10,11 +23,18 @@ const includeContratoDetalle = (alias) => ({
         {
             model: Empleado,
             as: 'empleado',
-            include: [{
-                model: Usuario,
-                as: 'usuario',
-                attributes: ['nombre', 'apellido']
-            }]
+            include: [
+                {
+                    model: Usuario,
+                    as: 'usuario',
+                    attributes: ['nombre', 'apellido']
+                },
+                {
+                    model: EspacioTrabajo,
+                    as: 'espacioTrabajo',
+                    attributes: ['id', 'nombre']
+                }
+            ]
         },
         {
             model: Puesto,
@@ -39,10 +59,10 @@ const includeContratoDetalle = (alias) => ({
 // Obtener todas las evaluaciones con paginación y filtros
 const getAll = async (req, res) => {
     try {
-        const { page = 1, limit = 10, activo, periodo, tipoEvaluacion, estado } = req.query;
+        const { page = 1, limit = 10, activo, periodo, tipoEvaluacion, estado, espacioTrabajoId, evaluadoId } = req.query;
         const where = {};
 
-        // Filtro de activo
+        // Filtros directos
         if (activo === 'false') {
             where.activo = false;
         } else if (activo === 'all') {
@@ -50,10 +70,112 @@ const getAll = async (req, res) => {
         } else {
             where.activo = true;
         }
-
         if (periodo) where.periodo = periodo;
         if (tipoEvaluacion) where.tipoEvaluacion = tipoEvaluacion;
         if (estado) where.estado = estado;
+
+        // --- Filtrado por Espacio de Trabajo y Permisos ---
+        // Las evaluaciones se filtran resolviendo primero los empleados permitidos
+        // y luego los contratos de esos empleados → contratoEvaluadoId
+        const usuarioSesionId = req.session.usuarioId || req.session.empleadoId;
+        const esAdmin = req.session.esAdministrador;
+
+        if (!esAdmin) {
+            const empleadoSesion = await Empleado.findOne({ where: { usuarioId: usuarioSesionId } });
+
+            if (empleadoSesion) {
+                // ES EMPLEADO — verificar permisos de escritura (equivale a "puede ver todos del workspace")
+                const tienePermisoVerTodos = await tienePermiso(req.session, 'crear') ||
+                    await tienePermiso(req.session, 'actualizar') ||
+                    await tienePermiso(req.session, 'eliminar');
+
+                if (tienePermisoVerTodos) {
+                    // Puede ver todo el workspace
+                    const empleadosWorkspace = await Empleado.findAll({
+                        where: { espacioTrabajoId: empleadoSesion.espacioTrabajoId },
+                        attributes: ['id']
+                    });
+                    const idsEmpleadosWs = empleadosWorkspace.map(e => e.id);
+
+                    // Resolver contratos de esos empleados
+                    let whereEmpleadoContrato = { empleadoId: { [Op.in]: idsEmpleadosWs } };
+                    if (evaluadoId) {
+                        if (!idsEmpleadosWs.includes(parseInt(evaluadoId))) {
+                            return res.json({ data: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } });
+                        }
+                        whereEmpleadoContrato = { empleadoId: evaluadoId };
+                    }
+                    if (espacioTrabajoId && parseInt(espacioTrabajoId) !== empleadoSesion.espacioTrabajoId) {
+                        return res.json({ data: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } });
+                    }
+                    const contratosPermitidos = await Contrato.findAll({ where: whereEmpleadoContrato, attributes: ['id'] });
+                    const idsContratosWs = contratosPermitidos.map(c => c.id);
+                    where.contratoEvaluadoId = { [Op.in]: idsContratosWs };
+
+                } else {
+                    // Solo ve sus propios registros (solo evaluaciones donde él es el evaluado)
+                    if (evaluadoId && parseInt(evaluadoId) !== empleadoSesion.id) {
+                        return res.json({ data: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } });
+                    }
+                    const contratosPropio = await Contrato.findAll({
+                        where: { empleadoId: empleadoSesion.id },
+                        attributes: ['id']
+                    });
+                    const idsPropios = contratosPropio.map(c => c.id);
+                    where.contratoEvaluadoId = { [Op.in]: idsPropios };
+                }
+
+            } else {
+                // ES PROPIETARIO (no empleado) → ve los empleados de sus espacios de trabajo
+                const espaciosPropios = await EspacioTrabajo.findAll({
+                    where: { propietarioId: usuarioSesionId },
+                    attributes: ['id']
+                });
+                const espaciosIds = espaciosPropios.map(e => e.id);
+
+                let targetEspacios = espaciosIds;
+                if (espacioTrabajoId) {
+                    if (!espaciosIds.includes(parseInt(espacioTrabajoId))) {
+                        return res.json({ data: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } });
+                    }
+                    targetEspacios = [parseInt(espacioTrabajoId)];
+                }
+
+                const empleadosDeWorkspaces = await Empleado.findAll({
+                    where: { espacioTrabajoId: { [Op.in]: targetEspacios } },
+                    attributes: ['id']
+                });
+                const idsPermitidos = empleadosDeWorkspaces.map(e => e.id);
+
+                let whereContratoPermitido = { empleadoId: { [Op.in]: idsPermitidos } };
+                if (evaluadoId) {
+                    if (!idsPermitidos.includes(parseInt(evaluadoId))) {
+                        return res.json({ data: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } });
+                    }
+                    whereContratoPermitido = { empleadoId: evaluadoId };
+                }
+                const contratosPermitidos = await Contrato.findAll({ where: whereContratoPermitido, attributes: ['id'] });
+                const idsContratos = contratosPermitidos.map(c => c.id);
+                where.contratoEvaluadoId = idsContratos.length > 0 ? { [Op.in]: idsContratos } : -1;
+            }
+
+        } else {
+            // ADMIN GLOBAL — filtros opcionales
+            if (evaluadoId || espacioTrabajoId) {
+                let whereContratoAdmin = {};
+                if (evaluadoId) whereContratoAdmin.empleadoId = evaluadoId;
+                if (espacioTrabajoId) {
+                    const empleadosWs = await Empleado.findAll({ where: { espacioTrabajoId }, attributes: ['id'] });
+                    const idsWs = empleadosWs.map(e => e.id);
+                    if (evaluadoId && !idsWs.includes(parseInt(evaluadoId))) {
+                        return res.json({ data: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } });
+                    }
+                    if (!evaluadoId) whereContratoAdmin.empleadoId = { [Op.in]: idsWs };
+                }
+                const contratosAdmin = await Contrato.findAll({ where: whereContratoAdmin, attributes: ['id'] });
+                where.contratoEvaluadoId = { [Op.in]: contratosAdmin.map(c => c.id) };
+            }
+        }
 
         const offset = (parseInt(page) - 1) * parseInt(limit);
 
@@ -79,9 +201,11 @@ const getAll = async (req, res) => {
             },
         });
     } catch (error) {
+        console.error(error);
         res.status(500).json({ error: error.message });
     }
 };
+
 
 // Obtener evaluación por ID
 const getById = async (req, res) => {
@@ -107,6 +231,11 @@ const getById = async (req, res) => {
 const create = async (req, res) => {
     const transaction = await sequelize.transaction();
     try {
+        // Verificar permiso de creación
+        if (!(await tienePermiso(req.session, 'crear'))) {
+            await transaction.rollback();
+            return res.status(403).json({ error: 'No tiene permiso para crear evaluaciones' });
+        }
         const {
             periodo,
             tipoEvaluacion,
@@ -197,6 +326,11 @@ const create = async (req, res) => {
 const update = async (req, res) => {
     const transaction = await sequelize.transaction();
     try {
+        // Verificar permiso de edición
+        if (!(await tienePermiso(req.session, 'actualizar'))) {
+            await transaction.rollback();
+            return res.status(403).json({ error: 'No tiene permiso para editar evaluaciones' });
+        }
         const { id } = req.params;
         const {
             periodo,
@@ -292,6 +426,10 @@ const update = async (req, res) => {
 // Eliminar evaluación (eliminación lógica)
 const remove = async (req, res) => {
     try {
+        // Verificar permiso de eliminación
+        if (!(await tienePermiso(req.session, 'eliminar'))) {
+            return res.status(403).json({ error: 'No tiene permiso para desactivar evaluaciones' });
+        }
         const evaluacion = await Evaluacion.findByPk(req.params.id);
 
         if (!evaluacion) {
@@ -308,6 +446,10 @@ const remove = async (req, res) => {
 // Eliminar evaluaciones en lote (eliminación lógica)
 const bulkRemove = async (req, res) => {
     try {
+        // Verificar permiso de eliminación
+        if (!(await tienePermiso(req.session, 'eliminar'))) {
+            return res.status(403).json({ error: 'No tiene permiso para desactivar evaluaciones en lote' });
+        }
         const { ids } = req.body;
 
         if (!ids || !Array.isArray(ids) || ids.length === 0) {

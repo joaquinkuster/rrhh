@@ -1,15 +1,31 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { useLocation } from 'react-router-dom';
+import Select from 'react-select';
 import {
     getSolicitudes,
     deleteSolicitud,
     deleteSolicitudesBulk,
     getSolicitudById,
     reactivateSolicitud,
+    getEmpleados,
+    getEspaciosTrabajo,
 } from '../services/api';
 import SolicitudWizard from '../components/SolicitudWizard';
 import SolicitudDetail from '../components/SolicitudDetail';
 import ConfirmDialog from '../components/ConfirmDialog';
+import { truncateText } from '../utils/formatters';
+
+const buildSelectStyles = (isDark) => ({
+    control: (b, s) => ({ ...b, backgroundColor: isDark ? '#1e293b' : 'white', borderColor: s.isFocused ? '#0d9488' : (isDark ? '#334155' : '#e2e8f0'), boxShadow: 'none', '&:hover': { borderColor: '#0d9488' }, minHeight: '36px', fontSize: '0.875rem', borderRadius: '0.5rem' }),
+    menu: (b) => ({ ...b, backgroundColor: isDark ? '#1e293b' : 'white', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`, borderRadius: '0.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 9999 }),
+    option: (b, s) => ({ ...b, backgroundColor: s.isSelected ? '#0d9488' : s.isFocused ? (isDark ? '#334155' : '#f1f5f9') : 'transparent', color: s.isSelected ? 'white' : (isDark ? '#e2e8f0' : '#1e293b'), fontSize: '0.875rem', cursor: 'pointer' }),
+    groupHeading: (b) => ({ ...b, fontWeight: 'bold', textTransform: 'uppercase', fontSize: '0.7rem', color: '#64748b' }),
+    input: (b) => ({ ...b, color: isDark ? '#e2e8f0' : '#1e293b', fontSize: '0.875rem' }),
+    singleValue: (b) => ({ ...b, color: isDark ? '#e2e8f0' : '#1e293b' }),
+    placeholder: (b) => ({ ...b, color: '#94a3b8', fontSize: '0.875rem' }),
+    valueContainer: (b) => ({ ...b, padding: '0 8px' }),
+});
 
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50];
 
@@ -39,6 +55,7 @@ const ESTADO_STYLES = {
 
 const Solicitudes = () => {
     const location = useLocation();
+    const { user } = useAuth();
 
     // Data State
     const [items, setItems] = useState([]);
@@ -57,6 +74,14 @@ const Solicitudes = () => {
     const [search, setSearch] = useState('');
     const [filterActivo, setFilterActivo] = useState('true');
     const [filterTipo, setFilterTipo] = useState('');
+    const [filterEstado, setFilterEstado] = useState('');
+    const [filterEspacio, setFilterEspacio] = useState(null);
+    const [filterEmpleado, setFilterEmpleado] = useState(null);
+
+    // Filter lists
+    const [empleadosList, setEmpleadosList] = useState([]);
+    const [espaciosList, setEspaciosList] = useState([]);
+    const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
 
     // Selection
     const [selectedIds, setSelectedIds] = useState(new Set());
@@ -64,6 +89,7 @@ const Solicitudes = () => {
     // Column Visibility
     const [visibleColumns, setVisibleColumns] = useState({
         tipo: true,
+        espacio: false,
         estado: true,
         fecha: true,
     });
@@ -80,6 +106,56 @@ const Solicitudes = () => {
     const [confirmBulkOpen, setConfirmBulkOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState(null);
 
+    // Theme observer
+    useEffect(() => {
+        const obs = new MutationObserver(() => setIsDark(document.documentElement.classList.contains('dark')));
+        obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+        return () => obs.disconnect();
+    }, []);
+
+    // Load filter data
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const [empRes, espRes] = await Promise.all([
+                    getEmpleados({ limit: 500, activo: 'true' }),
+                    getEspaciosTrabajo({ limit: 200, activo: 'true' }),
+                ]);
+                setEmpleadosList(empRes.data || []);
+                setEspaciosList(espRes.data || []);
+            } catch (e) { console.error(e); }
+        };
+        load();
+    }, []);
+
+    // Permisos y restricciones
+    const isRestricted = user?.esEmpleado && !user?.esAdministrador;
+    const hasFullAccess = user?.esAdministrador || (user?.rol?.permisos?.some(p => p.modulo === 'solicitudes' && ['crear', 'editar', 'eliminar'].includes(p.accion)));
+    const isSingleEmployee = (empleadosList.length === 1 && isRestricted) || (isRestricted && !hasFullAccess);
+    const isSingleWorkspace = espaciosList.length === 1 && isRestricted;
+
+    // Auto-select espacio y empleado para usuarios restringidos
+    useEffect(() => {
+        if (isRestricted) {
+            if (espaciosList.length === 1 && !filterEspacio) {
+                setFilterEspacio({ value: espaciosList[0].id, label: espaciosList[0].nombre });
+            }
+            if (!filterEmpleado) {
+                if (empleadosList.length === 1) {
+                    const emp = empleadosList[0];
+                    const label = `${emp.usuario?.apellido || emp.apellido}, ${emp.usuario?.nombre || emp.nombre}`;
+                    setFilterEmpleado({ value: emp.id, label });
+                } else if (!hasFullAccess && user?.empleadoId) {
+                    const myEmp = empleadosList.find(e => e.id === user.empleadoId);
+                    if (myEmp) {
+                        const label = `${myEmp.usuario?.apellido || myEmp.apellido}, ${myEmp.usuario?.nombre || myEmp.nombre}`;
+                        setFilterEmpleado({ value: myEmp.id, label });
+                    }
+                }
+            }
+        }
+    }, [user, espaciosList, empleadosList, filterEspacio, filterEmpleado, isRestricted, hasFullAccess]);
+
     // Debounce Search
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -89,17 +165,35 @@ const Solicitudes = () => {
         return () => clearTimeout(timer);
     }, [searchInput]);
 
+    // Build select options
+    const empleadoOptions = Object.values(
+        (empleadosList).reduce((acc, emp) => {
+            const ws = emp.espacioTrabajo?.nombre || 'Sin Espacio';
+            if (!acc[ws]) acc[ws] = { label: ws, options: [] };
+            const ap = emp.usuario?.apellido || emp.apellido || '';
+            const nm = emp.usuario?.nombre || emp.nombre || '';
+            acc[ws].options.push({ value: emp.id, label: `${ap}, ${nm}` });
+            return acc;
+        }, {})
+    );
+    const espacioOptions = espaciosList.map(e => ({ value: e.id, label: e.nombre }));
+    const selectStyles = buildSelectStyles(isDark);
+
     // Load Items
     const loadItems = useCallback(async () => {
         try {
             setLoading(true);
-            const result = await getSolicitudes({
-                search,
+            const params = {
+                search: filterEmpleado ? '' : search,
                 tipoSolicitud: filterTipo,
                 activo: filterActivo,
                 page,
                 limit,
-            });
+            };
+            if (filterEspacio) params.espacioTrabajoId = filterEspacio.value;
+            if (filterEmpleado) params.empleadoId = filterEmpleado.value;
+            if (filterEstado) params.estado = filterEstado;
+            const result = await getSolicitudes(params);
             setItems(result.data);
             setTotalPages(result.pagination.totalPages);
             setTotal(result.pagination.total);
@@ -109,7 +203,7 @@ const Solicitudes = () => {
         } finally {
             setLoading(false);
         }
-    }, [search, filterTipo, filterActivo, page, limit]);
+    }, [search, filterTipo, filterActivo, page, limit, filterEspacio, filterEmpleado, filterEstado]);
 
     useEffect(() => {
         loadItems();
@@ -142,10 +236,13 @@ const Solicitudes = () => {
         setSearch('');
         setFilterActivo('true');
         setFilterTipo('');
+        setFilterEstado('');
+        if (!isSingleWorkspace) setFilterEspacio(null);
+        if (!isSingleEmployee) setFilterEmpleado(null);
         setPage(1);
     };
 
-    const hasActiveFilters = searchInput || filterActivo !== 'true' || filterTipo;
+    const hasActiveFilters = searchInput || filterActivo !== 'true' || filterTipo || filterEstado || (!isSingleWorkspace && filterEspacio) || (!isSingleEmployee && filterEmpleado);
 
     // Selection Handlers
     const handleSelectAll = (e) => {
@@ -286,7 +383,7 @@ const Solicitudes = () => {
 
     const getEmpleadoNombre = (sol) => {
         const emp = sol.contrato?.empleado;
-        return emp ? `${emp.apellido}, ${emp.nombre}` : '-';
+        return emp ? `${emp.usuario.apellido}, ${emp.usuario.nombre}` : '-';
     };
 
     const getEmpleadoDoc = (sol) => {
@@ -345,9 +442,12 @@ const Solicitudes = () => {
                 </div>
 
                 {/* Filters */}
-                <div className="filters-bar">
-                    <div className="filter-group">
-                        <input type="text" className="filter-input" placeholder="Buscar por empleado..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} style={{ minWidth: '200px' }} />
+                <div className="filters-bar" style={{ flexWrap: 'wrap' }}>
+                    <div className="filter-group" style={{ minWidth: '160px' }}>
+                        <Select isDisabled={isSingleWorkspace} options={espacioOptions} value={filterEspacio} onChange={opt => { setFilterEspacio(opt); setPage(1); }} placeholder="Espacio..." isClearable={!isSingleWorkspace} styles={selectStyles} noOptionsMessage={() => 'Sin resultados'} />
+                    </div>
+                    <div className="filter-group" style={{ minWidth: '200px' }}>
+                        <Select isDisabled={isSingleEmployee} options={empleadoOptions} value={filterEmpleado} onChange={opt => { setFilterEmpleado(opt); setPage(1); }} placeholder="Empleado..." isClearable={!isSingleEmployee} styles={selectStyles} noOptionsMessage={() => 'Sin resultados'} />
                     </div>
                     <div className="filter-group">
                         <select className="filter-input" value={filterTipo} onChange={(e) => { setFilterTipo(e.target.value); setPage(1); }}>
@@ -355,6 +455,18 @@ const Solicitudes = () => {
                             {TIPOS_SOLICITUD.map(tipo => (
                                 <option key={tipo.value} value={tipo.value}>{tipo.label}</option>
                             ))}
+                        </select>
+                    </div>
+                    <div className="filter-group">
+                        <select className="filter-input" value={filterEstado} onChange={(e) => { setFilterEstado(e.target.value); setPage(1); }}>
+                            <option value="">Estado de solicitud</option>
+                            <option value="pendiente">Pendiente</option>
+                            <option value="aprobada">Aprobada</option>
+                            <option value="rechazada">Rechazada</option>
+                            <option value="justificada">Justificada</option>
+                            <option value="injustificada">Injustificada</option>
+                            <option value="aceptada">Aceptada</option>
+                            <option value="procesada">Procesada</option>
                         </select>
                     </div>
                     <div className="filter-group">
@@ -374,7 +486,7 @@ const Solicitudes = () => {
                             </button>
                             {showColumnSelector && (
                                 <div className="column-selector-dropdown">
-                                    {Object.entries({ tipo: 'Tipo', estado: 'Estado', fecha: 'Fecha' }).map(([key, label]) => (
+                                    {Object.entries({ tipo: 'Tipo', espacio: 'Espacio', estado: 'Estado', fecha: 'Fecha' }).map(([key, label]) => (
                                         <label key={key} className="column-option">
                                             <input type="checkbox" checked={visibleColumns[key]} onChange={() => toggleColumn(key)} />
                                             <span>{label}</span>
@@ -416,6 +528,7 @@ const Solicitudes = () => {
                                         </th>
                                         <th>Empleado</th>
                                         {visibleColumns.tipo && <th>Tipo</th>}
+                                        {visibleColumns.espacio && <th>Espacio</th>}
                                         {visibleColumns.estado && <th>Estado</th>}
                                         {visibleColumns.fecha && <th>Fecha</th>}
                                         <th>Acciones</th>
@@ -436,6 +549,7 @@ const Solicitudes = () => {
                                                     </div>
                                                 </td>
                                                 {visibleColumns.tipo && <td><span className="badge badge-primary">{TIPO_LABELS[item.tipoSolicitud] || item.tipoSolicitud}</span></td>}
+                                                {visibleColumns.espacio && <td>{truncateText(item.contrato?.empleado?.espacioTrabajo?.nombre || '-')}</td>}
                                                 {visibleColumns.estado && (
                                                     <td>
                                                         <span style={{

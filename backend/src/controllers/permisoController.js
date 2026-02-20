@@ -45,6 +45,12 @@ const getGroupedByModule = async (req, res) => {
  * Inicializar permisos del sistema
  * Este endpoint crea todos los permisos necesarios para cada módulo
  */
+const { Op } = require('sequelize');
+
+/**
+ * Inicializar permisos del sistema
+ * Este endpoint crea todos los permisos necesarios para cada módulo
+ */
 const initializePermisos = async (req, res) => {
     try {
         const modulos = [
@@ -56,8 +62,9 @@ const initializePermisos = async (req, res) => {
             { key: 'contactos', label: 'Contactos' },
             { key: 'solicitudes', label: 'Solicitudes' },
             { key: 'liquidaciones', label: 'Liquidaciones' },
-            { key: 'conceptos_salariales', label: 'Conceptos Salariales' },
             { key: 'roles', label: 'Roles y Permisos' },
+            { key: 'dashboard', label: 'Dashboard' },
+            { key: 'reportes', label: 'Reportes' },
         ];
 
         const acciones = [
@@ -67,10 +74,34 @@ const initializePermisos = async (req, res) => {
             { key: 'eliminar', label: 'Eliminar' },
         ];
 
+        // 1. Eliminar permisos prohibidos u obsoletos
+        await Permiso.destroy({
+            where: {
+                [Op.or]: [
+                    // Liquidaciones: Solo leer y actualizar (borrar crear y eliminar)
+                    { modulo: 'liquidaciones', accion: { [Op.in]: ['crear', 'eliminar'] } },
+                    // Conceptos Salariales: Eliminar módulo completo
+                    { modulo: 'conceptos_salariales' },
+                    // Dashboard y Reportes: Solo permitir leer (borrar todo lo que NO sea leer)
+                    { modulo: { [Op.in]: ['dashboard', 'reportes'] }, accion: { [Op.ne]: 'leer' } }
+                ]
+            }
+        });
+
         const permisosCreados = [];
 
         for (const modulo of modulos) {
             for (const accion of acciones) {
+                // Restricción para Liquidaciones: Solo permitir leer y actualizar
+                if (modulo.key === 'liquidaciones' && (accion.key === 'crear' || accion.key === 'eliminar')) {
+                    continue;
+                }
+
+                // Restricción para Dashboard y Reportes: Solo permitir leer
+                if ((modulo.key === 'dashboard' || modulo.key === 'reportes') && accion.key !== 'leer') {
+                    continue;
+                }
+
                 const [permiso, created] = await Permiso.findOrCreate({
                     where: {
                         modulo: modulo.key,
@@ -87,8 +118,9 @@ const initializePermisos = async (req, res) => {
             }
         }
 
+
         res.json({
-            message: `Inicialización completada. ${permisosCreados.length} permisos creados.`,
+            message: `Inicialización completada. ${permisosCreados.length} permisos creados/verificados.`,
             permisosCreados,
         });
     } catch (error) {

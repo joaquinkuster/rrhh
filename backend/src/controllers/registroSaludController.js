@@ -1,22 +1,129 @@
-const { RegistroSalud, Empleado, Usuario } = require('../models');
+const { RegistroSalud, Empleado, Usuario, EspacioTrabajo, Contrato, Rol, Permiso } = require('../models');
 const { Op } = require('sequelize');
+
+// Helper: verifica si el usuario en sesión tiene un permiso específico en el módulo registros_salud
+const tienePermiso = async (session, accion) => {
+    if (session.esAdministrador) return true;
+    const usuarioId = session.usuarioId || session.empleadoId;
+    const empleado = await Empleado.findOne({ where: { usuarioId } });
+    if (!empleado || !empleado.ultimoContratoSeleccionadoId) return false;
+    const contrato = await Contrato.findByPk(empleado.ultimoContratoSeleccionadoId, {
+        include: [{ model: Rol, as: 'rol', include: [{ model: Permiso, as: 'permisos', through: { attributes: [] } }] }]
+    });
+    if (!contrato?.rol?.permisos) return false;
+    return contrato.rol.permisos.some(p => p.modulo === 'registros_salud' && p.accion === accion);
+};
 
 // Include para obtener empleado
 const includeEmpleado = [{
     model: Empleado,
     as: 'empleado',
-    include: [{
-        model: Usuario,
-        as: 'usuario',
-        attributes: ['nombre', 'apellido']
-    }]
+    include: [
+        {
+            model: Usuario,
+            as: 'usuario',
+            attributes: ['nombre', 'apellido']
+        },
+        {
+            model: EspacioTrabajo,
+            as: 'espacioTrabajo',
+            attributes: ['id', 'nombre']
+        }
+    ]
 }];
 
 // Obtener todos los registros de salud con paginación y filtros
 const getAll = async (req, res) => {
     try {
-        const { search, page = 1, limit = 10, activo, tipoExamen, resultado, empleadoId, vigente } = req.query;
+        const { search, page = 1, limit = 10, activo, tipoExamen, resultado, empleadoId, vigente, espacioTrabajoId } = req.query;
         const where = {};
+
+        // --- Filtrado por Espacio de Trabajo y Permisos ---
+        const usuarioSesionId = req.session.usuarioId || req.session.empleadoId;
+        const esAdmin = req.session.esAdministrador;
+        const filtrosEmpleados = []; // Array de IDs permitidos
+
+        if (!esAdmin) {
+            // Buscar si es empleado
+            const empleadoSesion = await Empleado.findOne({ where: { usuarioId: usuarioSesionId } });
+
+            if (empleadoSesion) {
+                // Verificar usando el helper si tiene permisos de escritura (equivale a "puede ver todos")
+                const tienePermisoVerTodos = await tienePermiso(req.session, 'crear') ||
+                    await tienePermiso(req.session, 'actualizar') ||
+                    await tienePermiso(req.session, 'eliminar');
+
+                if (tienePermisoVerTodos) {
+                    // Puede ver todo el workspace
+                    const empleadosWorkspace = await Empleado.findAll({
+                        where: { espacioTrabajoId: empleadoSesion.espacioTrabajoId },
+                        attributes: ['id']
+                    });
+                    const idsWs = empleadosWorkspace.map(e => e.id);
+
+                    if (empleadoId) {
+                        // Si pide uno específico, validar que sea del ws
+                        if (!idsWs.includes(parseInt(empleadoId))) {
+                            return res.json({ data: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } });
+                        }
+                        where.empleadoId = empleadoId;
+                    } else {
+                        where.empleadoId = { [Op.in]: idsWs };
+                    }
+                } else {
+                    // Solo ve sus propios registros
+                    where.empleadoId = empleadoSesion.id;
+                    // Si pidió otro empleadoId, lo ignoramos o retornamos vacío (por seguridad, forzamos el suyo)
+                    if (empleadoId && parseInt(empleadoId) !== empleadoSesion.id) {
+                        return res.json({ data: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } });
+                    }
+                }
+            } else {
+                // ES PROPIETARIO (No empleado)
+                const espaciosPropios = await EspacioTrabajo.findAll({
+                    where: { propietarioId: usuarioSesionId },
+                    attributes: ['id']
+                });
+                const espaciosIds = espaciosPropios.map(e => e.id);
+
+                let targetEspacios = espaciosIds;
+                if (espacioTrabajoId) {
+                    if (!espaciosIds.includes(parseInt(espacioTrabajoId))) {
+                        return res.json({ data: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } });
+                    }
+                    targetEspacios = [espacioTrabajoId];
+                }
+
+                const empleadosDeWorkspaces = await Empleado.findAll({
+                    where: { espacioTrabajoId: { [Op.in]: targetEspacios } },
+                    attributes: ['id']
+                });
+                const idsPermitidos = empleadosDeWorkspaces.map(e => e.id);
+
+                if (empleadoId) {
+                    if (!idsPermitidos.includes(parseInt(empleadoId))) {
+                        return res.json({ data: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } });
+                    }
+                    where.empleadoId = empleadoId;
+                } else if (idsPermitidos.length > 0) {
+                    where.empleadoId = { [Op.in]: idsPermitidos };
+                } else {
+                    where.empleadoId = -1; // Ninguno
+                }
+            }
+        } else {
+            // ADMIN GLOBAL
+            if (empleadoId) where.empleadoId = empleadoId;
+            // Si quisiera filtrar por espacioTrabajoId siendo admin
+            if (espacioTrabajoId) {
+                const empleadosWs = await Empleado.findAll({ where: { espacioTrabajoId } });
+                const ids = empleadosWs.map(e => e.id);
+                if (empleadoId && !ids.includes(parseInt(empleadoId))) {
+                    return res.json({ data: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } });
+                }
+                if (!empleadoId) where.empleadoId = { [Op.in]: ids };
+            }
+        }
 
         // Filtro de activo
         if (activo === 'false') {
@@ -37,14 +144,9 @@ const getAll = async (req, res) => {
             where.resultado = resultado;
         }
 
-        // Filtro por empleadoId
-        if (empleadoId) {
-            where.empleadoId = empleadoId;
-        }
-
         // Filtro por vigente
         if (vigente) {
-            where.vigente = vigente;
+            where.vigente = vigente === 'true';
         }
 
         const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -67,6 +169,7 @@ const getAll = async (req, res) => {
             },
         });
     } catch (error) {
+        console.error(error);
         res.status(500).json({ error: error.message });
     }
 };
@@ -91,6 +194,11 @@ const getById = async (req, res) => {
 // Crear registro de salud
 const create = async (req, res) => {
     try {
+        // Verificar permiso de creación
+        if (!(await tienePermiso(req.session, 'crear'))) {
+            return res.status(403).json({ error: 'No tiene permiso para crear registros de salud' });
+        }
+
         const { tipoExamen, resultado, fechaRealizacion, fechaVencimiento, comprobante, comprobanteNombre, comprobanteTipo, comprobantes, empleadoId } = req.body;
 
         // Validar empleado
@@ -134,6 +242,11 @@ const create = async (req, res) => {
 // Actualizar registro de salud
 const update = async (req, res) => {
     try {
+        // Verificar permiso de edición
+        if (!(await tienePermiso(req.session, 'actualizar'))) {
+            return res.status(403).json({ error: 'No tiene permiso para editar registros de salud' });
+        }
+
         const { id } = req.params;
         const { tipoExamen, resultado, fechaRealizacion, fechaVencimiento, comprobante, comprobanteNombre, comprobanteTipo, comprobantes, empleadoId } = req.body;
 
@@ -181,6 +294,11 @@ const update = async (req, res) => {
 // Eliminar registro (eliminación lógica)
 const remove = async (req, res) => {
     try {
+        // Verificar permiso de eliminación
+        if (!(await tienePermiso(req.session, 'eliminar'))) {
+            return res.status(403).json({ error: 'No tiene permiso para desactivar registros de salud' });
+        }
+
         const registro = await RegistroSalud.findByPk(req.params.id);
 
         if (!registro) {
@@ -197,6 +315,11 @@ const remove = async (req, res) => {
 // Eliminar registros en lote (eliminación lógica)
 const bulkRemove = async (req, res) => {
     try {
+        // Verificar permiso de eliminación
+        if (!(await tienePermiso(req.session, 'eliminar'))) {
+            return res.status(403).json({ error: 'No tiene permiso para desactivar registros de salud en lote' });
+        }
+
         const { ids } = req.body;
 
         if (!ids || !Array.isArray(ids) || ids.length === 0) {

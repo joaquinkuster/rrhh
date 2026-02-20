@@ -1,4 +1,4 @@
-const { Usuario, Empleado, Contrato } = require('../models');
+const { Usuario, Empleado, Contrato, Rol, Permiso } = require('../models');
 const { body, validationResult } = require('express-validator');
 const bcrypt = require('bcrypt');
 
@@ -64,38 +64,56 @@ const login = async (req, res) => {
             }
         }
 
-        const userData = {
-            id: usuario.id,
-            nombre: usuario.nombre,
-            apellido: usuario.apellido,
-            email: usuario.email,
-            esAdministrador: usuario.esAdministrador,
-            esEmpleado: usuario.esEmpleado,
-            activo: usuario.activo,
-            createdAt: usuario.createdAt,
-            updatedAt: usuario.updatedAt,
-            // Datos de empleo si existen
-            ...(emp ? {
-                empleadoId: emp.id,
-                espacioTrabajoId: emp.espacioTrabajoId,
-                telefono: emp.telefono,
-                tipoDocumento: emp.tipoDocumento,
-                numeroDocumento: emp.numeroDocumento,
-                cuil: emp.cuil,
-                fechaNacimiento: emp.fechaNacimiento,
-                nacionalidadId: emp.nacionalidadId,
-                genero: emp.genero,
-                estadoCivil: emp.estadoCivil,
-                calle: emp.calle,
-                numero: emp.numero,
-                piso: emp.piso,
-                departamento: emp.departamento,
-                codigoPostal: emp.codigoPostal,
-                provinciaId: emp.provinciaId,
-                ciudadId: emp.ciudadId,
-                ultimoContratoSeleccionadoId: emp.ultimoContratoSeleccionadoId,
-            } : {})
-        };
+        // Construir respuesta userData
+        const userData = usuario.get({ plain: true });
+        delete userData.contrasena;
+
+        if (emp) {
+            const empData = emp.get({ plain: true });
+
+            // Cargar Rol y Permisos del contrato seleccionado
+            if (empData.ultimoContratoSeleccionadoId) {
+                const contrato = await Contrato.findByPk(empData.ultimoContratoSeleccionadoId, {
+                    include: [{
+                        model: Rol,
+                        as: 'rol',
+                        attributes: ['id', 'nombre'],
+                        include: [{
+                            model: Permiso,
+                            as: 'permisos',
+                            through: { attributes: [] },
+                            attributes: ['id', 'modulo', 'accion']
+                        }]
+                    }]
+                });
+
+                if (contrato && contrato.rol) {
+                    userData.rol = contrato.rol;
+                }
+            }
+
+            // Mezclar datos de empleado en el objeto usuario (para compatibilidad con frontend actual)
+            Object.assign(userData, {
+                empleadoId: empData.id,
+                espacioTrabajoId: empData.espacioTrabajoId,
+                telefono: empData.telefono,
+                tipoDocumento: empData.tipoDocumento,
+                numeroDocumento: empData.numeroDocumento,
+                cuil: empData.cuil,
+                fechaNacimiento: empData.fechaNacimiento,
+                nacionalidadId: empData.nacionalidadId,
+                genero: empData.genero,
+                estadoCivil: empData.estadoCivil,
+                calle: empData.calle,
+                numero: empData.numero,
+                piso: empData.piso,
+                departamento: empData.departamento,
+                codigoPostal: empData.codigoPostal,
+                provinciaId: empData.provinciaId,
+                ciudadId: empData.ciudadId,
+                ultimoContratoSeleccionadoId: empData.ultimoContratoSeleccionadoId,
+            });
+        }
 
         // Guardar sesión y retornar datos
         req.session.save((err) => {
@@ -239,6 +257,28 @@ const getCurrentUser = async (req, res) => {
             }
 
             const emp = empleado.get({ plain: true });
+
+            // Cargar Rol y Permisos del contrato seleccionado
+            if (emp.ultimoContratoSeleccionadoId) {
+                const contrato = await Contrato.findByPk(emp.ultimoContratoSeleccionadoId, {
+                    include: [{
+                        model: Rol,
+                        as: 'rol',
+                        attributes: ['id', 'nombre'],
+                        include: [{
+                            model: Permiso,
+                            as: 'permisos',
+                            through: { attributes: [] }, // Tabla intermedia
+                            attributes: ['id', 'modulo', 'accion']
+                        }]
+                    }]
+                });
+
+                if (contrato && contrato.rol) {
+                    result.rol = contrato.rol;
+                }
+            }
+
             Object.assign(result, {
                 empleadoId: emp.id,
                 espacioTrabajoId: emp.espacioTrabajoId,

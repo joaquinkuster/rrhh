@@ -202,8 +202,9 @@ const RolWizard = ({ rol, onClose, onSuccess }) => {
             contactos: 'Contactos',
             solicitudes: 'Solicitudes',
             liquidaciones: 'Liquidaciones',
-            conceptos_salariales: 'Conceptos Salariales',
             roles: 'Roles y Permisos',
+            dashboard: 'Dashboard',
+            reportes: 'Reportes',
         };
         return labels[modulo] || modulo;
     };
@@ -377,73 +378,92 @@ const RolWizard = ({ rol, onClose, onSuccess }) => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {Object.entries(permisosAgrupados).map(([modulo, permisosModulo], index) => {
-                                        const permisosDelModulo = permisosModulo.map(p => p.id);
-                                        const todosSeleccionados = permisosDelModulo.every(id => permisos.includes(id));
-                                        const algunosSeleccionados = permisosDelModulo.some(id => permisos.includes(id)) && !todosSeleccionados;
+                                    {(() => {
+                                        const MODULE_ORDER = [
+                                            'dashboard',
+                                            'empleados',
+                                            'empresas',
+                                            'contratos',
+                                            'registros_salud',
+                                            'evaluaciones',
+                                            'contactos',
+                                            'solicitudes',
+                                            'liquidaciones',
+                                            'roles',
+                                            'reportes'
+                                        ];
 
-                                        return (
-                                            <tr key={modulo} style={{
-                                                borderBottom: index < Object.keys(permisosAgrupados).length - 1 ? '1px solid var(--border-color)' : 'none',
-                                                transition: 'background-color 0.2s'
-                                            }}
-                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--hover-bg)'}
-                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                            >
-                                                <td style={{
-                                                    padding: '0.75rem 1rem',
-                                                    fontWeight: 600,
-                                                    color: 'var(--text-primary)',
-                                                    position: 'sticky',
-                                                    left: 0,
-                                                    background: 'inherit',
-                                                    zIndex: 1
-                                                }}>
-                                                    {getModuloLabel(modulo)}
-                                                </td>
-                                                {accionesOrdenadas.map(accion => {
-                                                    const permiso = permisosModulo.find(p => p.accion === accion);
-                                                    if (!permiso) {
+                                        return MODULE_ORDER.map((modulo, index) => {
+                                            const permisosModulo = permisosAgrupados[modulo];
+                                            if (!permisosModulo) return null;
+
+                                            const permisosDelModulo = permisosModulo.map(p => p.id);
+                                            const todosSeleccionados = permisosDelModulo.every(id => permisos.includes(id));
+                                            const algunosSeleccionados = permisosDelModulo.some(id => permisos.includes(id)) && !todosSeleccionados;
+
+                                            return (
+                                                <tr key={modulo} style={{
+                                                    borderBottom: index < MODULE_ORDER.length - 1 ? '1px solid var(--border-color)' : 'none',
+                                                    transition: 'background-color 0.2s'
+                                                }}
+                                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--hover-bg)'}
+                                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                >
+                                                    <td style={{
+                                                        padding: '0.75rem 1rem',
+                                                        fontWeight: 600,
+                                                        color: 'var(--text-primary)',
+                                                        position: 'sticky',
+                                                        left: 0,
+                                                        background: 'inherit',
+                                                        zIndex: 1
+                                                    }}>
+                                                        {getModuloLabel(modulo)}
+                                                    </td>
+                                                    {accionesOrdenadas.map(accion => {
+                                                        const permiso = permisosModulo.find(p => p.accion === accion);
+                                                        if (!permiso) {
+                                                            return (
+                                                                <td key={accion} style={{
+                                                                    padding: '0.75rem 1rem',
+                                                                    textAlign: 'center'
+                                                                }}>
+                                                                    <span style={{ color: 'var(--text-secondary)' }}>-</span>
+                                                                </td>
+                                                            );
+                                                        }
                                                         return (
                                                             <td key={accion} style={{
                                                                 padding: '0.75rem 1rem',
                                                                 textAlign: 'center'
                                                             }}>
-                                                                <span style={{ color: 'var(--text-secondary)' }}>-</span>
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={permisos.includes(permiso.id)}
+                                                                    onChange={() => handlePermisoToggle(permiso.id)}
+                                                                    style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                                                                />
                                                             </td>
                                                         );
-                                                    }
-                                                    return (
-                                                        <td key={accion} style={{
-                                                            padding: '0.75rem 1rem',
-                                                            textAlign: 'center'
-                                                        }}>
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={permisos.includes(permiso.id)}
-                                                                onChange={() => handlePermisoToggle(permiso.id)}
-                                                                style={{ cursor: 'pointer', width: '16px', height: '16px' }}
-                                                            />
-                                                        </td>
-                                                    );
-                                                })}
-                                                <td style={{
-                                                    padding: '0.75rem 1rem',
-                                                    textAlign: 'center'
-                                                }}>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={todosSeleccionados}
-                                                        ref={input => {
-                                                            if (input) input.indeterminate = algunosSeleccionados;
-                                                        }}
-                                                        onChange={() => handleModuloToggle(modulo)}
-                                                        style={{ cursor: 'pointer', width: '16px', height: '16px' }}
-                                                    />
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
+                                                    })}
+                                                    <td style={{
+                                                        padding: '0.75rem 1rem',
+                                                        textAlign: 'center'
+                                                    }}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={todosSeleccionados}
+                                                            ref={input => {
+                                                                if (input) input.indeterminate = algunosSeleccionados;
+                                                            }}
+                                                            onChange={() => handleModuloToggle(modulo)}
+                                                            style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                                                        />
+                                                    </td>
+                                                </tr>
+                                            );
+                                        });
+                                    })()}
                                 </tbody>
                             </table>
                         </div>

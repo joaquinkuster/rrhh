@@ -209,12 +209,18 @@ export const deleteEmpleadosBulk = async (ids) => {
 };
 
 // ===== Empresas =====
-export const getEmpresas = async ({ search = '', page = 1, limit = 10, activo } = {}) => {
+export const getEmpresas = async (filters = {}) => {
     const params = new URLSearchParams();
-    if (search) params.append('search', search);
-    params.append('page', page);
-    params.append('limit', limit);
-    if (activo !== undefined) params.append('activo', activo);
+
+    // Defaults si no vienen en filters
+    if (filters.page === undefined) params.append('page', 1);
+    if (filters.limit === undefined) params.append('limit', 10);
+
+    Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+            params.append(key, value);
+        }
+    });
 
     const response = await fetch(`${API_URL}/empresas?${params.toString()}`);
     if (!response.ok) throw new Error('Error al obtener empresas');
@@ -652,7 +658,12 @@ export const getDiasSolicitadosVacaciones = async (fechaInicio, fechaFin) => {
 
 // ===== LIQUIDACIONES =====
 export const getLiquidaciones = async (params = {}) => {
-    const queryParams = new URLSearchParams(params);
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+            queryParams.append(key, value);
+        }
+    });
     const response = await fetch(`${API_URL}/liquidaciones?${queryParams.toString()}`);
     if (!response.ok) throw new Error('Error al obtener liquidaciones');
     return response.json();
@@ -717,7 +728,12 @@ export const marcarLiquidacionComoPagada = async (id, estaPagada) => {
 
 // ===== CONCEPTOS SALARIALES =====
 export const getConceptosSalariales = async (params = {}) => {
-    const queryParams = new URLSearchParams(params);
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+            queryParams.append(key, value);
+        }
+    });
     const response = await fetch(`${API_URL}/conceptos-salariales?${queryParams.toString()}`);
     if (!response.ok) throw new Error('Error al obtener conceptos salariales');
     return response.json();
@@ -802,7 +818,13 @@ export const getReportesEmpresa = async (empresaId) => {
 
 // ===== ROLES =====
 export const getRoles = async (params = {}) => {
-    const queryParams = new URLSearchParams(params);
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+            queryParams.append(key, value);
+        }
+    });
+
     const response = await fetch(`${API_URL}/roles?${queryParams.toString()}`);
     if (!response.ok) throw new Error('Error al obtener roles');
     return response.json();
@@ -888,9 +910,15 @@ export const initializePermisos = async () => {
 };
 
 // ===== ESPACIOS DE TRABAJO =====
-export const getEspaciosTrabajo = async (params = {}) => {
-    const queryParams = new URLSearchParams(params).toString();
-    const response = await fetchWithCredentials(`${API_URL}/espacios-trabajo?${queryParams}`);
+export const getEspaciosTrabajo = async (filters = {}) => {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+            params.append(key, value);
+        }
+    });
+    const query = params.toString() ? `?${params.toString()}` : '';
+    const response = await fetchWithCredentials(`${API_URL}/espacios-trabajo${query}`);
     if (!response.ok) throw new Error('Error al obtener espacios de trabajo');
     return response.json();
 };
@@ -969,3 +997,20 @@ export const canChangeRolWorkspace = async (rolId) => {
 };
 
 // ===== Conceptos Salariales =====
+
+// ===== Usuarios (propietarios de espacios) =====
+export const getUsuarios = async (params = {}) => {
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+            queryParams.append(key, value);
+        }
+    });
+    const query = queryParams.toString();
+    const response = await fetchWithCredentials(`${API_URL}/usuarios?${query}`);
+    if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || 'Error al obtener usuarios');
+    }
+    return response.json();
+};

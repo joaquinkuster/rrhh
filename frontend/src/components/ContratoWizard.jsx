@@ -577,11 +577,18 @@ const ContratoWizard = ({ contrato: contratoToEdit, onClose, onSuccess, empleado
         return anyHasContract;
     };
 
-    const empleadoOptions = empleados.map(emp => ({
-        value: emp.id,
-        label: `${emp.apellido}, ${emp.nombre} - ${emp.numeroDocumento}`,
-        empleado: emp,
-    }));
+    const empleadoOptions = Object.values(
+        empleados.reduce((acc, emp) => {
+            const ws = emp.espacioTrabajo?.nombre || 'Sin Espacio';
+            if (!acc[ws]) acc[ws] = { label: ws, options: [] };
+            acc[ws].options.push({
+                value: emp.id,
+                label: `${emp.apellido}, ${emp.nombre} - ${emp.numeroDocumento}`,
+                empleado: emp,
+            });
+            return acc;
+        }, {})
+    );
 
     const isEmpleadoLocked = isEditMode;
 

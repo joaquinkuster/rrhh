@@ -23,6 +23,12 @@ const getAll = async (req, res) => {
             whereClause.activo = activo === 'true';
         }
 
+        // Filtro de descripción
+        const { descripcion } = req.query;
+        if (descripcion) {
+            whereClause.descripcion = { [Op.like]: `%${descripcion}%` };
+        }
+
         const usuarioSesionId = req.session.usuarioId || req.session.empleadoId;
         const esAdmin = req.session.esAdministrador;
 

@@ -4,7 +4,7 @@ const { Op } = require('sequelize');
 // Obtener todos los empleados con filtros y paginación
 const getAll = async (req, res) => {
     try {
-        const { nombre, apellido, email, nacionalidad, genero, estadoCivil, activo, page = 1, limit = 10 } = req.query;
+        const { nombre, apellido, email, nacionalidad, genero, estadoCivil, activo, page = 1, limit = 10, documento } = req.query;
 
         // Filtros para la tabla Empleado
         const whereEmpleado = {};
@@ -24,6 +24,7 @@ const getAll = async (req, res) => {
         if (nacionalidad) whereEmpleado.nacionalidadId = nacionalidad;
         if (genero) whereEmpleado.genero = genero;
         if (estadoCivil) whereEmpleado.estadoCivil = estadoCivil;
+        if (documento) whereEmpleado.numeroDocumento = { [Op.like]: `${documento}%` };
 
         // Filtros de texto en Usuario
         if (nombre) whereUsuario.nombre = { [Op.like]: `%${nombre}%` };

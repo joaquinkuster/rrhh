@@ -40,6 +40,13 @@ const getAll = async (req, res) => {
             where.nombre = { [Op.like]: `%${search}%` };
         }
 
+        // Filtros adicionales requested
+        const { email, telefono, industria, direccion } = req.query;
+        if (email) where.email = { [Op.like]: `%${email}%` };
+        if (telefono) where.telefono = { [Op.like]: `%${telefono}%` };
+        if (industria) where.industria = { [Op.like]: `%${industria}%` };
+        if (direccion) where.direccion = { [Op.like]: `%${direccion}%` };
+
         const usuarioSesionId = req.session.usuarioId || req.session.empleadoId;
         const esAdmin = req.session.esAdministrador;
 

@@ -1,14 +1,30 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../context/AuthContext';
+import Select from 'react-select';
 import {
     getEvaluaciones,
     deleteEvaluacion,
     deleteEvaluacionesBulk,
     getEvaluacionById,
     reactivateEvaluacion,
+    getEmpleados,
+    getEspaciosTrabajo,
 } from '../services/api';
 import EvaluacionWizard from '../components/EvaluacionWizard';
 import EvaluacionDetail from '../components/EvaluacionDetail';
 import ConfirmDialog from '../components/ConfirmDialog';
+import { truncateText } from '../utils/formatters';
+
+const buildSelectStyles = (isDark) => ({
+    control: (b, s) => ({ ...b, backgroundColor: isDark ? '#1e293b' : 'white', borderColor: s.isFocused ? '#0d9488' : (isDark ? '#334155' : '#e2e8f0'), boxShadow: 'none', '&:hover': { borderColor: '#0d9488' }, minHeight: '36px', fontSize: '0.875rem', borderRadius: '0.5rem' }),
+    menu: (b) => ({ ...b, backgroundColor: isDark ? '#1e293b' : 'white', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`, borderRadius: '0.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 9999 }),
+    option: (b, s) => ({ ...b, backgroundColor: s.isSelected ? '#0d9488' : s.isFocused ? (isDark ? '#334155' : '#f1f5f9') : 'transparent', color: s.isSelected ? 'white' : (isDark ? '#e2e8f0' : '#1e293b'), fontSize: '0.875rem', cursor: 'pointer' }),
+    groupHeading: (b) => ({ ...b, fontWeight: 'bold', textTransform: 'uppercase', fontSize: '0.7rem', color: '#64748b' }),
+    input: (b) => ({ ...b, color: isDark ? '#e2e8f0' : '#1e293b', fontSize: '0.875rem' }),
+    singleValue: (b) => ({ ...b, color: isDark ? '#e2e8f0' : '#1e293b' }),
+    placeholder: (b) => ({ ...b, color: '#94a3b8', fontSize: '0.875rem' }),
+    valueContainer: (b) => ({ ...b, padding: '0 8px' }),
+});
 
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50];
 
@@ -84,6 +100,7 @@ const ESTADO_FILTER = [
 ];
 
 const Evaluaciones = () => {
+    const { user } = useAuth();
     // Data State
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -100,6 +117,16 @@ const Evaluaciones = () => {
     const [filterActivo, setFilterActivo] = useState('true');
     const [filterPeriodo, setFilterPeriodo] = useState('');
     const [filterEstado, setFilterEstado] = useState('');
+    const [filterEspacio, setFilterEspacio] = useState(null);
+    const [filterEvaluado, setFilterEvaluado] = useState(null);
+    const [filterPuntajeMin, setFilterPuntajeMin] = useState('');
+    const [filterPuntajeMax, setFilterPuntajeMax] = useState('');
+    const [filterEscala, setFilterEscala] = useState('');
+
+    // Filter lists
+    const [empleadosList, setEmpleadosList] = useState([]);
+    const [espaciosList, setEspaciosList] = useState([]);
+    const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
 
     // Selection
     const [selectedIds, setSelectedIds] = useState(new Set());
@@ -107,7 +134,8 @@ const Evaluaciones = () => {
     // Column Visibility
     const [visibleColumns, setVisibleColumns] = useState({
         empleadoEvaluado: true,
-        puntaje: true,
+        espacio: false,
+        puntaje: false,
         escala: true,
     });
     const [showColumnSelector, setShowColumnSelector] = useState(false);
@@ -123,17 +151,87 @@ const Evaluaciones = () => {
     const [confirmBulkOpen, setConfirmBulkOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState(null);
 
+    // Theme observer
+    useEffect(() => {
+        const obs = new MutationObserver(() => setIsDark(document.documentElement.classList.contains('dark')));
+        obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+        return () => obs.disconnect();
+    }, []);
+
+    // Load filter data
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const [empRes, espRes] = await Promise.all([
+                    getEmpleados({ limit: 500, activo: 'true' }),
+                    getEspaciosTrabajo({ limit: 200, activo: 'true' }),
+                ]);
+                setEmpleadosList(empRes.data || []);
+                setEspaciosList(espRes.data || []);
+            } catch (e) { console.error(e); }
+        };
+        load();
+    }, []);
+
+    // Permisos y restricciones
+    const isRestricted = user?.esEmpleado && !user?.esAdministrador;
+    const hasFullAccess = user?.esAdministrador || (user?.rol?.permisos?.some(p => p.modulo === 'evaluaciones' && ['crear', 'editar', 'eliminar'].includes(p.accion)));
+    const isSingleEmployee = (empleadosList.length === 1 && isRestricted) || (isRestricted && !hasFullAccess);
+    const isSingleWorkspace = espaciosList.length === 1 && isRestricted;
+
+    // Auto-select espacio y evaluado para usuarios restringidos
+    useEffect(() => {
+        if (isRestricted) {
+            if (espaciosList.length === 1 && !filterEspacio) {
+                setFilterEspacio({ value: espaciosList[0].id, label: espaciosList[0].nombre });
+            }
+            if (!filterEvaluado) {
+                if (empleadosList.length === 1) {
+                    const emp = empleadosList[0];
+                    const label = `${emp.usuario?.apellido || emp.apellido}, ${emp.usuario?.nombre || emp.nombre}`;
+                    setFilterEvaluado({ value: emp.id, label });
+                } else if (!hasFullAccess && user?.empleadoId) {
+                    const myEmp = empleadosList.find(e => e.id === user.empleadoId);
+                    if (myEmp) {
+                        const label = `${myEmp.usuario?.apellido || myEmp.apellido}, ${myEmp.usuario?.nombre || myEmp.nombre}`;
+                        setFilterEvaluado({ value: myEmp.id, label });
+                    }
+                }
+            }
+        }
+    }, [user, espaciosList, empleadosList, filterEspacio, filterEvaluado, isRestricted, hasFullAccess]);
+
+    // Build select options
+    const empleadoOptions = Object.values(
+        (empleadosList).reduce((acc, emp) => {
+            const ws = emp.espacioTrabajo?.nombre || 'Sin Espacio';
+            if (!acc[ws]) acc[ws] = { label: ws, options: [] };
+            const ap = emp.usuario?.apellido || emp.apellido || '';
+            const nm = emp.usuario?.nombre || emp.nombre || '';
+            acc[ws].options.push({ value: emp.id, label: `${ap}, ${nm}` });
+            return acc;
+        }, {})
+    );
+    const espacioOptions = espaciosList.map(e => ({ value: e.id, label: e.nombre }));
+    const selectStyles = buildSelectStyles(isDark);
+
     // Load Items
     const loadItems = useCallback(async () => {
         try {
             setLoading(true);
-            const result = await getEvaluaciones({
+            const params = {
                 periodo: filterPeriodo,
                 estado: filterEstado,
                 activo: filterActivo,
                 page,
                 limit,
-            });
+            };
+            if (filterEspacio) params.espacioTrabajoId = filterEspacio.value;
+            if (filterEvaluado) params.evaluadoId = filterEvaluado.value;
+            if (filterPuntajeMin) params.puntajeMin = filterPuntajeMin;
+            if (filterPuntajeMax) params.puntajeMax = filterPuntajeMax;
+            if (filterEscala) params.escalaCualitativa = filterEscala;
+            const result = await getEvaluaciones(params);
             setItems(result.data);
             setTotalPages(result.pagination.totalPages);
             setTotal(result.pagination.total);
@@ -143,21 +241,24 @@ const Evaluaciones = () => {
         } finally {
             setLoading(false);
         }
-    }, [filterPeriodo, filterEstado, filterActivo, page, limit]);
+    }, [filterPeriodo, filterEstado, filterActivo, page, limit, filterEspacio, filterEvaluado, filterPuntajeMin, filterPuntajeMax, filterEscala]);
 
-    useEffect(() => {
-        loadItems();
-    }, [loadItems]);
+    useEffect(() => { loadItems(); }, [loadItems]);
 
     // Handlers
     const clearFilters = () => {
         setFilterActivo('true');
         setFilterPeriodo('');
         setFilterEstado('');
+        if (!isSingleWorkspace) setFilterEspacio(null);
+        if (!isSingleEmployee) setFilterEvaluado(null);
+        setFilterPuntajeMin('');
+        setFilterPuntajeMax('');
+        setFilterEscala('');
         setPage(1);
     };
 
-    const hasActiveFilters = filterActivo !== 'true' || filterPeriodo || filterEstado;
+    const hasActiveFilters = filterActivo !== 'true' || filterPeriodo || filterEstado || (!isSingleWorkspace && filterEspacio) || (!isSingleEmployee && filterEvaluado) || filterPuntajeMin || filterPuntajeMax || filterEscala;
 
     // Selection Handlers
     const handleSelectAll = (e) => {
@@ -343,7 +444,13 @@ const Evaluaciones = () => {
                 </div>
 
                 {/* Filters */}
-                <div className="filters-bar">
+                <div className="filters-bar" style={{ flexWrap: 'wrap' }}>
+                    <div className="filter-group" style={{ minWidth: '160px' }}>
+                        <Select isDisabled={isSingleWorkspace} options={espacioOptions} value={filterEspacio} onChange={opt => { setFilterEspacio(opt); setPage(1); }} placeholder="Espacio..." isClearable={!isSingleWorkspace} styles={selectStyles} noOptionsMessage={() => 'Sin resultados'} />
+                    </div>
+                    <div className="filter-group" style={{ minWidth: '200px' }}>
+                        <Select isDisabled={isSingleEmployee} options={empleadoOptions} value={filterEvaluado} onChange={opt => { setFilterEvaluado(opt); setPage(1); }} placeholder="Evaluado..." isClearable={!isSingleEmployee} styles={selectStyles} noOptionsMessage={() => 'Sin resultados'} />
+                    </div>
                     <div className="filter-group">
                         <select className="filter-input" value={filterPeriodo} onChange={(e) => { setFilterPeriodo(e.target.value); setPage(1); }}>
                             <option value="">Todos los períodos</option>
@@ -359,6 +466,20 @@ const Evaluaciones = () => {
                                 <option key={e.value} value={e.value}>{e.label}</option>
                             ))}
                         </select>
+                    </div>
+                    <div className="filter-group">
+                        <select className="filter-input" value={filterEscala} onChange={(e) => { setFilterEscala(e.target.value); setPage(1); }}>
+                            <option value="">Escala</option>
+                            <option value="supera_expectativas">Supera Expectativas</option>
+                            <option value="cumple">Cumple</option>
+                            <option value="necesita_mejora">Necesita Mejora</option>
+                        </select>
+                    </div>
+                    <div className="filter-group">
+                        <input type="number" className="filter-input" placeholder="Puntaje mín." value={filterPuntajeMin} onChange={e => { setFilterPuntajeMin(e.target.value); setPage(1); }} style={{ width: '110px' }} min="0" max="100" />
+                    </div>
+                    <div className="filter-group">
+                        <input type="number" className="filter-input" placeholder="Puntaje máx." value={filterPuntajeMax} onChange={e => { setFilterPuntajeMax(e.target.value); setPage(1); }} style={{ width: '110px' }} min="0" max="100" />
                     </div>
                     <div className="filter-group">
                         <select className="filter-input" value={filterActivo} onChange={(e) => { setFilterActivo(e.target.value); setPage(1); }}>
@@ -377,7 +498,7 @@ const Evaluaciones = () => {
                             </button>
                             {showColumnSelector && (
                                 <div className="column-selector-dropdown">
-                                    {Object.entries({ empleadoEvaluado: 'Evaluado', puntaje: 'Puntaje', escala: 'Escala' }).map(([key, label]) => (
+                                    {Object.entries({ empleadoEvaluado: 'Evaluado', espacio: 'Espacio', puntaje: 'Puntaje', escala: 'Escala' }).map(([key, label]) => (
                                         <label key={key} className="column-option">
                                             <input type="checkbox" checked={visibleColumns[key]} onChange={() => toggleColumn(key)} />
                                             <span>{label}</span>
@@ -420,6 +541,7 @@ const Evaluaciones = () => {
                                         <th>Período</th>
                                         <th>Tipo</th>
                                         {visibleColumns.empleadoEvaluado && <th>Evaluado</th>}
+                                        {visibleColumns.espacio && <th>Espacio</th>}
                                         <th style={{ textAlign: 'center' }}>Estado</th>
                                         {visibleColumns.puntaje && <th style={{ textAlign: 'center' }}>Puntaje</th>}
                                         {visibleColumns.escala && <th style={{ textAlign: 'center' }}>Escala</th>}
@@ -441,7 +563,7 @@ const Evaluaciones = () => {
                                                 <td>
                                                     {item.contratoEvaluado?.empleado ? (
                                                         <>
-                                                            <strong>{item.contratoEvaluado.empleado.apellido}, {item.contratoEvaluado.empleado.nombre}</strong>
+                                                            <strong>{item.contratoEvaluado.empleado.usuario.apellido}, {item.contratoEvaluado.empleado.usuario.nombre}</strong>
                                                             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                                                                 {item.contratoEvaluado.puestos?.[0]?.nombre || 'Sin puesto'}
                                                             </div>
@@ -451,6 +573,7 @@ const Evaluaciones = () => {
                                                     )}
                                                 </td>
                                             )}
+                                            {visibleColumns.espacio && <td>{truncateText(item.contratoEvaluado?.empleado?.espacioTrabajo?.nombre || '-')}</td>}
                                             <td style={{ textAlign: 'center' }}>
                                                 <span style={{
                                                     display: 'inline-flex',

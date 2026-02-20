@@ -4,7 +4,7 @@ const { Op } = require('sequelize');
 // Obtener todos los espacios de trabajo con filtros y paginación
 const getAll = async (req, res) => {
     try {
-        const { nombre, propietario, activo, page = 1, limit = 10 } = req.query;
+        const { nombre, propietario, propietarioId, activo, descripcion, fechaCreacion, page = 1, limit = 10 } = req.query;
         const where = {};
 
         // Por defecto solo mostrar activos
@@ -20,16 +20,46 @@ const getAll = async (req, res) => {
             where.nombre = { [Op.like]: `%${nombre}%` };
         }
 
+        if (descripcion) where.descripcion = { [Op.like]: `%${descripcion}%` };
+
+        if (fechaCreacion) {
+            // Parseo manual de 'YYYY-MM-DD' para evitar desfase de zona horaria
+            // new Date('YYYY-MM-DD') lo interpreta en UTC, causando errores en servidores con TZ local
+            const parts = fechaCreacion.split('-');
+            if (parts.length === 3) {
+                const year = parseInt(parts[0]);
+                const month = parseInt(parts[1]) - 1; // month es 0-indexed
+                const day = parseInt(parts[2]);
+                const startDate = new Date(year, month, day, 0, 0, 0, 0);
+                const endDate = new Date(year, month, day, 23, 59, 59, 999);
+                where.createdAt = {
+                    [Op.between]: [startDate, endDate]
+                };
+            }
+        }
+
         // --- Lógica de permisos ---
         const usuarioId = req.session.usuarioId || req.session.empleadoId;
         const esAdmin = req.session.esAdministrador;
 
         // Si no es admin, solo mostrar sus propios espacios
+        // Si no es admin, solo mostrar sus propios espacios o el espacio donde es empleado
         if (!esAdmin) {
-            where.propietarioId = usuarioId;
-        } else if (propietario) {
+            const emp = await Empleado.findOne({ where: { usuarioId } });
+
+            if (emp && emp.espacioTrabajoId) {
+                // Si es empleado, puede ver sus espacios propios Y su espacio asignado
+                where[Op.or] = [
+                    { propietarioId: usuarioId },
+                    { id: emp.espacioTrabajoId }
+                ];
+            } else {
+                // Si no es empleado, solo sus porpios espacios
+                where.propietarioId = usuarioId;
+            }
+        } else if (propietario || propietarioId) {
             // Si es admin y quiere filtrar por propietario específico
-            where.propietarioId = propietario;
+            where.propietarioId = propietario || propietarioId;
         }
 
         const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -120,19 +150,80 @@ const create = async (req, res) => {
             espacioTrabajoId: espacio.id
         }, { transaction: t });
 
-        // 3. Rol de Administrador
-        const rolAdmin = await Rol.create({
-            nombre: 'Administrador',
-            descripcion: 'Rol con acceso completo a todas las funcionalidades del sistema',
+        // 3. Roles por Defecto
+        const allPermisos = await Permiso.findAll({ transaction: t });
+
+        // Helper para filtrar permisos
+        const getPermisosIds = (criterios) => {
+            return allPermisos.filter(p => {
+                // Si criterio es string (modulo), todas las acciones
+                // Si es objeto { modulo, acciones: [] }
+                return criterios.some(c => {
+                    if (typeof c === 'string') return p.modulo === c;
+                    return p.modulo === c.modulo && c.acciones.includes(p.accion);
+                });
+            }).map(p => p.id);
+        };
+
+        // 3.1 Director Ejecutivo (CEO) - Todos los permisos
+        const rolCEO = await Rol.create({
+            nombre: 'Director Ejecutivo',
+            descripcion: 'Acceso total al sistema (CEO)',
             esObligatorio: true,
             espacioTrabajoId: espacio.id,
             activo: true
         }, { transaction: t });
 
-        // Asignar todos los permisos existentes al rol admin
-        const permisos = await Permiso.findAll({ transaction: t });
-        if (permisos.length > 0) {
-            await rolAdmin.setPermisos(permisos.map(p => p.id), { transaction: t });
+        if (allPermisos.length > 0) {
+            await rolCEO.setPermisos(allPermisos.map(p => p.id), { transaction: t });
+        }
+
+        // 3.2 Administrador de RRHH
+        const rolRRHH = await Rol.create({
+            nombre: 'Administrador de RRHH',
+            descripcion: 'Gestión de RRHH, Dashboard y Reportes',
+            esObligatorio: true,
+            espacioTrabajoId: espacio.id,
+            activo: true
+        }, { transaction: t });
+
+        const permisosRRHH = getPermisosIds([
+            'empleados',
+            'contratos',
+            'registros_salud',
+            'evaluaciones',
+            'contactos',
+            'solicitudes',
+            // Agrego lectura de empresas para operatividad básica en selects
+            { modulo: 'empresas', acciones: ['leer'] },
+            { modulo: 'dashboard', acciones: ['leer'] },
+            { modulo: 'reportes', acciones: ['leer'] },
+            { modulo: 'liquidaciones', acciones: ['leer', 'actualizar'] }
+        ]);
+
+        if (permisosRRHH.length > 0) {
+            await rolRRHH.setPermisos(permisosRRHH, { transaction: t });
+        }
+
+        // 3.3 Personal Operativo
+        const rolOperativo = await Rol.create({
+            nombre: 'Personal Operativo',
+            descripcion: 'Acceso de lectura limitado',
+            esObligatorio: true,
+            espacioTrabajoId: espacio.id,
+            activo: true
+        }, { transaction: t });
+
+        const permisosOperativo = getPermisosIds([
+            { modulo: 'registros_salud', acciones: ['leer'] },
+            { modulo: 'evaluaciones', acciones: ['leer'] },
+            { modulo: 'contactos', acciones: ['leer'] },
+            { modulo: 'solicitudes', acciones: ['leer'] },
+            { modulo: 'liquidaciones', acciones: ['leer'] }
+        ]);
+
+        if (permisosOperativo.length > 0) {
+            await rolOperativo.setPermisos(permisosOperativo, { transaction: t });
         }
 
         await t.commit();

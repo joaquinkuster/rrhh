@@ -1,11 +1,40 @@
-const { Liquidacion, Contrato, Empleado, Usuario } = require('../models');
+const { Liquidacion, Contrato, Empleado, Usuario, EspacioTrabajo, Rol, Permiso } = require('../models');
 const { Op } = require('sequelize');
+
+// Helper: verifica si el usuario en sesión tiene un permiso específico en el módulo liquidaciones
+const tienePermiso = async (session, accion) => {
+    if (session.esAdministrador) return true;
+    const usuarioId = session.usuarioId || session.empleadoId;
+    const empleado = await Empleado.findOne({ where: { usuarioId } });
+    if (!empleado || !empleado.ultimoContratoSeleccionadoId) return false;
+    const contrato = await Contrato.findByPk(empleado.ultimoContratoSeleccionadoId, {
+        include: [{ model: Rol, as: 'rol', include: [{ model: Permiso, as: 'permisos', through: { attributes: [] } }] }]
+    });
+    if (!contrato?.rol?.permisos) return false;
+    return contrato.rol.permisos.some(p => p.modulo === 'liquidaciones' && p.accion === accion);
+};
+
+// Include estándar para carga del contrato con empleado y espacio
+const includeContrato = [{
+    model: Contrato,
+    as: 'contrato',
+    include: [{
+        model: Empleado,
+        as: 'empleado',
+        include: [
+            { model: Usuario, as: 'usuario', attributes: ['nombre', 'apellido'] },
+            { model: EspacioTrabajo, as: 'espacioTrabajo', attributes: ['id', 'nombre'] }
+        ]
+    }],
+    attributes: ['id', 'tipoContrato', 'fechaInicio', 'fechaFin', 'estado'],
+}];
 
 // Obtener todas las liquidaciones con filtros y paginación
 const getAll = async (req, res) => {
     try {
         const {
             empleadoId,
+            espacioTrabajoId,
             contratoId,
             fechaDesde,
             fechaHasta,
@@ -20,50 +49,122 @@ const getAll = async (req, res) => {
         if (activo !== undefined) {
             where.activo = activo === 'true' || activo === true || activo === '1';
         }
-
-        if (estado) {
-            where.estado = estado;
-        }
-
+        if (estado) where.estado = estado;
         if (req.query.estaPagada !== undefined) {
             where.estaPagada = req.query.estaPagada === 'true' || req.query.estaPagada === true || req.query.estaPagada === '1';
         }
-
-        if (contratoId) {
-            where.contratoId = contratoId;
-        }
-
         if (fechaDesde || fechaHasta) {
             where.fechaInicio = {};
             if (fechaDesde) where.fechaInicio[Op.gte] = fechaDesde;
             if (fechaHasta) where.fechaInicio[Op.lte] = fechaHasta;
         }
 
-        // Aplicar filtro de empleado si se proporciona
-        const contratoWhere = {};
-        if (empleadoId) {
-            contratoWhere.empleadoId = empleadoId;
+        // --- Filtrado por Espacio de Trabajo y Permisos ---
+        // Las liquidaciones pertenecen a contratos: resolver empleado → contratos → where.contratoId
+        const usuarioSesionId = req.session.usuarioId || req.session.empleadoId;
+        const esAdmin = req.session.esAdministrador;
+
+        if (!esAdmin) {
+            const empleadoSesion = await Empleado.findOne({ where: { usuarioId: usuarioSesionId } });
+
+            if (empleadoSesion) {
+                // ES EMPLEADO — verificar si tiene permisos de gestión (puede ver todos del workspace)
+                const tienePermisoVerTodos = await tienePermiso(req.session, 'crear') ||
+                    await tienePermiso(req.session, 'actualizar') ||
+                    await tienePermiso(req.session, 'eliminar');
+
+                if (tienePermisoVerTodos) {
+                    // Puede ver las liquidaciones de todos los empleados de su workspace
+                    const empleadosWorkspace = await Empleado.findAll({
+                        where: { espacioTrabajoId: empleadoSesion.espacioTrabajoId },
+                        attributes: ['id']
+                    });
+                    const idsEmpleadosWs = empleadosWorkspace.map(e => e.id);
+
+                    let whereContrato = { empleadoId: { [Op.in]: idsEmpleadosWs } };
+                    if (empleadoId) {
+                        if (!idsEmpleadosWs.includes(parseInt(empleadoId))) {
+                            return res.json({ liquidaciones: [], total: 0, page: 1, totalPages: 0 });
+                        }
+                        whereContrato = { empleadoId };
+                    }
+                    if (espacioTrabajoId && parseInt(espacioTrabajoId) !== empleadoSesion.espacioTrabajoId) {
+                        return res.json({ liquidaciones: [], total: 0, page: 1, totalPages: 0 });
+                    }
+                    const contratosPermitidos = await Contrato.findAll({ where: whereContrato, attributes: ['id'] });
+                    where.contratoId = { [Op.in]: contratosPermitidos.map(c => c.id) };
+
+                } else {
+                    // Solo ve sus propias liquidaciones
+                    if (empleadoId && parseInt(empleadoId) !== empleadoSesion.id) {
+                        return res.json({ liquidaciones: [], total: 0, page: 1, totalPages: 0 });
+                    }
+                    const contratosPropio = await Contrato.findAll({
+                        where: { empleadoId: empleadoSesion.id },
+                        attributes: ['id']
+                    });
+                    where.contratoId = { [Op.in]: contratosPropio.map(c => c.id) };
+                }
+
+            } else {
+                // ES PROPIETARIO (no empleado) → ve liquidaciones de empleados de sus espacios
+                const espaciosPropios = await EspacioTrabajo.findAll({
+                    where: { propietarioId: usuarioSesionId },
+                    attributes: ['id']
+                });
+                const espaciosIds = espaciosPropios.map(e => e.id);
+
+                let targetEspacios = espaciosIds;
+                if (espacioTrabajoId) {
+                    if (!espaciosIds.includes(parseInt(espacioTrabajoId))) {
+                        return res.json({ liquidaciones: [], total: 0, page: 1, totalPages: 0 });
+                    }
+                    targetEspacios = [parseInt(espacioTrabajoId)];
+                }
+
+                const empleadosDeWorkspaces = await Empleado.findAll({
+                    where: { espacioTrabajoId: { [Op.in]: targetEspacios } },
+                    attributes: ['id']
+                });
+                const idsPermitidos = empleadosDeWorkspaces.map(e => e.id);
+
+                let whereContrato = { empleadoId: { [Op.in]: idsPermitidos } };
+                if (empleadoId) {
+                    if (!idsPermitidos.includes(parseInt(empleadoId))) {
+                        return res.json({ liquidaciones: [], total: 0, page: 1, totalPages: 0 });
+                    }
+                    whereContrato = { empleadoId };
+                }
+                const contratosPermitidos = await Contrato.findAll({ where: whereContrato, attributes: ['id'] });
+                const idsContratos = contratosPermitidos.map(c => c.id);
+                where.contratoId = idsContratos.length > 0 ? { [Op.in]: idsContratos } : -1;
+            }
+
+        } else {
+            // ADMIN GLOBAL — filtros opcionales
+            if (contratoId) {
+                where.contratoId = contratoId;
+            } else if (empleadoId || espacioTrabajoId) {
+                let whereContratoAdmin = {};
+                if (empleadoId) whereContratoAdmin.empleadoId = empleadoId;
+                if (espacioTrabajoId) {
+                    const empleadosWs = await Empleado.findAll({ where: { espacioTrabajoId }, attributes: ['id'] });
+                    const idsWs = empleadosWs.map(e => e.id);
+                    if (empleadoId && !idsWs.includes(parseInt(empleadoId))) {
+                        return res.json({ liquidaciones: [], total: 0, page: 1, totalPages: 0 });
+                    }
+                    if (!empleadoId) whereContratoAdmin.empleadoId = { [Op.in]: idsWs };
+                }
+                const contratosAdmin = await Contrato.findAll({ where: whereContratoAdmin, attributes: ['id'] });
+                where.contratoId = { [Op.in]: contratosAdmin.map(c => c.id) };
+            }
         }
 
         const offset = (page - 1) * limit;
 
         const { count, rows } = await Liquidacion.findAndCountAll({
             where,
-            include: [{
-                model: Contrato,
-                as: 'contrato',
-                where: Object.keys(contratoWhere).length > 0 ? contratoWhere : undefined,
-                include: [{
-                    model: Empleado,
-                    as: 'empleado',
-                    include: [{
-                        model: Usuario,
-                        as: 'usuario',
-                        attributes: ['nombre', 'apellido']
-                    }]
-                }],
-                attributes: ['id', 'tipoContrato', 'fechaInicio', 'fechaFin', 'estado'],
-            }],
+            include: includeContrato,
             order: [['id', 'DESC']],
             limit: parseInt(limit),
             offset: parseInt(offset),
@@ -85,27 +186,10 @@ const getAll = async (req, res) => {
 const getById = async (req, res) => {
     try {
         const { id } = req.params;
-
-        const liquidacion = await Liquidacion.findByPk(id, {
-            include: [{
-                model: Contrato,
-                as: 'contrato',
-                include: [{
-                    model: Empleado,
-                    as: 'empleado',
-                    include: [{
-                        model: Usuario,
-                        as: 'usuario',
-                        attributes: ['nombre', 'apellido']
-                    }]
-                }],
-            }],
-        });
-
+        const liquidacion = await Liquidacion.findByPk(id, { include: includeContrato });
         if (!liquidacion) {
             return res.status(404).json({ error: 'Liquidación no encontrada' });
         }
-
         res.json(liquidacion);
     } catch (error) {
         console.error('Error al obtener liquidación:', error);
@@ -116,30 +200,23 @@ const getById = async (req, res) => {
 // Actualizar liquidación
 const update = async (req, res) => {
     try {
+        // Verificar permiso de edición
+        if (!(await tienePermiso(req.session, 'actualizar'))) {
+            return res.status(403).json({ error: 'No tiene permiso para editar liquidaciones' });
+        }
+
         const { id } = req.params;
         const {
-            basico,
-            antiguedad,
-            presentismo,
-            horasExtras,
-            vacaciones,
-            sac,
-            inasistencias,
-            totalBruto,
-            totalRetenciones,
-            vacacionesNoGozadas,
-            neto,
-            detalleConceptos,
-            estado,
+            basico, antiguedad, presentismo, horasExtras, vacaciones, sac,
+            inasistencias, totalBruto, totalRetenciones, vacacionesNoGozadas,
+            neto, detalleConceptos, estado,
         } = req.body;
 
         const liquidacion = await Liquidacion.findByPk(id);
-
         if (!liquidacion) {
             return res.status(404).json({ error: 'Liquidación no encontrada' });
         }
 
-        // Actualizar campos permitidos
         if (basico !== undefined) liquidacion.basico = basico;
         if (antiguedad !== undefined) liquidacion.antiguedad = antiguedad;
         if (presentismo !== undefined) liquidacion.presentismo = presentismo;
@@ -157,23 +234,7 @@ const update = async (req, res) => {
 
         await liquidacion.save();
 
-        // Recargar con relaciones
-        const liquidacionActualizada = await Liquidacion.findByPk(id, {
-            include: [{
-                model: Contrato,
-                as: 'contrato',
-                include: [{
-                    model: Empleado,
-                    as: 'empleado',
-                    include: [{
-                        model: Usuario,
-                        as: 'usuario',
-                        attributes: ['nombre', 'apellido']
-                    }]
-                }],
-            }],
-        });
-
+        const liquidacionActualizada = await Liquidacion.findByPk(id, { include: includeContrato });
         res.json({ message: 'Liquidación actualizada exitosamente', liquidacion: liquidacionActualizada });
     } catch (error) {
         console.error('Error al actualizar liquidación:', error);
@@ -184,10 +245,13 @@ const update = async (req, res) => {
 // Eliminar liquidación (eliminación lógica)
 const remove = async (req, res) => {
     try {
+        // Verificar permiso de eliminación
+        if (!(await tienePermiso(req.session, 'eliminar'))) {
+            return res.status(403).json({ error: 'No tiene permiso para desactivar liquidaciones' });
+        }
+
         const { id } = req.params;
-
         const liquidacion = await Liquidacion.findByPk(id);
-
         if (!liquidacion) {
             return res.status(404).json({ error: 'Liquidación no encontrada' });
         }
@@ -206,9 +270,7 @@ const remove = async (req, res) => {
 const reactivate = async (req, res) => {
     try {
         const { id } = req.params;
-
         const liquidacion = await Liquidacion.findByPk(id);
-
         if (!liquidacion) {
             return res.status(404).json({ error: 'Liquidación no encontrada' });
         }
@@ -216,22 +278,7 @@ const reactivate = async (req, res) => {
         liquidacion.activo = true;
         await liquidacion.save();
 
-        const liquidacionActualizada = await Liquidacion.findByPk(id, {
-            include: [{
-                model: Contrato,
-                as: 'contrato',
-                include: [{
-                    model: Empleado,
-                    as: 'empleado',
-                    include: [{
-                        model: Usuario,
-                        as: 'usuario',
-                        attributes: ['nombre', 'apellido']
-                    }]
-                }],
-            }],
-        });
-
+        const liquidacionActualizada = await Liquidacion.findByPk(id, { include: includeContrato });
         res.json({ message: 'Liquidación reactivada exitosamente', liquidacion: liquidacionActualizada });
     } catch (error) {
         console.error('Error al reactivar liquidación:', error);
@@ -242,17 +289,17 @@ const reactivate = async (req, res) => {
 // Eliminar múltiples liquidaciones (eliminación lógica en lote)
 const bulkRemove = async (req, res) => {
     try {
-        const { ids } = req.body;
+        // Verificar permiso de eliminación
+        if (!(await tienePermiso(req.session, 'eliminar'))) {
+            return res.status(403).json({ error: 'No tiene permiso para desactivar liquidaciones en lote' });
+        }
 
+        const { ids } = req.body;
         if (!ids || !Array.isArray(ids) || ids.length === 0) {
             return res.status(400).json({ error: 'Se requiere un array de IDs' });
         }
 
-        await Liquidacion.update(
-            { activo: false },
-            { where: { id: { [Op.in]: ids } } }
-        );
-
+        await Liquidacion.update({ activo: false }, { where: { id: { [Op.in]: ids } } });
         res.json({ message: `${ids.length} liquidaciones eliminadas exitosamente` });
     } catch (error) {
         console.error('Error al eliminar liquidaciones:', error);

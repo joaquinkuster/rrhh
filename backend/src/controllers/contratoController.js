@@ -71,6 +71,14 @@ const getAll = async (req, res) => {
             where.estado = estado;
         }
 
+        // Filtro por rango salarial
+        const { salarioMin, salarioMax } = req.query;
+        if (salarioMin || salarioMax) {
+            where.salario = {};
+            if (salarioMin) where.salario[Op.gte] = parseFloat(salarioMin);
+            if (salarioMax) where.salario[Op.lte] = parseFloat(salarioMax);
+        }
+
         // --- Filtrado por Espacio de Trabajo (via Empleado) ---
         const usuarioSesionId = req.session.usuarioId || req.session.empleadoId;
         const esAdmin = req.session.esAdministrador;

@@ -1,14 +1,30 @@
 import { useState, useEffect, useCallback } from 'react';
+import Select from 'react-select';
 import {
     getEmpresas,
     deleteEmpresa,
     deleteEmpresasBulk,
     getEmpresaById,
     reactivateEmpresa,
+    getEspaciosTrabajo,
+    getCurrentUser,
 } from '../services/api';
 import EmpresaWizard from '../components/EmpresaWizard';
 import EmpresaDetail from '../components/EmpresaDetail';
 import ConfirmDialog from '../components/ConfirmDialog';
+import { truncateText } from '../utils/formatters';
+
+const buildSelectStyles = (isDark) => ({
+    control: (b, s) => ({ ...b, backgroundColor: isDark ? '#1e293b' : 'white', borderColor: s.isFocused ? '#0d9488' : (isDark ? '#334155' : '#e2e8f0'), boxShadow: 'none', '&:hover': { borderColor: '#0d9488' }, minHeight: '36px', fontSize: '0.875rem', borderRadius: '0.5rem' }),
+    menu: (b) => ({ ...b, backgroundColor: isDark ? '#1e293b' : 'white', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`, borderRadius: '0.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 9999 }),
+    option: (b, s) => ({ ...b, backgroundColor: s.isSelected ? '#0d9488' : s.isFocused ? (isDark ? '#334155' : '#f1f5f9') : 'transparent', color: s.isSelected ? 'white' : (isDark ? '#e2e8f0' : '#1e293b'), fontSize: '0.875rem', cursor: 'pointer' }),
+    input: (b) => ({ ...b, color: isDark ? '#e2e8f0' : '#1e293b', fontSize: '0.875rem' }),
+    singleValue: (b) => ({ ...b, color: isDark ? '#e2e8f0' : '#1e293b' }),
+    placeholder: (b) => ({ ...b, color: '#94a3b8', fontSize: '0.875rem' }),
+    valueContainer: (b) => ({ ...b, padding: '0 8px' }),
+});
+
+const INDUSTRIAS_COMUNES = ['Tecnología', 'Salud', 'Educación', 'Construcción', 'Retail', 'Transporte', 'Finanzas', 'Manufactura', 'Otro'];
 
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50];
 
@@ -27,18 +43,34 @@ const Empresas = () => {
 
     // Filters
     const [searchInput, setSearchInput] = useState('');
-    const [search, setSearch] = useState('');
+    const [filterNombre, setFilterNombre] = useState('');
     const [filterActivo, setFilterActivo] = useState('true');
+    const [filterEspacio, setFilterEspacio] = useState(null);
+    const [filterEmail, setFilterEmail] = useState('');
+    const [emailInput, setEmailInput] = useState('');
+    const [filterTelefono, setFilterTelefono] = useState('');
+    const [telefonoInput, setTelefonoInput] = useState('');
+    const [filterIndustria, setFilterIndustria] = useState('');
+    const [industriaInput, setIndustriaInput] = useState('');
+    const [filterDireccion, setFilterDireccion] = useState('');
+    const [direccionInput, setDireccionInput] = useState('');
+
+    const [currentUser, setCurrentUser] = useState(null);
+
+    // Filter lists
+    const [espaciosList, setEspaciosList] = useState([]);
+    const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
 
     // Selection
     const [selectedIds, setSelectedIds] = useState(new Set());
 
     // Column Visibility
     const [visibleColumns, setVisibleColumns] = useState({
+        espacio: false,
         email: true,
         telefono: true,
         industria: true,
-        direccion: true,
+        direccion: false,
     });
     const [showColumnSelector, setShowColumnSelector] = useState(false);
 
@@ -53,20 +85,101 @@ const Empresas = () => {
     const [confirmBulkOpen, setConfirmBulkOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState(null);
 
+    // Theme observer
+    useEffect(() => {
+        const obs = new MutationObserver(() => setIsDark(document.documentElement.classList.contains('dark')));
+        obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+        return () => obs.disconnect();
+    }, []);
+
+    // Load filter data
+    // Load Initial Data
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const [espaciosRes, userMe] = await Promise.all([
+                    getEspaciosTrabajo({ limit: 200, activo: 'true' }),
+                    getCurrentUser()
+                ]);
+                setEspaciosList(espaciosRes.data || []);
+                setCurrentUser(userMe);
+
+                // Lógica de preselección de espacio SOLO SI ES EMPLEADO
+                if (userMe && userMe.esEmpleado) {
+                    const espacios = espaciosRes.data || [];
+                    if (userMe.espacioTrabajoId) {
+                        const miEspacio = espacios.find(e => e.id === userMe.espacioTrabajoId);
+                        if (miEspacio) {
+                            setFilterEspacio({ value: miEspacio.id, label: miEspacio.nombre });
+                        }
+                    }
+                }
+            } catch (e) { console.error(e); }
+        };
+        load();
+    }, []);
+
+    const espacioOptions = espaciosList.map(e => ({ value: e.id, label: e.nombre }));
+    const selectStyles = buildSelectStyles(isDark);
+
     // Debounce Search
     useEffect(() => {
         const timer = setTimeout(() => {
-            setSearch(searchInput);
+            setFilterNombre(searchInput);
             setPage(1);
         }, 300);
         return () => clearTimeout(timer);
     }, [searchInput]);
 
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setFilterEmail(emailInput);
+            setPage(1);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [emailInput]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setFilterTelefono(telefonoInput);
+            setPage(1);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [telefonoInput]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setFilterIndustria(industriaInput);
+            setPage(1);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [industriaInput]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setFilterDireccion(direccionInput);
+            setPage(1);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [direccionInput]);
+
     // Load Items
     const loadItems = useCallback(async () => {
         try {
             setLoading(true);
-            const result = await getEmpresas({ search, page, limit, activo: filterActivo });
+            const params = {
+                search: filterNombre,
+                activo: filterActivo,
+                page,
+                limit,
+                espacioTrabajoId: filterEspacio?.value,
+                email: filterEmail,
+                telefono: filterTelefono,
+                industria: filterIndustria,
+                direccion: filterDireccion,
+            };
+
+            const result = await getEmpresas(params);
             setItems(result.data);
             setTotalPages(result.pagination.totalPages);
             setTotal(result.pagination.total);
@@ -76,7 +189,7 @@ const Empresas = () => {
         } finally {
             setLoading(false);
         }
-    }, [search, page, limit, filterActivo]);
+    }, [filterNombre, page, limit, filterActivo, filterEspacio, filterEmail, filterTelefono, filterIndustria, filterDireccion]);
 
     useEffect(() => {
         loadItems();
@@ -85,12 +198,25 @@ const Empresas = () => {
     // Handlers
     const clearFilters = () => {
         setSearchInput('');
-        setSearch('');
+        setFilterNombre('');
         setFilterActivo('true');
+        // Si es empleado, no limpiar el filtro de espacio
+        if (!currentUser || !currentUser.esEmpleado) {
+            setFilterEspacio(null);
+        }
+        setFilterEmail('');
+        setFilterTelefono('');
+        setFilterIndustria('');
+        setFilterDireccion('');
+        setEmailInput('');
+        setTelefonoInput('');
+        setIndustriaInput('');
+        setDireccionInput('');
         setPage(1);
     };
 
-    const hasActiveFilters = searchInput || filterActivo !== 'true';
+    const isEmpleado = currentUser && currentUser.esEmpleado;
+    const hasActiveFilters = filterNombre || filterActivo !== 'true' || (!isEmpleado && filterEspacio) || filterEmail || filterTelefono || filterIndustria || filterDireccion;
 
     // Selection Handlers
     const handleSelectAll = (e) => {
@@ -267,16 +393,42 @@ const Empresas = () => {
 
                 {/* Filters */}
                 <div className="filters-bar">
-                    <div className="filter-group">
-                        <input type="text" className="filter-input" placeholder="Buscar por nombre..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} style={{ minWidth: '200px' }} />
+                    <div className="filters-inputs">
+                        <div className="filter-group" style={{ minWidth: '200px' }}>
+                            <Select
+                                options={espacioOptions}
+                                value={filterEspacio}
+                                onChange={opt => { setFilterEspacio(opt); setPage(1); }}
+                                placeholder="Espacio..."
+                                isClearable={!currentUser?.esEmpleado}
+                                isDisabled={currentUser && currentUser.esEmpleado}
+                                styles={selectStyles}
+                                noOptionsMessage={() => 'Sin resultados'}
+                            />
+                        </div>
+                        <div className="filter-group">
+                            <input type="text" className="filter-input" placeholder="Buscar por nombre..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} style={{ width: '200px' }} />
+                        </div>
+                        <div className="filter-group">
+                            <input type="text" className="filter-input" placeholder="Email" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} style={{ width: '200px' }} />
+                        </div>
+                        <div className="filter-group">
+                            <input type="text" className="filter-input" placeholder="Teléfono" value={telefonoInput} onChange={(e) => setTelefonoInput(e.target.value)} style={{ width: '200px' }} />
+                        </div>
+                        <div className="filter-group">
+                            <input type="text" className="filter-input" placeholder="Industria" value={industriaInput} onChange={(e) => setIndustriaInput(e.target.value)} style={{ width: '200px' }} />
+                        </div>
+                        <div className="filter-group">
+                            <input type="text" className="filter-input" placeholder="Dirección" value={direccionInput} onChange={(e) => setDireccionInput(e.target.value)} style={{ width: '200px' }} />
+                        </div>
+                        <div className="filter-group">
+                            <select className="filter-input" value={filterActivo} onChange={(e) => { setFilterActivo(e.target.value); setPage(1); }} style={{ width: '200px' }}>
+                                <option value="true">Activas</option>
+                                <option value="false">Inactivas</option>
+                            </select>
+                        </div>
                     </div>
-                    <div className="filter-group">
-                        <select className="filter-input" value={filterActivo} onChange={(e) => { setFilterActivo(e.target.value); setPage(1); }}>
-                            <option value="true">Activas</option>
-                            <option value="false">Inactivas</option>
-                        </select>
-                    </div>
-                    <div className="filter-group">
+                    <div className="filters-actions">
                         <div className="column-selector-wrapper">
                             <button className="btn btn-secondary btn-sm" onClick={() => setShowColumnSelector(!showColumnSelector)}>
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
@@ -287,7 +439,7 @@ const Empresas = () => {
                             </button>
                             {showColumnSelector && (
                                 <div className="column-selector-dropdown">
-                                    {Object.entries({ email: 'Email', telefono: 'Teléfono', industria: 'Industria', direccion: 'Dirección' }).map(([key, label]) => (
+                                    {Object.entries({ espacio: 'Espacio', email: 'Email', telefono: 'Teléfono', industria: 'Industria', direccion: 'Dirección' }).map(([key, label]) => (
                                         <label key={key} className="column-option">
                                             <input type="checkbox" checked={visibleColumns[key]} onChange={() => toggleColumn(key)} />
                                             <span>{label}</span>
@@ -296,15 +448,15 @@ const Empresas = () => {
                                 </div>
                             )}
                         </div>
+                        {hasActiveFilters && (
+                            <button className="btn btn-secondary btn-sm" onClick={clearFilters}>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                                Limpiar
+                            </button>
+                        )}
                     </div>
-                    {hasActiveFilters && (
-                        <button className="btn btn-secondary btn-sm" onClick={clearFilters}>
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                            Limpiar
-                        </button>
-                    )}
                 </div>
 
                 {/* Content */}
@@ -328,6 +480,7 @@ const Empresas = () => {
                                             <input type="checkbox" checked={allSelected} ref={input => { if (input) input.indeterminate = someSelected; }} onChange={handleSelectAll} />
                                         </th>
                                         <th>Nombre</th>
+                                        {visibleColumns.espacio && <th>Espacio</th>}
                                         {visibleColumns.email && <th>Email</th>}
                                         {visibleColumns.telefono && <th>Teléfono</th>}
                                         {visibleColumns.industria && <th>Industria</th>}
@@ -340,6 +493,7 @@ const Empresas = () => {
                                         <tr key={item.id} className={`${selectedIds.has(item.id) ? 'row-selected' : ''} ${!item.activo ? 'row-inactive' : ''}`}>
                                             <td><input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => handleSelectOne(item.id)} /></td>
                                             <td><strong>{item.nombre}</strong></td>
+                                            {visibleColumns.espacio && <td>{truncateText(item.espacioTrabajo?.nombre || '-')}</td>}
                                             {visibleColumns.email && <td>{item.email || '-'}</td>}
                                             {visibleColumns.telefono && <td>{item.telefono || '-'}</td>}
                                             {visibleColumns.industria && <td>{item.industria || '-'}</td>}

@@ -1,14 +1,27 @@
 import { useState, useEffect, useCallback } from 'react';
+import Select from 'react-select';
 import {
     getEspaciosTrabajo,
     deleteEspacioTrabajo,
     deleteEspaciosTrabajoB,
     getEspacioTrabajoById,
     reactivateEspacioTrabajo,
+    getUsuarios,
+    getCurrentUser,
 } from '../services/api';
 import EspacioTrabajoFormulario from '../components/EspacioTrabajoFormulario';
 import EspacioTrabajoDetail from '../components/EspacioTrabajoDetail';
 import ConfirmDialog from '../components/ConfirmDialog';
+
+const buildSelectStyles = (isDark) => ({
+    control: (b, s) => ({ ...b, backgroundColor: isDark ? '#1e293b' : 'white', borderColor: s.isFocused ? '#0d9488' : (isDark ? '#334155' : '#e2e8f0'), boxShadow: 'none', '&:hover': { borderColor: '#0d9488' }, minHeight: '36px', fontSize: '0.875rem', borderRadius: '0.5rem' }),
+    menu: (b) => ({ ...b, backgroundColor: isDark ? '#1e293b' : 'white', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`, borderRadius: '0.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 9999 }),
+    option: (b, s) => ({ ...b, backgroundColor: s.isSelected ? '#0d9488' : s.isFocused ? (isDark ? '#334155' : '#f1f5f9') : 'transparent', color: s.isSelected ? 'white' : (isDark ? '#e2e8f0' : '#1e293b'), fontSize: '0.875rem', cursor: 'pointer' }),
+    input: (b) => ({ ...b, color: isDark ? '#e2e8f0' : '#1e293b', fontSize: '0.875rem' }),
+    singleValue: (b) => ({ ...b, color: isDark ? '#e2e8f0' : '#1e293b' }),
+    placeholder: (b) => ({ ...b, color: '#94a3b8', fontSize: '0.875rem' }),
+    valueContainer: (b) => ({ ...b, padding: '0 8px' }),
+});
 
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50];
 
@@ -27,8 +40,17 @@ const EspaciosTrabajo = () => {
 
     // Filters
     const [searchInput, setSearchInput] = useState('');
-    const [search, setSearch] = useState('');
+    const [filterNombre, setFilterNombre] = useState('');
     const [filterActivo, setFilterActivo] = useState('true');
+    const [descripcionInput, setDescripcionInput] = useState('');
+    const [filterDescripcion, setFilterDescripcion] = useState('');
+    const [filterPropietario, setFilterPropietario] = useState(null);
+    const [filterFechaCreacion, setFilterFechaCreacion] = useState('');
+
+    // Filter lists
+    const [usuariosList, setUsuariosList] = useState([]);
+    const [currentUser, setCurrentUser] = useState(null);
+    const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
 
     // Selection
     const [selectedIds, setSelectedIds] = useState(new Set());
@@ -52,25 +74,77 @@ const EspaciosTrabajo = () => {
     const [confirmBulkOpen, setConfirmBulkOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState(null);
 
-    // Debounce Search
+    // Theme observer
+    useEffect(() => {
+        const obs = new MutationObserver(() => setIsDark(document.documentElement.classList.contains('dark')));
+        obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+        return () => obs.disconnect();
+    }, []);
+
+    // Load filter data — solo usuarios no-empleados (admins/staff que pueden ser propietarios)
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const [usersRes, userMe] = await Promise.all([
+                    getUsuarios({ activo: 'true' }),
+                    getCurrentUser()
+                ]);
+                setUsuariosList(usersRes.data || []);
+                setCurrentUser(userMe);
+
+                if (userMe && !userMe.esAdministrador) {
+                    setFilterPropietario({ value: userMe.id, label: `${userMe.apellido}, ${userMe.nombre}` });
+                }
+            } catch (e) {
+                console.error(e);
+                // Si falla al obtener usuario, intentar obtener solo usuarios
+                try {
+                    const res = await getUsuarios({ activo: 'true' });
+                    setUsuariosList(res.data || []);
+                } catch (ex) { console.error(ex); }
+            }
+        };
+        load();
+    }, []);
+
+    const empleadoOptions = usuariosList.map(u => ({
+        value: u.id,
+        label: `${u.apellido}, ${u.nombre}`,
+    }));
+    const selectStyles = buildSelectStyles(isDark);
+
+    // Debounce Search (nombre y descripción)
     useEffect(() => {
         const timer = setTimeout(() => {
-            setSearch(searchInput);
+            setFilterNombre(searchInput);
             setPage(1);
         }, 300);
         return () => clearTimeout(timer);
     }, [searchInput]);
 
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setFilterDescripcion(descripcionInput);
+            setPage(1);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [descripcionInput]);
+
     // Load Items
     const loadItems = useCallback(async () => {
         try {
             setLoading(true);
-            const result = await getEspaciosTrabajo({
-                nombre: search,
+            const params = {
+                nombre: filterNombre,
                 activo: filterActivo,
                 page,
                 limit,
-            });
+                descripcion: filterDescripcion,
+                propietarioId: filterPropietario?.value,
+                fechaCreacion: filterFechaCreacion,
+            };
+
+            const result = await getEspaciosTrabajo(params);
 
             setItems(result.data);
             setTotalPages(result.pagination.totalPages);
@@ -81,7 +155,7 @@ const EspaciosTrabajo = () => {
         } finally {
             setLoading(false);
         }
-    }, [search, filterActivo, page, limit]);
+    }, [filterNombre, filterActivo, page, limit, filterDescripcion, filterPropietario, filterFechaCreacion]);
 
     useEffect(() => {
         loadItems();
@@ -191,8 +265,14 @@ const EspaciosTrabajo = () => {
 
     const clearFilters = () => {
         setSearchInput('');
-        setSearch('');
+        setFilterNombre('');
+        setDescripcionInput('');
+        setFilterDescripcion('');
         setFilterActivo('true');
+        if (!currentUser || currentUser.esAdministrador) {
+            setFilterPropietario(null);
+        }
+        setFilterFechaCreacion('');
         setPage(1);
     };
 
@@ -203,7 +283,9 @@ const EspaciosTrabajo = () => {
         }));
     };
 
-    const hasActiveFilters = search || filterActivo !== 'true';
+    // Si no es admin, el filtro de propietario es obligatorio y no cuenta como "activo" para mostrar el botón limpiar
+    const isNotAdmin = currentUser && !currentUser.esAdministrador;
+    const hasActiveFilters = filterNombre || filterActivo !== 'true' || filterDescripcion || (!isNotAdmin && filterPropietario) || filterFechaCreacion;
     const allSelected = items.length > 0 && selectedIds.size === items.length;
     const someSelected = selectedIds.size > 0 && selectedIds.size < items.length;
     const showingInactive = filterActivo === 'false';
@@ -268,16 +350,37 @@ const EspaciosTrabajo = () => {
 
                     {/* Filters */}
                     <div className="filters-bar">
-                        <div className="filter-group">
-                            <input type="text" className="filter-input" placeholder="Buscar por nombre..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} style={{ minWidth: '200px' }} />
+                        <div className="filters-inputs">
+                            <div className="filter-group">
+                                <Select
+                                    options={empleadoOptions}
+                                    value={filterPropietario}
+                                    onChange={opt => { setFilterPropietario(opt); setPage(1); }}
+                                    placeholder="Propietario..."
+                                    isClearable={currentUser?.esAdministrador}
+                                    isDisabled={currentUser && !currentUser.esAdministrador}
+                                    styles={selectStyles}
+                                    noOptionsMessage={() => 'Sin resultados'}
+                                />
+                            </div>
+                            <div className="filter-group">
+                                <input type="text" className="filter-input" placeholder="Buscar por nombre..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} style={{ width: '200px' }} />
+                            </div>
+                            <div className="filter-group">
+                                <input type="text" className="filter-input" placeholder="Descripción" value={descripcionInput} onChange={(e) => setDescripcionInput(e.target.value)} style={{ width: '200px' }} />
+                            </div>
+                            <div className="filter-group">
+                                <input type="date" className="filter-input" placeholder="Fecha Creación" value={filterFechaCreacion} onChange={(e) => { setFilterFechaCreacion(e.target.value); setPage(1); }} style={{ width: '200px' }} />
+                            </div>
+                            <div className="filter-group">
+                                <select className="filter-input" value={filterActivo} onChange={(e) => { setFilterActivo(e.target.value); setPage(1); }} style={{ width: '200px' }}>
+                                    <option value="true">Activos</option>
+                                    <option value="false">Inactivos</option>
+                                </select>
+                            </div>
                         </div>
-                        <div className="filter-group">
-                            <select className="filter-input" value={filterActivo} onChange={(e) => { setFilterActivo(e.target.value); setPage(1); }}>
-                                <option value="true">Activos</option>
-                                <option value="false">Inactivos</option>
-                            </select>
-                        </div>
-                        <div className="filter-group">
+
+                        <div className="filters-actions">
                             <div className="column-selector-wrapper">
                                 <button className="btn btn-secondary btn-sm" onClick={() => setShowColumnSelector(!showColumnSelector)}>
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
@@ -305,15 +408,15 @@ const EspaciosTrabajo = () => {
                                     </div>
                                 )}
                             </div>
+                            {hasActiveFilters && (
+                                <button className="btn btn-secondary btn-sm" onClick={clearFilters}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                    Limpiar
+                                </button>
+                            )}
                         </div>
-                        {hasActiveFilters && (
-                            <button className="btn btn-secondary btn-sm" onClick={clearFilters}>
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                                Limpiar
-                            </button>
-                        )}
                     </div>
 
                     {/* Content */}

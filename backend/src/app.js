@@ -18,6 +18,7 @@ const prueba_liqRoutes = require('./routes/prueba_liq');
 const rolRoutes = require('./routes/roles');
 const permisoRoutes = require('./routes/permisos');
 const espacioTrabajoRoutes = require('./routes/espacioTrabajoRoutes');
+const usuarioRoutes = require('./routes/usuarioRoutes');
 
 
 // Iniciar cron jobs
@@ -71,6 +72,7 @@ app.use('/api/feriados', feriadoRoutes);
 app.use('/api/roles', rolRoutes);
 app.use('/api/permisos', permisoRoutes);
 app.use('/api/espacios-trabajo', espacioTrabajoRoutes);
+app.use('/api/usuarios', usuarioRoutes);
 
 
 

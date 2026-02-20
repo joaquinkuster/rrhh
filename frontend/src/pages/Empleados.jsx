@@ -1,23 +1,51 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import Select from 'react-select';
 import {
     getEmpleados,
     deleteEmpleado,
     deleteEmpleadosBulk,
     getEmpleadoById,
     reactivateEmpleado,
+    getEspaciosTrabajo,
+    getCurrentUser,
 } from '../services/api';
 import EmpleadoWizard from '../components/EmpleadoWizard';
 import EmpleadoDetail from '../components/EmpleadoDetail';
 import ConfirmDialog from '../components/ConfirmDialog';
 import Alert from '../components/Alert';
 import ubicaciones from '../data/ubicaciones.json';
+import { truncateText } from '../utils/formatters';
+
+const buildSelectStyles = (isDark) => ({
+    control: (b, s) => ({ ...b, backgroundColor: isDark ? '#1e293b' : 'white', borderColor: s.isFocused ? '#0d9488' : (isDark ? '#334155' : '#e2e8f0'), boxShadow: 'none', '&:hover': { borderColor: '#0d9488' }, minHeight: '36px', fontSize: '0.875rem', borderRadius: '0.5rem' }),
+    menu: (b) => ({ ...b, backgroundColor: isDark ? '#1e293b' : 'white', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`, borderRadius: '0.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 9999 }),
+    option: (b, s) => ({ ...b, backgroundColor: s.isSelected ? '#0d9488' : s.isFocused ? (isDark ? '#334155' : '#f1f5f9') : 'transparent', color: s.isSelected ? 'white' : (isDark ? '#e2e8f0' : '#1e293b'), fontSize: '0.875rem', cursor: 'pointer' }),
+    input: (b) => ({ ...b, color: isDark ? '#e2e8f0' : '#1e293b', fontSize: '0.875rem' }),
+    singleValue: (b) => ({ ...b, color: isDark ? '#e2e8f0' : '#1e293b' }),
+    placeholder: (b) => ({ ...b, color: '#94a3b8', fontSize: '0.875rem' }),
+    valueContainer: (b) => ({ ...b, padding: '0 8px' }),
+});
+
+const NACIONALIDADES_COMUNES = [
+    'Argentina', 'Brasil', 'Chile', 'Uruguay', 'Paraguay', 'Bolivia', 'Perú', 'Colombia', 'Venezuela', 'Ecuador', 'México', 'España', 'Italia', 'Estados Unidos', 'Otra'
+];
 
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50];
 
 const Empleados = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { user } = useAuth();
+
+    // Permisos del módulo empleados
+    const isEmpleadoUser = user?.esEmpleado && !user?.esAdministrador;
+    const userPermisos = user?.rol?.permisos || [];
+    const canRead = !isEmpleadoUser || user?.esAdministrador || userPermisos.some(p => p.modulo === 'empleados' && p.accion === 'leer');
+    const canCreate = !isEmpleadoUser || user?.esAdministrador || userPermisos.some(p => p.modulo === 'empleados' && p.accion === 'crear');
+    const canEdit = !isEmpleadoUser || user?.esAdministrador || userPermisos.some(p => p.modulo === 'empleados' && p.accion === 'actualizar');
+    const canDelete = !isEmpleadoUser || user?.esAdministrador || userPermisos.some(p => p.modulo === 'empleados' && p.accion === 'eliminar');
 
     // Data State
     const [items, setItems] = useState([]);
@@ -36,14 +64,27 @@ const Empleados = () => {
 
     // Filters
     const [searchInput, setSearchInput] = useState('');
-    const [search, setSearch] = useState('');
+    const [filterNombre, setFilterNombre] = useState('');
     const [filterActivo, setFilterActivo] = useState('true');
+    const [filterEspacio, setFilterEspacio] = useState(null);
+    const [filterDocumento, setFilterDocumento] = useState('');
+    const [documentoInput, setDocumentoInput] = useState('');
+    const [filterEmail, setFilterEmail] = useState('');
+    const [emailInput, setEmailInput] = useState('');
+    const [filterNacionalidad, setFilterNacionalidad] = useState('');
+
+    const [currentUser, setCurrentUser] = useState(null);
+
+    // Filter lists
+    const [espaciosList, setEspaciosList] = useState([]);
+    const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
 
     // Selection
     const [selectedIds, setSelectedIds] = useState(new Set());
 
     // Column Visibility
     const [visibleColumns, setVisibleColumns] = useState({
+        espacio: false,
         email: true,
         documento: true,
         nacionalidad: true,
@@ -69,30 +110,99 @@ const Empleados = () => {
     useEffect(() => {
         if (location.state?.fromLogin) {
             setShowWelcomeAlert(true);
-            // Limpiar el state para que no se muestre en recargas
             window.history.replaceState({}, document.title);
         }
     }, [location]);
 
-    // Debounce Search
+    // Redirigir si no tiene permiso de lectura
+    useEffect(() => {
+        if (user && isEmpleadoUser && !canRead) {
+            navigate('/dashboard', { replace: true });
+        }
+    }, [user, isEmpleadoUser, canRead, navigate]);
+
+    // Theme observer
+    useEffect(() => {
+        const obs = new MutationObserver(() => setIsDark(document.documentElement.classList.contains('dark')));
+        obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+        return () => obs.disconnect();
+    }, []);
+
+    // Load filter data
+    // Load Initial Data
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const [espaciosRes, userMe] = await Promise.all([
+                    getEspaciosTrabajo({ activo: 'true' }),
+                    getCurrentUser()
+                ]);
+
+                setEspaciosList(espaciosRes.data || []);
+                setCurrentUser(userMe);
+
+                // Lógica de preselección de espacio SOLO SI ES EMPLEADO
+                if (userMe && userMe.esEmpleado) {
+                    const espacios = espaciosRes.data || [];
+                    // Si el usuario tiene un espacio asignado, priorizar ese
+                    if (userMe.espacioTrabajoId) {
+                        const miEspacio = espacios.find(e => e.id === userMe.espacioTrabajoId);
+                        if (miEspacio) {
+                            setFilterEspacio({ value: miEspacio.id, label: miEspacio.nombre });
+                        }
+                    }
+                }
+
+            } catch (e) { console.error(e); }
+        };
+        load();
+    }, []);
+
+    const espacioOptions = espaciosList.map(e => ({ value: e.id, label: e.nombre }));
+    const selectStyles = buildSelectStyles(isDark);
+
+    // Debounce Search (nombre, documento, email)
     useEffect(() => {
         const timer = setTimeout(() => {
-            setSearch(searchInput);
+            setFilterNombre(searchInput);
             setPage(1);
         }, 300);
         return () => clearTimeout(timer);
     }, [searchInput]);
 
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setFilterDocumento(documentoInput);
+            setPage(1);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [documentoInput]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setFilterEmail(emailInput);
+            setPage(1);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [emailInput]);
+
     // Load Items
     const loadItems = useCallback(async () => {
         try {
             setLoading(true);
-            const result = await getEmpleados({
-                nombre: search,
+
+            const params = {
+                nombre: filterNombre,
                 activo: filterActivo,
                 page,
                 limit,
-            });
+                espacioTrabajoId: filterEspacio?.value,
+                documento: filterDocumento,
+                email: filterEmail,
+                nacionalidad: filterNacionalidad,
+            };
+
+            const result = await getEmpleados(params);
 
             setItems(result.data);
             setTotalPages(result.pagination.totalPages);
@@ -103,7 +213,7 @@ const Empleados = () => {
         } finally {
             setLoading(false);
         }
-    }, [search, filterActivo, page, limit]);
+    }, [filterNombre, filterActivo, page, limit, filterEspacio, filterDocumento, filterEmail, filterNacionalidad]);
 
     useEffect(() => {
         loadItems();
@@ -113,12 +223,24 @@ const Empleados = () => {
 
     const clearFilters = () => {
         setSearchInput('');
-        setSearch('');
+        setFilterNombre('');
         setFilterActivo('true');
+        // Si es empleado, no limpiar el filtro de espacio
+        if (!currentUser || !currentUser.esEmpleado) {
+            setFilterEspacio(null);
+        }
+        setDocumentoInput('');
+        setEmailInput('');
+        setFilterDocumento('');
+        setFilterEmail('');
+        setFilterNacionalidad('');
         setPage(1);
     };
 
-    const hasActiveFilters = searchInput || filterActivo !== 'true';
+    const isEmpleado = currentUser && currentUser.esEmpleado;
+    const showingInactive = filterActivo === 'false';
+    const hasActiveFilters = filterNombre || filterActivo !== 'true' || (!isEmpleado && filterEspacio) || filterNacionalidad || filterDocumento || filterEmail;
+
 
     // Selection Handlers
     const handleSelectAll = (e) => {
@@ -261,7 +383,6 @@ const Empleados = () => {
         }
     };
 
-    const showingInactive = filterActivo === 'false';
 
     return (
         <>
@@ -307,7 +428,7 @@ const Empleados = () => {
                             </span>
                         </div>
                         <div className="header-actions">
-                            {selectedIds.size > 0 && !showingInactive && (
+                            {selectedIds.size > 0 && !showingInactive && canDelete && (
                                 <button className="btn btn-danger" onClick={handleBulkDeleteClick}>
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 20, height: 20 }}>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
@@ -315,27 +436,57 @@ const Empleados = () => {
                                     Desactivar seleccionados
                                 </button>
                             )}
-                            <button className="btn btn-primary" onClick={handleCreate}>
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 20, height: 20 }}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                                </svg>
-                                Nuevo Empleado
-                            </button>
+                            {canCreate && (
+                                <button className="btn btn-primary" onClick={handleCreate}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 20, height: 20 }}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                    </svg>
+                                    Nuevo Empleado
+                                </button>
+                            )}
                         </div>
                     </div>
 
+
                     {/* Filters */}
                     <div className="filters-bar">
-                        <div className="filter-group">
-                            <input type="text" className="filter-input" placeholder="Buscar por nombre..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} style={{ minWidth: '200px' }} />
+                        <div className="filters-inputs">
+                            <div className="filter-group">
+                                <Select
+                                    options={espacioOptions}
+                                    value={filterEspacio}
+                                    onChange={opt => { setFilterEspacio(opt); setPage(1); }}
+                                    placeholder="Espacio..."
+                                    isClearable={!currentUser?.esEmpleado}
+                                    isDisabled={currentUser && currentUser.esEmpleado}
+                                    styles={selectStyles}
+                                    noOptionsMessage={() => 'Sin resultados'}
+                                />
+                            </div>
+                            <div className="filter-group">
+                                <input type="text" className="filter-input" placeholder="Buscar por nombre..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} style={{ width: '200px' }} />
+                            </div>
+                            <div className="filter-group">
+                                <input type="text" className="filter-input" placeholder="Documento" value={documentoInput} onChange={(e) => setDocumentoInput(e.target.value)} style={{ width: '200px' }} />
+                            </div>
+                            <div className="filter-group">
+                                <input type="text" className="filter-input" placeholder="Email" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} style={{ width: '200px' }} />
+                            </div>
+                            <div className="filter-group">
+                                <select className="filter-input" value={filterNacionalidad} onChange={(e) => { setFilterNacionalidad(e.target.value); setPage(1); }} style={{ width: '200px' }}>
+                                    <option value="">Nacionalidad</option>
+                                    {ubicaciones.nacionalidades.map(n => <option key={n.id} value={n.id}>{n.nombre}</option>)}
+                                </select>
+                            </div>
+                            <div className="filter-group">
+                                <select className="filter-input" value={filterActivo} onChange={(e) => { setFilterActivo(e.target.value); setPage(1); }} style={{ width: '200px' }}>
+                                    <option value="true">Activos</option>
+                                    <option value="false">Inactivos</option>
+                                </select>
+                            </div>
                         </div>
-                        <div className="filter-group">
-                            <select className="filter-input" value={filterActivo} onChange={(e) => { setFilterActivo(e.target.value); setPage(1); }}>
-                                <option value="true">Activos</option>
-                                <option value="false">Inactivos</option>
-                            </select>
-                        </div>
-                        <div className="filter-group">
+
+                        <div className="filters-actions">
                             <div className="column-selector-wrapper">
                                 <button className="btn btn-secondary btn-sm" onClick={() => setShowColumnSelector(!showColumnSelector)}>
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
@@ -346,7 +497,7 @@ const Empleados = () => {
                                 </button>
                                 {showColumnSelector && (
                                     <div className="column-selector-dropdown">
-                                        {Object.entries({ email: 'Email', documento: 'Documento', nacionalidad: 'Nacionalidad' }).map(([key, label]) => (
+                                        {Object.entries({ espacio: 'Espacio', email: 'Email', documento: 'Documento', nacionalidad: 'Nacionalidad' }).map(([key, label]) => (
                                             <label key={key} className="column-option">
                                                 <input type="checkbox" checked={visibleColumns[key]} onChange={() => toggleColumn(key)} />
                                                 <span>{label}</span>
@@ -355,17 +506,16 @@ const Empleados = () => {
                                     </div>
                                 )}
                             </div>
+                            {hasActiveFilters && (
+                                <button className="btn btn-secondary btn-sm" onClick={clearFilters}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                    Limpiar
+                                </button>
+                            )}
                         </div>
-                        {hasActiveFilters && (
-                            <button className="btn btn-secondary btn-sm" onClick={clearFilters}>
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                                Limpiar
-                            </button>
-                        )}
                     </div>
-
                     {/* Content */}
                     {loading ? (
                         <div className="loading"><div className="spinner"></div></div>
@@ -387,6 +537,7 @@ const Empleados = () => {
                                                 <input type="checkbox" checked={allSelected} ref={input => { if (input) input.indeterminate = someSelected; }} onChange={handleSelectAll} />
                                             </th>
                                             <th>Nombre</th>
+                                            {visibleColumns.espacio && <th>Espacio</th>}
                                             {visibleColumns.email && <th>Email</th>}
                                             {visibleColumns.documento && <th>Documento</th>}
                                             {visibleColumns.nacionalidad && <th>Nacionalidad</th>}
@@ -398,6 +549,7 @@ const Empleados = () => {
                                             <tr key={item.id} className={`${selectedIds.has(item.id) ? 'row-selected' : ''} ${!item.activo ? 'row-inactive' : ''}`}>
                                                 <td><input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => handleSelectOne(item.id)} /></td>
                                                 <td><strong>{item.apellido}, {item.nombre}</strong></td>
+                                                {visibleColumns.espacio && <td>{truncateText(item.espacioTrabajo?.nombre || '-')}</td>}
                                                 {visibleColumns.email && <td>{item.email}</td>}
                                                 {visibleColumns.documento && <td>{item.numeroDocumento}</td>}
                                                 {visibleColumns.nacionalidad && <td>{(() => {
@@ -408,12 +560,14 @@ const Empleados = () => {
                                                 <td>
                                                     <div className="table-actions">
                                                         {showingInactive ? (
-                                                            <button className="btn btn-success btn-sm" onClick={() => handleReactivate(item)} title="Reactivar">
-                                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
-                                                                </svg>
-                                                                Reactivar
-                                                            </button>
+                                                            canDelete && (
+                                                                <button className="btn btn-success btn-sm" onClick={() => handleReactivate(item)} title="Reactivar">
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                                                                    </svg>
+                                                                    Reactivar
+                                                                </button>
+                                                            )
                                                         ) : (
                                                             <>
                                                                 <button className="btn btn-info btn-sm" onClick={() => handleView(item)} title="Ver">
@@ -423,18 +577,22 @@ const Empleados = () => {
                                                                     </svg>
                                                                     Ver
                                                                 </button>
-                                                                <button className="btn btn-warning btn-sm" onClick={() => handleEdit(item)} title="Editar">
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-                                                                    </svg>
-                                                                    Editar
-                                                                </button>
-                                                                <button className="btn btn-danger btn-sm" onClick={() => handleDeleteClick(item)} title="Desactivar">
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                                                                    </svg>
-                                                                    Desactivar
-                                                                </button>
+                                                                {canEdit && (
+                                                                    <button className="btn btn-warning btn-sm" onClick={() => handleEdit(item)} title="Editar">
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                                                                        </svg>
+                                                                        Editar
+                                                                    </button>
+                                                                )}
+                                                                {canDelete && (
+                                                                    <button className="btn btn-danger btn-sm" onClick={() => handleDeleteClick(item)} title="Desactivar">
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                                                                        </svg>
+                                                                        Desactivar
+                                                                    </button>
+                                                                )}
                                                             </>
                                                         )}
                                                     </div>

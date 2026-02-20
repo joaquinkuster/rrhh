@@ -1,14 +1,28 @@
 import { useState, useEffect, useCallback } from 'react';
+import Select from 'react-select';
 import {
     getRoles,
     deleteRol,
     deleteRolesBulk,
     getRolById,
     reactivateRol,
+    getEspaciosTrabajo,
+    getCurrentUser,
 } from '../services/api';
 import RolWizard from '../components/RolWizard';
 import RolDetail from '../components/RolDetail';
 import ConfirmDialog from '../components/ConfirmDialog';
+import { truncateText } from '../utils/formatters';
+
+const buildSelectStyles = (isDark) => ({
+    control: (b, s) => ({ ...b, backgroundColor: isDark ? '#1e293b' : 'white', borderColor: s.isFocused ? '#0d9488' : (isDark ? '#334155' : '#e2e8f0'), boxShadow: 'none', '&:hover': { borderColor: '#0d9488' }, minHeight: '36px', fontSize: '0.875rem', borderRadius: '0.5rem' }),
+    menu: (b) => ({ ...b, backgroundColor: isDark ? '#1e293b' : 'white', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`, borderRadius: '0.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 9999 }),
+    option: (b, s) => ({ ...b, backgroundColor: s.isSelected ? '#0d9488' : s.isFocused ? (isDark ? '#334155' : '#f1f5f9') : 'transparent', color: s.isSelected ? 'white' : (isDark ? '#e2e8f0' : '#1e293b'), fontSize: '0.875rem', cursor: 'pointer' }),
+    input: (b) => ({ ...b, color: isDark ? '#e2e8f0' : '#1e293b', fontSize: '0.875rem' }),
+    singleValue: (b) => ({ ...b, color: isDark ? '#e2e8f0' : '#1e293b' }),
+    placeholder: (b) => ({ ...b, color: '#94a3b8', fontSize: '0.875rem' }),
+    valueContainer: (b) => ({ ...b, padding: '0 8px' }),
+});
 
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50];
 
@@ -27,8 +41,16 @@ const Roles = () => {
 
     // Filters
     const [searchInput, setSearchInput] = useState('');
-    const [search, setSearch] = useState('');
+    const [filterNombre, setFilterNombre] = useState('');
+    const [filterDescripcion, setFilterDescripcion] = useState('');
+    const [descripcionInput, setDescripcionInput] = useState('');
     const [filterActivo, setFilterActivo] = useState('true');
+    const [filterEspacio, setFilterEspacio] = useState(null);
+
+    // Filter lists
+    const [espaciosList, setEspaciosList] = useState([]);
+    const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
+    const [currentUser, setCurrentUser] = useState(null);
 
     // Selection
     const [selectedIds, setSelectedIds] = useState(new Set());
@@ -41,6 +63,7 @@ const Roles = () => {
 
     // Column Visibility
     const [visibleColumns, setVisibleColumns] = useState({
+        espacio: false,
         descripcion: true,
         usuarios: true,
         permisos: true,
@@ -52,20 +75,74 @@ const Roles = () => {
     const [confirmBulkOpen, setConfirmBulkOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState(null);
 
+    // Theme observer
+    useEffect(() => {
+        const obs = new MutationObserver(() => setIsDark(document.documentElement.classList.contains('dark')));
+        obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+        return () => obs.disconnect();
+    }, []);
+
+    // Load filter data
+    // Load Initial Data
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const [espaciosRes, userMe] = await Promise.all([
+                    getEspaciosTrabajo({ limit: 200, activo: 'true' }),
+                    getCurrentUser()
+                ]);
+                setEspaciosList(espaciosRes.data || []);
+                setCurrentUser(userMe);
+
+                // Lógica de preselección de espacio SOLO SI ES EMPLEADO
+                if (userMe && userMe.esEmpleado) {
+                    const espacios = espaciosRes.data || [];
+                    if (userMe.espacioTrabajoId) {
+                        const miEspacio = espacios.find(e => e.id === userMe.espacioTrabajoId);
+                        if (miEspacio) {
+                            setFilterEspacio({ value: miEspacio.id, label: miEspacio.nombre });
+                        }
+                    }
+                }
+            } catch (e) { console.error(e); }
+        };
+        load();
+    }, []);
+
+    const espacioOptions = espaciosList.map(e => ({ value: e.id, label: e.nombre }));
+    const selectStyles = buildSelectStyles(isDark);
+
     // Debounce Search
     useEffect(() => {
         const timer = setTimeout(() => {
-            setSearch(searchInput);
+            setFilterNombre(searchInput);
             setPage(1);
         }, 300);
         return () => clearTimeout(timer);
     }, [searchInput]);
 
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setFilterDescripcion(descripcionInput);
+            setPage(1);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [descripcionInput]);
+
     // Load Items
     const loadItems = useCallback(async () => {
         try {
             setLoading(true);
-            const result = await getRoles({ search, page, limit, activo: filterActivo });
+            const params = {
+                search: filterNombre,
+                descripcion: filterDescripcion,
+                activo: filterActivo,
+                page,
+                limit,
+                espacioTrabajoId: filterEspacio?.value,
+            };
+
+            const result = await getRoles(params);
             setItems(result.roles);
             setTotalPages(result.totalPages);
             setTotal(result.total);
@@ -75,7 +152,7 @@ const Roles = () => {
         } finally {
             setLoading(false);
         }
-    }, [search, page, limit, filterActivo]);
+    }, [filterNombre, filterDescripcion, page, limit, filterActivo, filterEspacio]);
 
     useEffect(() => {
         loadItems();
@@ -84,8 +161,14 @@ const Roles = () => {
     // Handlers
     const clearFilters = () => {
         setSearchInput('');
-        setSearch('');
+        setFilterNombre('');
+        setFilterDescripcion('');
+        setDescripcionInput('');
         setFilterActivo('true');
+        // Si es empleado, no limpiar el filtro de espacio
+        if (!currentUser || !currentUser.esEmpleado) {
+            setFilterEspacio(null);
+        }
         setPage(1);
     };
 
@@ -96,7 +179,8 @@ const Roles = () => {
         }));
     };
 
-    const hasActiveFilters = searchInput || filterActivo !== 'true';
+    const isEmpleado = currentUser && currentUser.esEmpleado;
+    const hasActiveFilters = searchInput || filterActivo !== 'true' || (!isEmpleado && filterEspacio);
 
     // Selection Handlers
     const handleSelectAll = (e) => {
@@ -268,16 +352,33 @@ const Roles = () => {
 
                 {/* Filters */}
                 <div className="filters-bar">
-                    <div className="filter-group">
-                        <input type="text" className="filter-input" placeholder="Buscar por nombre..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} style={{ minWidth: '200px' }} />
+                    <div className="filters-inputs">
+                        <div className="filter-group" style={{ minWidth: '160px' }}>
+                            <Select
+                                options={espacioOptions}
+                                value={filterEspacio}
+                                onChange={opt => { setFilterEspacio(opt); setPage(1); }}
+                                placeholder="Espacio..."
+                                isClearable={!currentUser?.esEmpleado}
+                                isDisabled={currentUser && currentUser.esEmpleado}
+                                styles={selectStyles}
+                                noOptionsMessage={() => 'Sin resultados'}
+                            />
+                        </div>
+                        <div className="filter-group">
+                            <input type="text" className="filter-input" placeholder="Buscar por nombre..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} style={{ minWidth: '200px' }} />
+                        </div>
+                        <div className="filter-group">
+                            <input type="text" className="filter-input" placeholder="Descripción" value={descripcionInput} onChange={(e) => setDescripcionInput(e.target.value)} style={{ minWidth: '200px' }} />
+                        </div>
+                        <div className="filter-group">
+                            <select className="filter-input" value={filterActivo} onChange={(e) => { setFilterActivo(e.target.value); setPage(1); }}>
+                                <option value="true">Activos</option>
+                                <option value="false">Inactivos</option>
+                            </select>
+                        </div>
                     </div>
-                    <div className="filter-group">
-                        <select className="filter-input" value={filterActivo} onChange={(e) => { setFilterActivo(e.target.value); setPage(1); }}>
-                            <option value="true">Activos</option>
-                            <option value="false">Inactivos</option>
-                        </select>
-                    </div>
-                    <div className="filter-group">
+                    <div className="filters-actions">
                         <div className="column-selector-wrapper">
                             <button className="btn btn-secondary btn-sm" onClick={() => setShowColumnSelector(!showColumnSelector)}>
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
@@ -289,6 +390,7 @@ const Roles = () => {
                             {showColumnSelector && (
                                 <div className="column-selector-dropdown">
                                     {Object.entries({
+                                        espacio: 'Espacio',
                                         descripcion: 'Descripción',
                                         usuarios: 'Usuarios',
                                         permisos: 'Permisos',
@@ -305,15 +407,15 @@ const Roles = () => {
                                 </div>
                             )}
                         </div>
+                        {hasActiveFilters && (
+                            <button className="btn btn-secondary btn-sm" onClick={clearFilters}>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                                Limpiar
+                            </button>
+                        )}
                     </div>
-                    {hasActiveFilters && (
-                        <button className="btn btn-secondary btn-sm" onClick={clearFilters}>
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                            Limpiar
-                        </button>
-                    )}
                 </div>
 
                 {/* Content */}
@@ -337,6 +439,7 @@ const Roles = () => {
                                             <input type="checkbox" checked={allSelected} ref={input => { if (input) input.indeterminate = someSelected; }} onChange={handleSelectAll} />
                                         </th>
                                         <th>Nombre</th>
+                                        {visibleColumns.espacio && <th>Espacio</th>}
                                         {visibleColumns.descripcion && <th>Descripción</th>}
                                         {visibleColumns.usuarios && <th>Usuarios</th>}
                                         {visibleColumns.permisos && <th>Permisos</th>}
@@ -348,6 +451,7 @@ const Roles = () => {
                                         <tr key={item.id} className={`${selectedIds.has(item.id) ? 'row-selected' : ''} ${!item.activo ? 'row-inactive' : ''}`}>
                                             <td><input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => handleSelectOne(item.id)} /></td>
                                             <td><strong>{item.nombre}</strong></td>
+                                            {visibleColumns.espacio && <td>{truncateText(item.espacioTrabajo?.nombre || '-')}</td>}
                                             {visibleColumns.descripcion && (
                                                 <td style={{ maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.descripcion || '-'}</td>
                                             )}
@@ -429,22 +533,26 @@ const Roles = () => {
             </div>
 
             {/* Modals */}
-            {showForm && (
-                <RolWizard rol={editingItem} onClose={handleCloseForm} onSuccess={handleFormSuccess} />
-            )}
+            {
+                showForm && (
+                    <RolWizard rol={editingItem} onClose={handleCloseForm} onSuccess={handleFormSuccess} />
+                )
+            }
 
-            {showDetail && selectedItem && (
-                <RolDetail
-                    rol={selectedItem}
-                    onClose={() => { setShowDetail(false); setSelectedItem(null); }}
-                    onEdit={(rol) => {
-                        setShowDetail(false);
-                        setSelectedItem(null);
-                        setEditingItem(rol);
-                        setShowForm(true);
-                    }}
-                />
-            )}
+            {
+                showDetail && selectedItem && (
+                    <RolDetail
+                        rol={selectedItem}
+                        onClose={() => { setShowDetail(false); setSelectedItem(null); }}
+                        onEdit={(rol) => {
+                            setShowDetail(false);
+                            setSelectedItem(null);
+                            setEditingItem(rol);
+                            setShowForm(true);
+                        }}
+                    />
+                )
+            }
 
             <ConfirmDialog
                 isOpen={confirmOpen}
@@ -465,7 +573,7 @@ const Roles = () => {
                 confirmText="Desactivar todos"
                 variant="danger"
             />
-        </div>
+        </div >
     );
 };
 

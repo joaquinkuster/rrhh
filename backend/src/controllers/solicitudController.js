@@ -1,4 +1,4 @@
-const { Solicitud, Licencia, Vacaciones, HorasExtras, Renuncia, Contrato, Empleado, Puesto, Departamento, Area, Empresa, RegistroSalud, Usuario } = require('../models');
+const { Solicitud, Licencia, Vacaciones, HorasExtras, Renuncia, Contrato, Empleado, Puesto, Departamento, Area, Empresa, RegistroSalud, Usuario, EspacioTrabajo, Rol, Permiso } = require('../models');
 const { Op } = require('sequelize');
 const sequelize = require('../config/database');
 const { esDiaHabil, parseLocalDate } = require('../utils/fechas');
@@ -10,6 +10,20 @@ const licenciaService = require('../services/licenciaService');
 const horasExtrasService = require('../services/horasExtrasService');
 const renunciaService = require('../services/renunciaService');
 
+// Helper: verifica si el usuario en sesión tiene un permiso específico en el módulo solicitudes
+const tienePermiso = async (session, accion) => {
+    if (session.esAdministrador) return true;
+    const usuarioId = session.usuarioId || session.empleadoId;
+    const empleado = await Empleado.findOne({ where: { usuarioId } });
+    if (!empleado || !empleado.ultimoContratoSeleccionadoId) return false;
+    const contrato = await Contrato.findByPk(empleado.ultimoContratoSeleccionadoId, {
+        include: [{ model: Rol, as: 'rol', include: [{ model: Permiso, as: 'permisos', through: { attributes: [] } }] }]
+    });
+    if (!contrato?.rol?.permisos) return false;
+    return contrato.rol.permisos.some(p => p.modulo === 'solicitudes' && p.accion === accion);
+};
+
+
 // Include relations for contract info
 const includeContrato = {
     model: Contrato,
@@ -18,11 +32,18 @@ const includeContrato = {
         {
             model: Empleado,
             as: 'empleado',
-            include: [{
-                model: Usuario,
-                as: 'usuario',
-                attributes: ['id', 'nombre', 'apellido']
-            }]
+            include: [
+                {
+                    model: Usuario,
+                    as: 'usuario',
+                    attributes: ['id', 'nombre', 'apellido']
+                },
+                {
+                    model: EspacioTrabajo,
+                    as: 'espacioTrabajo',
+                    attributes: ['id', 'nombre']
+                }
+            ]
         },
         {
             model: Puesto,
@@ -55,10 +76,10 @@ const includeTypes = [
 // Get all solicitudes with filters and pagination
 const getAll = async (req, res) => {
     try {
-        const { contratoId, tipoSolicitud, estado, search, activo, page = 1, limit = 10 } = req.query;
+        const { contratoId, empleadoId, espacioTrabajoId, tipoSolicitud, estado, search, activo, page = 1, limit = 10 } = req.query;
         const where = {};
 
-        // Por defecto solo mostrar activos
+        // Filtro de activo
         if (activo === 'false') {
             where.activo = false;
         } else if (activo === 'all') {
@@ -67,12 +88,107 @@ const getAll = async (req, res) => {
             where.activo = true;
         }
 
-        if (contratoId) {
-            where.contratoId = parseInt(contratoId);
-        }
+        if (tipoSolicitud) where.tipoSolicitud = tipoSolicitud;
 
-        if (tipoSolicitud) {
-            where.tipoSolicitud = tipoSolicitud;
+        // --- Filtrado por Espacio de Trabajo y Permisos ---
+        // Las solicitudes pertenecen a contratos, resolver: empleado → contratos → where.contratoId
+        const usuarioSesionId = req.session.usuarioId || req.session.empleadoId;
+        const esAdmin = req.session.esAdministrador;
+
+        if (!esAdmin) {
+            const empleadoSesion = await Empleado.findOne({ where: { usuarioId: usuarioSesionId } });
+
+            if (empleadoSesion) {
+                // ES EMPLEADO — verificar si tiene permisos de gestión (puede ver todos del workspace)
+                const tienePermisoVerTodos = await tienePermiso(req.session, 'crear') ||
+                    await tienePermiso(req.session, 'actualizar') ||
+                    await tienePermiso(req.session, 'eliminar');
+
+                if (tienePermisoVerTodos) {
+                    // Puede ver las solicitudes de todos los empleados de su workspace
+                    const empleadosWorkspace = await Empleado.findAll({
+                        where: { espacioTrabajoId: empleadoSesion.espacioTrabajoId },
+                        attributes: ['id']
+                    });
+                    const idsEmpleadosWs = empleadosWorkspace.map(e => e.id);
+
+                    let whereContrato = { empleadoId: { [Op.in]: idsEmpleadosWs } };
+                    if (empleadoId) {
+                        if (!idsEmpleadosWs.includes(parseInt(empleadoId))) {
+                            return res.json({ data: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } });
+                        }
+                        whereContrato = { empleadoId };
+                    }
+                    if (espacioTrabajoId && parseInt(espacioTrabajoId) !== empleadoSesion.espacioTrabajoId) {
+                        return res.json({ data: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } });
+                    }
+                    const contratosPermitidos = await Contrato.findAll({ where: whereContrato, attributes: ['id'] });
+                    where.contratoId = { [Op.in]: contratosPermitidos.map(c => c.id) };
+
+                } else {
+                    // Solo ve sus propias solicitudes
+                    if (empleadoId && parseInt(empleadoId) !== empleadoSesion.id) {
+                        return res.json({ data: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } });
+                    }
+                    const contratosPropio = await Contrato.findAll({
+                        where: { empleadoId: empleadoSesion.id },
+                        attributes: ['id']
+                    });
+                    where.contratoId = { [Op.in]: contratosPropio.map(c => c.id) };
+                }
+
+            } else {
+                // ES PROPIETARIO (no empleado) → ve solicitudes de empleados de sus espacios
+                const espaciosPropios = await EspacioTrabajo.findAll({
+                    where: { propietarioId: usuarioSesionId },
+                    attributes: ['id']
+                });
+                const espaciosIds = espaciosPropios.map(e => e.id);
+
+                let targetEspacios = espaciosIds;
+                if (espacioTrabajoId) {
+                    if (!espaciosIds.includes(parseInt(espacioTrabajoId))) {
+                        return res.json({ data: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } });
+                    }
+                    targetEspacios = [parseInt(espacioTrabajoId)];
+                }
+
+                const empleadosDeWorkspaces = await Empleado.findAll({
+                    where: { espacioTrabajoId: { [Op.in]: targetEspacios } },
+                    attributes: ['id']
+                });
+                const idsPermitidos = empleadosDeWorkspaces.map(e => e.id);
+
+                let whereContrato = { empleadoId: { [Op.in]: idsPermitidos } };
+                if (empleadoId) {
+                    if (!idsPermitidos.includes(parseInt(empleadoId))) {
+                        return res.json({ data: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } });
+                    }
+                    whereContrato = { empleadoId };
+                }
+                const contratosPermitidos = await Contrato.findAll({ where: whereContrato, attributes: ['id'] });
+                const idsContratos = contratosPermitidos.map(c => c.id);
+                where.contratoId = idsContratos.length > 0 ? { [Op.in]: idsContratos } : -1;
+            }
+
+        } else {
+            // ADMIN GLOBAL — filtros opcionales
+            if (contratoId) {
+                where.contratoId = parseInt(contratoId);
+            } else if (empleadoId || espacioTrabajoId) {
+                let whereContratoAdmin = {};
+                if (empleadoId) whereContratoAdmin.empleadoId = empleadoId;
+                if (espacioTrabajoId) {
+                    const empleadosWs = await Empleado.findAll({ where: { espacioTrabajoId }, attributes: ['id'] });
+                    const idsWs = empleadosWs.map(e => e.id);
+                    if (empleadoId && !idsWs.includes(parseInt(empleadoId))) {
+                        return res.json({ data: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } });
+                    }
+                    if (!empleadoId) whereContratoAdmin.empleadoId = { [Op.in]: idsWs };
+                }
+                const contratosAdmin = await Contrato.findAll({ where: whereContratoAdmin, attributes: ['id'] });
+                where.contratoId = { [Op.in]: contratosAdmin.map(c => c.id) };
+            }
         }
 
         const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -116,6 +232,7 @@ const getAll = async (req, res) => {
             },
         });
     } catch (error) {
+        console.error(error);
         res.status(500).json({ error: error.message });
     }
 };
@@ -142,6 +259,12 @@ const create = async (req, res) => {
     const transaction = await sequelize.transaction();
 
     try {
+        // Verificar permiso de creación
+        if (!(await tienePermiso(req.session, 'crear'))) {
+            await transaction.rollback();
+            return res.status(403).json({ error: 'No tiene permiso para crear solicitudes' });
+        }
+
         const { contratoId, tipoSolicitud, ...typeData } = req.body;
 
         // Validate contract exists and is active
@@ -251,6 +374,12 @@ const update = async (req, res) => {
     const transaction = await sequelize.transaction();
 
     try {
+        // Verificar permiso de edición
+        if (!(await tienePermiso(req.session, 'actualizar'))) {
+            await transaction.rollback();
+            return res.status(403).json({ error: 'No tiene permiso para editar solicitudes' });
+        }
+
         const { tipoSolicitud, ...typeData } = req.body;
         const solicitud = await Solicitud.findByPk(req.params.id, {
             include: includeTypes,
@@ -427,6 +556,11 @@ const update = async (req, res) => {
 // Delete solicitud (soft delete)
 const remove = async (req, res) => {
     try {
+        // Verificar permiso de eliminación
+        if (!(await tienePermiso(req.session, 'eliminar'))) {
+            return res.status(403).json({ error: 'No tiene permiso para desactivar solicitudes' });
+        }
+
         const solicitud = await Solicitud.findByPk(req.params.id);
 
         if (!solicitud) {
@@ -464,6 +598,11 @@ const reactivate = async (req, res) => {
 // Bulk delete
 const bulkRemove = async (req, res) => {
     try {
+        // Verificar permiso de eliminación
+        if (!(await tienePermiso(req.session, 'eliminar'))) {
+            return res.status(403).json({ error: 'No tiene permiso para desactivar solicitudes en lote' });
+        }
+
         const { ids } = req.body;
 
         if (!ids || !Array.isArray(ids) || ids.length === 0) {

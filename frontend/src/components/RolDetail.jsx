@@ -76,8 +76,9 @@ const RolDetail = ({ rol, onClose, onEdit }) => {
             contactos: 'Contactos',
             solicitudes: 'Solicitudes',
             liquidaciones: 'Liquidaciones',
-            conceptos_salariales: 'Conceptos Salariales',
             roles: 'Roles y Permisos',
+            dashboard: 'Dashboard',
+            reportes: 'Reportes',
         };
         return labels[modulo] || modulo;
     };
@@ -382,43 +383,62 @@ const RolDetail = ({ rol, onClose, onEdit }) => {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {Object.entries(permisosAgrupados).map(([modulo, permisos], index) => {
-                                                const accionesOrdenadas = ['crear', 'leer', 'actualizar', 'eliminar'];
+                                            {(() => {
+                                                const MODULE_ORDER = [
+                                                    'dashboard',
+                                                    'empleados',
+                                                    'empresas',
+                                                    'contratos',
+                                                    'registros_salud',
+                                                    'evaluaciones',
+                                                    'contactos',
+                                                    'solicitudes',
+                                                    'liquidaciones',
+                                                    'roles',
+                                                    'reportes'
+                                                ];
 
-                                                return (
-                                                    <tr key={modulo} style={{
-                                                        borderBottom: index < Object.keys(permisosAgrupados).length - 1 ? '1px solid var(--border-color)' : 'none'
-                                                    }}>
-                                                        <td style={{
-                                                            padding: '0.5rem 0.75rem',
-                                                            fontWeight: 500,
-                                                            color: 'var(--text-primary)',
-                                                            fontSize: '0.75rem'
+                                                return MODULE_ORDER.map((modulo, index) => {
+                                                    const permisos = permisosAgrupados[modulo];
+                                                    if (!permisos) return null;
+
+                                                    const accionesOrdenadas = ['crear', 'leer', 'actualizar', 'eliminar'];
+
+                                                    return (
+                                                        <tr key={modulo} style={{
+                                                            borderBottom: index < MODULE_ORDER.length - 1 ? '1px solid var(--border-color)' : 'none'
                                                         }}>
-                                                            {getModuloLabel(modulo)}
-                                                        </td>
-                                                        {accionesOrdenadas.map(accion => {
-                                                            const permiso = permisos.find(p => p.accion === accion);
-                                                            const color = getAccionColor(accion);
+                                                            <td style={{
+                                                                padding: '0.5rem 0.75rem',
+                                                                fontWeight: 500,
+                                                                color: 'var(--text-primary)',
+                                                                fontSize: '0.75rem'
+                                                            }}>
+                                                                {getModuloLabel(modulo)}
+                                                            </td>
+                                                            {accionesOrdenadas.map(accion => {
+                                                                const permiso = permisos.find(p => p.accion === accion);
+                                                                const color = getAccionColor(accion);
 
-                                                            return (
-                                                                <td key={accion} style={{
-                                                                    padding: '0.5rem 0.75rem',
-                                                                    textAlign: 'center'
-                                                                }}>
-                                                                    {permiso ? (
-                                                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={color} style={{ width: 16, height: 16 }}>
-                                                                            <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
-                                                                        </svg>
-                                                                    ) : (
-                                                                        <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>-</span>
-                                                                    )}
-                                                                </td>
-                                                            );
-                                                        })}
-                                                    </tr>
-                                                );
-                                            })}
+                                                                return (
+                                                                    <td key={accion} style={{
+                                                                        padding: '0.5rem 0.75rem',
+                                                                        textAlign: 'center'
+                                                                    }}>
+                                                                        {permiso ? (
+                                                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={color} style={{ width: 16, height: 16 }}>
+                                                                                <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
+                                                                            </svg>
+                                                                        ) : (
+                                                                            <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>-</span>
+                                                                        )}
+                                                                    </td>
+                                                                );
+                                                            })}
+                                                        </tr>
+                                                    );
+                                                });
+                                            })()}
                                         </tbody>
                                     </table>
                                 </div>

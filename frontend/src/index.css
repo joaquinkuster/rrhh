@@ -138,6 +138,10 @@ textarea {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  /* Evita que las tablas con muchas columnas desborden el layout completo */
+  overflow-x: hidden;
+  min-width: 0;
+  max-width: calc(100vw - var(--sidebar-width));
 }
 
 /* ===== Sidebar ===== */
@@ -219,6 +223,11 @@ textarea {
 .page-container {
   padding: var(--space-8);
   flex: 1;
+  /* Necesario para contener el desbordamiento de tablas anchas */
+  overflow-x: hidden;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* ===== Page Header ===== */
@@ -245,6 +254,10 @@ textarea {
   box-shadow: var(--shadow-md);
   padding: var(--space-6);
   transition: box-shadow var(--transition-base);
+  /* Evita que la card desborde su contenedor al mostrar columnas extra en la tabla */
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .card:hover {
@@ -446,8 +459,13 @@ textarea {
 /* ===== Tables ===== */
 .table-container {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border-radius: var(--radius-lg);
   border: 1px solid var(--neutral-200);
+  /* Limita el ancho máximo al contenedor padre para todas las tablas de todos los módulos */
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .table {
@@ -459,6 +477,7 @@ textarea {
 .table td {
   padding: var(--space-4);
   text-align: center;
+  white-space: nowrap;
 }
 
 .table th {
@@ -514,7 +533,8 @@ textarea {
 /* ===== Filters ===== */
 .filters-bar {
   display: flex;
-  flex-wrap: wrap;
+  align-items: flex-start;
+  /* Alineación superior para que la línea vertical cubra la altura si hay wrap */
   gap: var(--space-4);
   margin-bottom: var(--space-6);
   padding: var(--space-4);
@@ -522,10 +542,37 @@ textarea {
   border-radius: var(--radius-lg);
 }
 
+.filters-inputs {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.filters-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding-left: var(--space-4);
+  border-left: 1px solid var(--neutral-200);
+  white-space: nowrap;
+  /* Evita que los botones se rompan */
+  height: 100%;
+  min-height: 38px;
+  /* Altura mínima consistente con los inputs */
+}
+
 .filter-group {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  width: 200px;
+}
+
+.filter-group>* {
+  width: 100%;
 }
 
 .filter-input {
