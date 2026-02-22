@@ -1,4 +1,5 @@
 import { formatDateOnly } from '../utils/formatters';
+import { useAuth } from '../context/AuthContext';
 
 // Icons SVG components
 const Icons = {
@@ -68,7 +69,11 @@ const Icons = {
 const ContactoDetail = ({ contacto, onClose, onEdit }) => {
     if (!contacto) return null;
 
-
+    // Permisos del módulo contactos
+    const { user } = useAuth();
+    const isEmpleadoUser = user?.esEmpleado && !user?.esAdministrador;
+    const userPermisos = user?.rol?.permisos || [];
+    const canEdit = !isEmpleadoUser || user?.esAdministrador || userPermisos.some(p => p.modulo === 'contactos' && p.accion === 'actualizar');
 
     // Calculate relative time (hace X minutos/horas/días)
     const getRelativeTime = (dateString) => {
@@ -245,7 +250,7 @@ const ContactoDetail = ({ contacto, onClose, onEdit }) => {
                                 {contacto.esContactoEmergencia && <Badge label="Emergencia" color="blue" />}
                             </div>
                         </div>
-                        {onEdit && (
+                        {onEdit && canEdit && (
                             <button className="btn btn-warning btn-sm" onClick={() => onEdit(contacto)} title="Editar">
                                 {Icons.edit}
                                 Editar

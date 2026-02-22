@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import Select from 'react-select';
 import {
     getContratos, deleteContrato, deleteContratosBulk,
@@ -51,6 +52,18 @@ const buildSelectStyles = (isDark) => ({
 });
 
 const Contratos = () => {
+    const navigate = useNavigate();
+    const location = useLocation();
+    const { user } = useAuth();
+
+    // Permisos del módulo empresas
+    const isEmpleadoUser = user?.esEmpleado && !user?.esAdministrador;
+    const userPermisos = user?.rol?.permisos || [];
+    const canRead = !isEmpleadoUser || user?.esAdministrador || userPermisos.some(p => p.modulo === 'contratos' && p.accion === 'leer');
+    const canCreate = !isEmpleadoUser || user?.esAdministrador || userPermisos.some(p => p.modulo === 'contratos' && p.accion === 'crear');
+    const canEdit = !isEmpleadoUser || user?.esAdministrador || userPermisos.some(p => p.modulo === 'contratos' && p.accion === 'actualizar');
+    const canDelete = !isEmpleadoUser || user?.esAdministrador || userPermisos.some(p => p.modulo === 'contratos' && p.accion === 'eliminar');
+
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -84,14 +97,19 @@ const Contratos = () => {
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [confirmBulkOpen, setConfirmBulkOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState(null);
-    const location = useLocation();
-    const navigate = useNavigate();
 
     useEffect(() => {
         const obs = new MutationObserver(() => setIsDark(document.documentElement.classList.contains('dark')));
         obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
         return () => obs.disconnect();
     }, []);
+
+    // Redirigir si no tiene permiso de lectura
+    useEffect(() => {
+        if (user && isEmpleadoUser && !canRead) {
+            navigate('/dashboard', { replace: true });
+        }
+    }, [user, isEmpleadoUser, canRead, navigate]);
 
     useEffect(() => {
         const load = async () => {
@@ -267,16 +285,18 @@ const Contratos = () => {
                         <span className="selection-indicator">{selectedIds.size} de {total} seleccionados</span>
                     </div>
                     <div className="header-actions">
-                        {selectedIds.size > 0 && !showingInactive && (
+                        {selectedIds.size > 0 && !showingInactive && canDelete && (
                             <button className="btn btn-danger" onClick={() => setConfirmBulkOpen(true)}>
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 20, height: 20 }}><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
                                 Desactivar seleccionados
                             </button>
                         )}
-                        <button className="btn btn-primary" onClick={() => { setEditingItem(null); setEmpleadoPreseleccionado(null); setModoMultiple(true); setShowWizard(true); setError(''); setSuccess(''); }}>
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 20, height: 20 }}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-                            Nuevo Contrato
-                        </button>
+                        {canCreate && (
+                            <button className="btn btn-primary" onClick={() => { setEditingItem(null); setEmpleadoPreseleccionado(null); setModoMultiple(true); setShowWizard(true); setError(''); setSuccess(''); }}>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 20, height: 20 }}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                                Nuevo Contrato
+                            </button>
+                        )}
                     </div>
                 </div>
                 {/* Filters */}
@@ -388,24 +408,30 @@ const Contratos = () => {
                                                 <td>
                                                     <div className="table-actions">
                                                         {showingInactive ? (
-                                                            <button className="btn btn-success btn-sm" onClick={() => handleReactivate(item)}>
-                                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
-                                                                Reactivar
-                                                            </button>
+                                                            canEdit && (
+                                                                <button className="btn btn-success btn-sm" onClick={() => handleReactivate(item)}>
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
+                                                                    Reactivar
+                                                                </button>
+                                                            )
                                                         ) : (
                                                             <>
                                                                 <button className="btn btn-info btn-sm" onClick={() => handleView(item)}>
                                                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}><path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                                                                     Ver
                                                                 </button>
-                                                                <button className="btn btn-warning btn-sm" onClick={() => handleEdit(item)}>
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
-                                                                    Editar
-                                                                </button>
-                                                                <button className="btn btn-danger btn-sm" onClick={() => handleDeleteClick(item)}>
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
-                                                                    Desactivar
-                                                                </button>
+                                                                {canEdit && (
+                                                                    <button className="btn btn-warning btn-sm" onClick={() => handleEdit(item)}>
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
+                                                                        Editar
+                                                                    </button>
+                                                                )}
+                                                                {canDelete && (
+                                                                    <button className="btn btn-danger btn-sm" onClick={() => handleDeleteClick(item)}>
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+                                                                        Desactivar
+                                                                    </button>
+                                                                )}
                                                             </>
                                                         )}
                                                     </div>

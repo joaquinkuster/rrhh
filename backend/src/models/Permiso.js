@@ -23,7 +23,6 @@ const Permiso = sequelize.define('Permiso', {
                     'solicitudes',
                     'liquidaciones',
                     'roles',
-                    'dashboard',
                     'reportes',
                 ]],
                 msg: 'Módulo no válido',

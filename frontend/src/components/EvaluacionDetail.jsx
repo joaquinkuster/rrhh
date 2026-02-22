@@ -1,4 +1,5 @@
 import { formatDateOnly } from '../utils/formatters';
+import { useAuth } from '../context/AuthContext';
 
 // Icons SVG components
 const Icons = {
@@ -113,7 +114,11 @@ const ESCALA_COLORS = {
 const EvaluacionDetail = ({ evaluacion, onClose, onEdit }) => {
     if (!evaluacion) return null;
 
-
+    // Permisos del módulo evaluaciones
+    const { user } = useAuth();
+    const isEmpleadoUser = user?.esEmpleado && !user?.esAdministrador;
+    const userPermisos = user?.rol?.permisos || [];
+    const canEdit = !isEmpleadoUser || user?.esAdministrador || userPermisos.some(p => p.modulo === 'evaluaciones' && p.accion === 'actualizar');
 
     const getRelativeTime = (dateString) => {
         if (!dateString) return 'fecha desconocida';
@@ -237,7 +242,7 @@ const EvaluacionDetail = ({ evaluacion, onClose, onEdit }) => {
                                 {ESTADO_LABELS[evaluacion.estado] || evaluacion.estado}
                             </span>
                         </div>
-                        {onEdit && (
+                        {onEdit && canEdit && (
                             <button className="btn btn-warning btn-sm" onClick={() => onEdit(evaluacion)} title="Editar">
                                 {Icons.edit}
                                 Editar

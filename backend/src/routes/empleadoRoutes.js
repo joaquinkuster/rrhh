@@ -15,10 +15,10 @@ router.post('/', requirePermiso('empleados', 'crear'), empleadoController.create
 
 // PUT — requiere permiso 'actualizar'
 router.put('/:id', requirePermiso('empleados', 'actualizar'), empleadoController.update);
+router.patch('/:id/reactivate', requirePermiso('empleados', 'actualizar'), empleadoController.reactivate);
 
 // DELETE — requiere permiso 'eliminar'
 router.delete('/bulk', requirePermiso('empleados', 'eliminar'), empleadoController.bulkRemove);
 router.delete('/:id', requirePermiso('empleados', 'eliminar'), empleadoController.remove);
-router.patch('/:id/reactivate', requirePermiso('empleados', 'eliminar'), empleadoController.reactivate);
 
 module.exports = router;

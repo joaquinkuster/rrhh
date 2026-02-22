@@ -146,13 +146,13 @@ export const getEmpleados = async (filters = {}) => {
         }
     });
     const query = params.toString() ? `?${params.toString()}` : '';
-    const response = await fetch(`${API_URL}/empleados${query}`);
+    const response = await fetchWithCredentials(`${API_URL}/empleados${query}`);
     if (!response.ok) throw new Error('Error al obtener empleados');
     return response.json();
 };
 
 export const getEmpleadoById = async (id) => {
-    const response = await fetch(`${API_URL}/empleados/${id}`);
+    const response = await fetchWithCredentials(`${API_URL}/empleados/${id}`);
     if (!response.ok) throw new Error('Error al obtener empleado');
     return response.json();
 };
@@ -580,7 +580,7 @@ export const getSolicitudes = async (filters = {}) => {
         if (value !== undefined && value !== '') params.append(key, value);
     });
     const query = params.toString() ? `?${params.toString()}` : '';
-    const response = await fetch(`${API_URL}/solicitudes${query}`);
+    const response = await fetchWithCredentials(`${API_URL}/solicitudes${query}`);
     if (!response.ok) throw new Error('Error al obtener solicitudes');
     return response.json();
 };

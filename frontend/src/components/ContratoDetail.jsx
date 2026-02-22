@@ -1,4 +1,5 @@
 import { formatDateOnly, formatCurrency as formatCurrencyUtil, formatDateTime } from '../utils/formatters';
+import { useAuth } from '../context/AuthContext';
 
 // Mapeo de tipos de contrato a labels legibles
 const TIPOS_CONTRATO_LABELS = {
@@ -105,6 +106,13 @@ const Icons = {
 
 const ContratoDetail = ({ contrato, onClose, onEdit }) => {
     if (!contrato) return null;
+
+    // Permisos del módulo contratos
+    const { user } = useAuth();
+    const isEmpleadoUser = user?.esEmpleado && !user?.esAdministrador;
+    const userPermisos = user?.rol?.permisos || [];
+    const canEdit = !isEmpleadoUser || user?.esAdministrador || userPermisos.some(p => p.modulo === 'contratos' && p.accion === 'actualizar');
+
 
     const formatCurrency = formatCurrencyUtil;
 
@@ -304,7 +312,7 @@ const ContratoDetail = ({ contrato, onClose, onEdit }) => {
                                 {ESTADO_LABELS[contrato.estado] || contrato.estado}
                             </span>
                         </div>
-                        {onEdit && contrato.estado !== 'finalizado' && (
+                        {onEdit && contrato.estado !== 'finalizado' && canEdit && (
                             <button className="btn btn-warning btn-sm" onClick={() => onEdit(contrato)} title="Editar">
                                 {Icons.edit}
                                 Editar

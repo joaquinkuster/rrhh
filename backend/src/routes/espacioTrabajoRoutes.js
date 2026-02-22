@@ -1,20 +1,29 @@
 const express = require('express');
 const router = express.Router();
 const espacioTrabajoController = require('../controllers/espacioTrabajoController');
-const { isAuthenticated, isAdmin } = require('../middlewares/authMiddleware');
+const { isAuthenticated, isNotEmployee } = require('../middlewares/authMiddleware');
 
-// Rutas de validación
-router.get('/validation/empleado/:empleadoId/can-change', isAuthenticated, espacioTrabajoController.canChangeEmpleadoWorkspace);
-router.get('/validation/empresa/:empresaId/can-change', isAuthenticated, espacioTrabajoController.canChangeEmpresaWorkspace);
-router.get('/validation/rol/:rolId/can-change', isAuthenticated, espacioTrabajoController.canChangeRolWorkspace);
+router.use(isAuthenticated);
+router.use(isNotEmployee);
 
-// Todas las rutas requieren autenticación
-router.get('/', isAuthenticated, espacioTrabajoController.getAll);
-router.delete('/bulk', isAuthenticated, espacioTrabajoController.deleteBulk);
-router.get('/:id', isAuthenticated, espacioTrabajoController.getById);
-router.post('/', isAuthenticated, espacioTrabajoController.create);
-router.put('/:id', isAuthenticated, espacioTrabajoController.update);
-router.delete('/:id', isAuthenticated, espacioTrabajoController.deleteEspacio);
-router.patch('/:id/reactivate', isAuthenticated, espacioTrabajoController.reactivate);
+// GET - Rutas de validación
+router.get('/validation/empleado/:empleadoId/can-change', espacioTrabajoController.canChangeEmpleadoWorkspace);
+router.get('/validation/empresa/:empresaId/can-change', espacioTrabajoController.canChangeEmpresaWorkspace);
+router.get('/validation/rol/:rolId/can-change', espacioTrabajoController.canChangeRolWorkspace);
+
+// GET - Rutas de espacios de trabajo
+router.get('/', espacioTrabajoController.getAll);
+router.get('/:id', espacioTrabajoController.getById);
+
+// POST - Rutas de espacios de trabajo
+router.post('/', espacioTrabajoController.create);
+
+// PUT - Rutas de espacios de trabajo
+router.put('/:id', espacioTrabajoController.update);
+router.patch('/:id/reactivate', espacioTrabajoController.reactivate);
+
+// DELETE - Rutas de espacios de trabajo
+router.delete('/bulk', espacioTrabajoController.deleteBulk);
+router.delete('/:id', espacioTrabajoController.deleteEspacio);
 
 module.exports = router;

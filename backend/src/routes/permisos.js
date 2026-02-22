@@ -1,16 +1,17 @@
 const express = require('express');
 const router = express.Router();
 const permisoController = require('../controllers/permisoController');
-const { isAuthenticated, isAdmin } = require('../middlewares/authMiddleware');
+const { isAuthenticated, requirePermiso } = require('../middlewares/authMiddleware');
 
 
-// Todas las rutas requieren autenticación y permisos de administrador
+// Todas las rutas requieren autenticación
 router.use(isAuthenticated);
-router.use(isAdmin);
 
-// Rutas de permisos
-router.get('/', permisoController.getAll);
-router.get('/grouped', permisoController.getGroupedByModule);
-router.post('/initialize', permisoController.initializePermisos);
+// GET - requiere permiso 'leer' en 'permisos' (si es empleado)
+router.get('/', requirePermiso('permisos', 'leer'), permisoController.getAll);
+router.get('/grouped', requirePermiso('permisos', 'leer'), permisoController.getGroupedByModule);
+
+// POST - requiere permiso 'crear' en 'permisos' (si es empleado)
+router.post('/initialize', requirePermiso('permisos', 'crear'), permisoController.initializePermisos);
 
 module.exports = router;

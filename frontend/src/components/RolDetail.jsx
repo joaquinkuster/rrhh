@@ -1,3 +1,5 @@
+import { useAuth } from '../context/AuthContext';
+
 // Icons SVG components
 const Icons = {
     calendar: (
@@ -29,6 +31,12 @@ const Icons = {
 
 const RolDetail = ({ rol, onClose, onEdit }) => {
     if (!rol) return null;
+
+    // Permisos del módulo roles
+    const { user } = useAuth();
+    const isEmpleadoUser = user?.esEmpleado && !user?.esAdministrador;
+    const userPermisos = user?.rol?.permisos || [];
+    const canEdit = !isEmpleadoUser || user?.esAdministrador || userPermisos.some(p => p.modulo === 'roles' && p.accion === 'actualizar');
 
     const primaryColor = '#0d9488';
 
@@ -77,7 +85,6 @@ const RolDetail = ({ rol, onClose, onEdit }) => {
             solicitudes: 'Solicitudes',
             liquidaciones: 'Liquidaciones',
             roles: 'Roles y Permisos',
-            dashboard: 'Dashboard',
             reportes: 'Reportes',
         };
         return labels[modulo] || modulo;
@@ -212,7 +219,7 @@ const RolDetail = ({ rol, onClose, onEdit }) => {
                                 #{rol.id}
                             </span>
                         </div>
-                        {onEdit && (
+                        {onEdit && canEdit && (
                             <button className="btn btn-warning btn-sm" onClick={() => onEdit(rol)} title="Editar">
                                 {Icons.edit}
                                 Editar
@@ -385,7 +392,6 @@ const RolDetail = ({ rol, onClose, onEdit }) => {
                                         <tbody>
                                             {(() => {
                                                 const MODULE_ORDER = [
-                                                    'dashboard',
                                                     'empleados',
                                                     'empresas',
                                                     'contratos',

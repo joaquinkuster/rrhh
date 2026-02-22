@@ -1,4 +1,5 @@
 import { formatDateOnly } from '../utils/formatters';
+import { useAuth } from '../context/AuthContext';
 
 const TIPO_LABELS = {
     vacaciones: { label: 'Vacaciones', icon: '🏖️' },
@@ -147,6 +148,12 @@ const SectionHeader = ({ title, subtitle }) => (
 const SolicitudDetail = ({ solicitud, onEdit, onClose }) => {
     if (!solicitud) return null;
 
+    // Permisos del módulo solicitudes
+    const { user } = useAuth();
+    const isEmpleadoUser = user?.esEmpleado && !user?.esAdministrador;
+    const userPermisos = user?.rol?.permisos || [];
+    const canEdit = !isEmpleadoUser || user?.esAdministrador || userPermisos.some(p => p.modulo === 'solicitudes' && p.accion === 'actualizar');
+
     const tipoInfo = TIPO_LABELS[solicitud.tipoSolicitud] || { label: solicitud.tipoSolicitud, icon: '📄' };
     const typeData = solicitud.licencia || solicitud.vacaciones || solicitud.horasExtras || solicitud.renuncia || {};
     const estadoStyle = ESTADO_STYLES[typeData.estado] || ESTADO_STYLES.pendiente;
@@ -278,7 +285,7 @@ const SolicitudDetail = ({ solicitud, onEdit, onClose }) => {
                                 </span>
                             </div>
                         </div>
-                        {typeData.estado === 'pendiente' && onEdit && (
+                        {typeData.estado === 'pendiente' && onEdit && canEdit && (
                             <button className="btn btn-warning btn-sm" onClick={() => onEdit(solicitud)} title="Editar">
                                 {Icons.edit}
                                 Editar

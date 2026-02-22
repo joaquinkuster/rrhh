@@ -1,6 +1,14 @@
 import { formatDateOnly, formatCurrency } from '../utils/formatters';
+import { useAuth } from '../context/AuthContext';
 
 const LiquidacionDetail = ({ liquidacion, onClose, onEdit }) => {
+
+    // Permisos del módulo liquidaciones
+    const { user } = useAuth();
+    const isEmpleadoUser = user?.esEmpleado && !user?.esAdministrador;
+    const userPermisos = user?.rol?.permisos || [];
+    const canEdit = !isEmpleadoUser || user?.esAdministrador || userPermisos.some(p => p.modulo === 'liquidaciones' && p.accion === 'actualizar');
+
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '950px' }}>
@@ -106,9 +114,11 @@ ulo dentro del body */}
                     <button type="button" className="btn btn-secondary" onClick={onClose}>
                         Cerrar
                     </button>
-                    <button type="button" className="btn btn-primary" onClick={() => onEdit(liquidacion)}>
-                        Editar
-                    </button>
+                    {canEdit && (
+                        <button type="button" className="btn btn-primary" onClick={() => onEdit(liquidacion)}>
+                            Editar
+                        </button>
+                    )}
                 </div>
             </div>
         </div>

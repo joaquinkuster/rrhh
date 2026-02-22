@@ -1,17 +1,19 @@
 const express = require('express');
 const router = express.Router();
 const liquidacionController = require('../controllers/liquidacionController');
-const { isAuthenticated } = require('../middlewares/authMiddleware');
+const { isAuthenticated, requirePermiso } = require('../middlewares/authMiddleware');
 
 // Todas las rutas requieren autenticación
 router.use(isAuthenticated);
 
-router.get('/', liquidacionController.getAll);
-router.get('/:id', liquidacionController.getById);
-// NO POST - liquidaciones are created automatically by cron job
-router.put('/:id', liquidacionController.update);
-router.delete('/bulk', liquidacionController.bulkRemove);
-router.delete('/:id', liquidacionController.remove);
-router.patch('/:id/reactivate', liquidacionController.reactivate);
+// GET — requiere permiso 'leer' en 'liquidaciones' (si es empleado)
+router.get('/', requirePermiso('liquidaciones', 'leer'), liquidacionController.getAll);
+router.get('/:id', requirePermiso('liquidaciones', 'leer'), liquidacionController.getById);
+
+// PUT — requiere permiso 'actualizar' en 'liquidaciones' (si es empleado)
+router.put('/:id', requirePermiso('liquidaciones', 'actualizar'), liquidacionController.update);
+
+// PATCH — requiere permiso 'actualizar' en 'liquidaciones' (si es empleado)
+router.patch('/:id/reactivate', requirePermiso('liquidaciones', 'actualizar'), liquidacionController.reactivate);
 
 module.exports = router;

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getSolicitudes, updateSolicitud, deleteSolicitud, getFeriados } from '../services/api';
 import ConfirmDialog from '../components/ConfirmDialog';
+import { useAuth } from '../context/AuthContext';
 
 const ESTADO_STYLES = {
     pendiente: { bg: '#fef3c7', color: '#92400e', label: 'Pendiente' },
@@ -17,6 +18,15 @@ const TIPO_LABELS = {
 
 const Dashboard = () => {
     const navigate = useNavigate();
+    const { user } = useAuth();
+
+    // Permisos del módulo solicitudes
+    const isEmpleadoUser = user?.esEmpleado && !user?.esAdministrador;
+    const userPermisos = user?.rol?.permisos || [];
+    const canReadSolicitudes = !isEmpleadoUser || user?.esAdministrador || userPermisos.some(p => p.modulo === 'solicitudes' && p.accion === 'leer');
+    const canEditSolicitudes = !isEmpleadoUser || user?.esAdministrador || userPermisos.some(p => p.modulo === 'solicitudes' && p.accion === 'actualizar');
+    const canDeleteSolicitudes = !isEmpleadoUser || user?.esAdministrador || userPermisos.some(p => p.modulo === 'solicitudes' && p.accion === 'eliminar');
+
     const [solicitudesPendientes, setSolicitudesPendientes] = useState([]);
     const [feriados, setFeriados] = useState([]);
     const [loadingSolicitudes, setLoadingSolicitudes] = useState(true);
@@ -41,16 +51,18 @@ const Dashboard = () => {
             const result = await getSolicitudes({
                 activo: 'true',
                 page: 1,
-                limit: 5,
+                limit: 50,
             });
-            // Filter only pending requests
-            const pendientes = result.data.filter(sol => {
+            // Filtrar pendientes en el cliente
+            // estado vacío ("") se trata como 'pendiente' para datos legacy
+            const pendientes = (result.data || []).filter(sol => {
                 const typeData = sol.licencia || sol.vacaciones || sol.horasExtras || sol.renuncia;
-                return typeData?.estado === 'pendiente';
+                const estadoNorm = typeData?.estado || 'pendiente';
+                return estadoNorm === 'pendiente';
             }).slice(0, 5);
             setSolicitudesPendientes(pendientes);
         } catch (err) {
-            console.error('Error loading pending requests:', err);
+            console.error('Dashboard: error al cargar solicitudes pendientes:', err.message);
         } finally {
             setLoadingSolicitudes(false);
         }
@@ -75,60 +87,55 @@ const Dashboard = () => {
         loadFeriados();
     }, []);
 
-    const handleAprobar = (solicitud) => {
-        const empleadoNombre = getEmpleadoNombre(solicitud);
-        const tipoSolicitud = TIPO_LABELS[solicitud.tipoSolicitud];
+    const handleEditar = (solicitud) => {
+        navigate('/solicitudes', { state: { editSolicitudId: solicitud.id } });
+    };
 
+    const handleDesactivar = (solicitud) => {
         setConfirmDialog({
             isOpen: true,
-            title: '¿Aprobar solicitud?',
-            message: `¿Está seguro que desea aprobar la solicitud de ${tipoSolicitud} de ${empleadoNombre}?`,
-            variant: 'success',
-            confirmText: 'Aprobar',
+            title: '¿Desactivar solicitud?',
+            message: `¿Está seguro que desea desactivar la solicitud? Esta acción no se puede deshacer.`,
+            variant: 'danger',
+            confirmText: 'Desactivar',
             onConfirm: async () => {
                 try {
-                    // Send estado directly, not nested - backend expects { estado: 'aprobada' }
-                    let estado = 'aprobada';
-
-                    // Renuncias use 'aceptada' instead of 'aprobada'
-                    if (solicitud.renuncia) {
-                        estado = 'aceptada';
-                    }
-
-                    await updateSolicitud(solicitud.id, { estado });
-                    setSuccess(`Solicitud de ${tipoSolicitud} aprobada correctamente`);
+                    await deleteSolicitud(solicitud.id);
+                    setSuccess(`Solicitud desactivada correctamente`);
                     loadSolicitudesPendientes();
                     setConfirmDialog({ ...confirmDialog, isOpen: false });
                 } catch (err) {
-                    setError(err.message || 'Error al aprobar la solicitud');
+                    setError(err.message || 'Error al desactivar la solicitud');
                     setConfirmDialog({ ...confirmDialog, isOpen: false });
                 }
             }
         });
     };
 
-    const handleEditar = (solicitud) => {
-        navigate('/solicitudes', { state: { editSolicitudId: solicitud.id } });
-    };
-
-    const handleDesactivar = (solicitud) => {
-        const empleadoNombre = getEmpleadoNombre(solicitud);
-        const tipoSolicitud = TIPO_LABELS[solicitud.tipoSolicitud];
-
+    const handleAceptar = async (solicitud) => {
         setConfirmDialog({
             isOpen: true,
-            title: '¿Desactivar solicitud?',
-            message: `¿Está seguro que desea desactivar la solicitud de ${tipoSolicitud} de ${empleadoNombre}? Esta acción no se puede deshacer.`,
-            variant: 'danger',
-            confirmText: 'Desactivar',
+            title: '¿Aceptar solicitud?',
+            message: `¿Está seguro que desea aceptar la solicitud? Esta acción no se puede deshacer.`,
+            variant: 'success',
+            confirmText: 'Aceptar',
             onConfirm: async () => {
                 try {
-                    await deleteSolicitud(solicitud.id);
-                    setSuccess(`Solicitud de ${tipoSolicitud} desactivada correctamente`);
+                    // Set estado based on solicitud type
+                    let estado = 'aprobada';
+                    if (solicitud.renuncia) {
+                        estado = 'aceptada';
+                    }
+                    if (solicitud.licencia) {
+                        estado = 'justificada';
+                    }
+
+                    await updateSolicitud(solicitud.id, { estado });
+                    setSuccess('Solicitud aceptada correctamente');
                     loadSolicitudesPendientes();
                     setConfirmDialog({ ...confirmDialog, isOpen: false });
                 } catch (err) {
-                    setError(err.message || 'Error al desactivar la solicitud');
+                    setError(err.message);
                     setConfirmDialog({ ...confirmDialog, isOpen: false });
                 }
             }
@@ -142,7 +149,7 @@ const Dashboard = () => {
     };
 
     const getEmpleadoNombre = (sol) => {
-        const emp = sol.contrato?.empleado;
+        const emp = sol.contrato?.empleado.usuario;
         return emp ? `${emp.apellido}, ${emp.nombre}` : '-';
     };
 
@@ -188,133 +195,6 @@ const Dashboard = () => {
 
             {/* Dashboard Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                {/* Solicitudes Pendientes */}
-                <div className="card">
-                    <div className="card-header" style={{ borderBottom: '1px solid var(--border-color)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 20, height: 20, color: 'var(--primary-color)' }}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V19.5a2.25 2.25 0 002.25 2.25h6a2.25 2.25 0 002.25-2.25V6.108" />
-                            </svg>
-                            <h3 className="card-title">Solicitudes Pendientes</h3>
-                        </div>
-                    </div>
-
-                    <div style={{ padding: '1rem' }}>
-                        {loadingSolicitudes ? (
-                            <div className="loading" style={{ padding: '2rem' }}><div className="spinner"></div></div>
-                        ) : solicitudesPendientes.length === 0 ? (
-                            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
-                                <p>No hay solicitudes pendientes</p>
-                            </div>
-                        ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                {solicitudesPendientes.map((solicitud) => {
-                                    const estado = getEstado(solicitud);
-                                    const estadoStyle = ESTADO_STYLES[estado] || ESTADO_STYLES.pendiente;
-
-                                    return (
-                                        <div key={solicitud.id} style={{
-                                            background: 'var(--card-bg)',
-                                            border: '1px solid var(--border-color)',
-                                            borderRadius: '0.5rem',
-                                            padding: '1rem'
-                                        }}>
-                                            {/* First row: Employee name and action buttons */}
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                                                <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                                                    {getEmpleadoNombre(solicitud)}
-                                                </div>
-                                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                    <button
-                                                        className="btn btn-success btn-sm"
-                                                        onClick={() => handleAprobar(solicitud)}
-                                                        title="Aprobar"
-                                                        style={{
-                                                            padding: '0.5rem',
-                                                            minWidth: 'auto',
-                                                            width: '36px',
-                                                            height: '36px',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center'
-                                                        }}
-                                                    >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" style={{ width: 18, height: 18 }}>
-                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                                                        </svg>
-                                                    </button>
-                                                    <button
-                                                        className="btn btn-warning btn-sm"
-                                                        onClick={() => handleEditar(solicitud)}
-                                                        title="Editar"
-                                                        style={{
-                                                            padding: '0.5rem',
-                                                            minWidth: 'auto',
-                                                            width: '36px',
-                                                            height: '36px',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center'
-                                                        }}
-                                                    >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 18, height: 18 }}>
-                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-                                                        </svg>
-                                                    </button>
-                                                    <button
-                                                        className="btn btn-danger btn-sm"
-                                                        onClick={() => handleDesactivar(solicitud)}
-                                                        title="Desactivar"
-                                                        style={{
-                                                            padding: '0.5rem',
-                                                            minWidth: 'auto',
-                                                            width: '36px',
-                                                            height: '36px',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center'
-                                                        }}
-                                                    >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 18, height: 18 }}>
-                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                                                        </svg>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            {/* Second row: Type, date and badge */}
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                                                <span>{TIPO_LABELS[solicitud.tipoSolicitud]} • {formatDate(solicitud.createdAt)}</span>
-                                                <span style={{
-                                                    display: 'inline-block',
-                                                    padding: '0.15rem 0.5rem',
-                                                    borderRadius: '9999px',
-                                                    background: estadoStyle.bg,
-                                                    color: estadoStyle.color,
-                                                    fontSize: '0.7rem',
-                                                    fontWeight: '500'
-                                                }}>
-                                                    {estadoStyle.label}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-
-                        {solicitudesPendientes.length > 0 && (
-                            <div style={{ marginTop: '1rem', textAlign: 'center' }}>
-                                <button
-                                    className="btn btn-secondary btn-sm"
-                                    onClick={() => navigate('/solicitudes')}
-                                >
-                                    Ver todas las solicitudes
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-
                 {/* Próximos Eventos */}
                 <div className="card">
                     <div className="card-header" style={{ borderBottom: '1px solid var(--border-color)' }}>
@@ -367,6 +247,139 @@ const Dashboard = () => {
                                         </span>
                                     </div>
                                 ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Solicitudes Pendientes */}
+                <div className="card">
+                    <div className="card-header" style={{ borderBottom: '1px solid var(--border-color)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 20, height: 20, color: 'var(--primary-color)' }}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V19.5a2.25 2.25 0 002.25 2.25h6a2.25 2.25 0 002.25-2.25V6.108" />
+                            </svg>
+                            <h3 className="card-title">Solicitudes Pendientes</h3>
+                        </div>
+                    </div>
+
+                    <div style={{ padding: '1rem' }}>
+                        {loadingSolicitudes ? (
+                            <div className="loading" style={{ padding: '2rem' }}><div className="spinner"></div></div>
+                        ) : solicitudesPendientes.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                                <p>No hay solicitudes pendientes</p>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                {solicitudesPendientes.map((solicitud) => {
+                                    const estado = getEstado(solicitud);
+                                    const estadoStyle = ESTADO_STYLES[estado] || ESTADO_STYLES.pendiente;
+
+                                    return (
+                                        <div key={solicitud.id} style={{
+                                            background: 'var(--card-bg)',
+                                            border: '1px solid var(--border-color)',
+                                            borderRadius: '0.5rem',
+                                            padding: '1rem'
+                                        }}>
+                                            {/* First row: Employee name and action buttons */}
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                                <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                                                    {getEmpleadoNombre(solicitud)}
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                    {canEditSolicitudes && (
+                                                        <button
+                                                            className="btn btn-primary btn-sm"
+                                                            onClick={() => handleAceptar(solicitud)}
+                                                            title="Aceptar"
+                                                            style={{
+                                                                padding: '0.5rem',
+                                                                minWidth: 'auto',
+                                                                width: '36px',
+                                                                height: '36px',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center'
+                                                            }}
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" style={{ width: 18, height: 18 }}>
+                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                                            </svg>
+                                                        </button>
+                                                    )}
+                                                    {canEditSolicitudes && (
+                                                        <button
+                                                            className="btn btn-warning btn-sm"
+                                                            onClick={() => handleEditar(solicitud)}
+                                                            title="Editar"
+                                                            style={{
+                                                                padding: '0.5rem',
+                                                                minWidth: 'auto',
+                                                                width: '36px',
+                                                                height: '36px',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center'
+                                                            }}
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 18, height: 18 }}>
+                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                                                            </svg>
+                                                        </button>
+                                                    )}
+                                                    {canDeleteSolicitudes && (
+                                                        <button
+                                                            className="btn btn-danger btn-sm"
+                                                            onClick={() => handleDesactivar(solicitud)}
+                                                            title="Desactivar"
+                                                            style={{
+                                                                padding: '0.5rem',
+                                                                minWidth: 'auto',
+                                                                width: '36px',
+                                                                height: '36px',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center'
+                                                            }}
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 18, height: 18 }}>
+                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                                                            </svg>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            {/* Second row: Type, date and badge */}
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                                <span>{TIPO_LABELS[solicitud.tipoSolicitud]} • {formatDate(solicitud.createdAt)}</span>
+                                                <span style={{
+                                                    display: 'inline-block',
+                                                    padding: '0.15rem 0.5rem',
+                                                    borderRadius: '9999px',
+                                                    background: estadoStyle.bg,
+                                                    color: estadoStyle.color,
+                                                    fontSize: '0.7rem',
+                                                    fontWeight: '500'
+                                                }}>
+                                                    {estadoStyle.label}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {solicitudesPendientes.length > 0 && (
+                            <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+                                <button
+                                    className="btn btn-secondary btn-sm"
+                                    onClick={() => navigate('/solicitudes')}
+                                >
+                                    Ver todas las solicitudes
+                                </button>
                             </div>
                         )}
                     </div>

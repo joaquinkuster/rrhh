@@ -181,7 +181,7 @@ const create = async (req, res) => {
         // 3.2 Administrador de RRHH
         const rolRRHH = await Rol.create({
             nombre: 'Administrador de RRHH',
-            descripcion: 'Gestión de RRHH, Dashboard y Reportes',
+            descripcion: 'Gestión de RRHH y Reportes',
             esObligatorio: true,
             espacioTrabajoId: espacio.id,
             activo: true
@@ -196,7 +196,6 @@ const create = async (req, res) => {
             'solicitudes',
             // Agrego lectura de empresas para operatividad básica en selects
             { modulo: 'empresas', acciones: ['leer'] },
-            { modulo: 'dashboard', acciones: ['leer'] },
             { modulo: 'reportes', acciones: ['leer'] },
             { modulo: 'liquidaciones', acciones: ['leer', 'actualizar'] }
         ]);

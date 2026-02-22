@@ -1,17 +1,24 @@
 const express = require('express');
 const router = express.Router();
 const registroSaludController = require('../controllers/registroSaludController');
-const { isAuthenticated } = require('../middlewares/authMiddleware');
+const { isAuthenticated, requirePermiso } = require('../middlewares/authMiddleware');
 
 // Todas las rutas requieren autenticación
 router.use(isAuthenticated);
 
-router.get('/', registroSaludController.getAll);
-router.get('/:id', registroSaludController.getById);
-router.post('/', registroSaludController.create);
-router.put('/:id', registroSaludController.update);
-router.delete('/bulk', registroSaludController.bulkRemove);
-router.delete('/:id', registroSaludController.remove);
-router.patch('/:id/reactivate', registroSaludController.reactivate);
+// GET — requiere permiso 'leer' en 'empresas' (si es empleado)
+router.get('/', requirePermiso('leer', 'empresas'), registroSaludController.getAll);
+router.get('/:id', requirePermiso('leer', 'empresas'), registroSaludController.getById);
+
+// POST - requiere permiso 'crear' en 'empresas' (si es empleado)
+router.post('/', requirePermiso('crear', 'empresas'), registroSaludController.create);
+
+// PUT - requiere permiso 'actualizar' en 'empresas' (si es empleado)
+router.put('/:id', requirePermiso('actualizar', 'empresas'), registroSaludController.update);
+router.patch('/:id/reactivate', requirePermiso('actualizar', 'empresas'), registroSaludController.reactivate);
+
+// DELETE - requiere permiso 'eliminar' en 'empresas' (si es empleado)
+router.delete('/bulk', requirePermiso('eliminar', 'empresas'), registroSaludController.bulkRemove);
+router.delete('/:id', requirePermiso('eliminar', 'empresas'), registroSaludController.remove);
 
 module.exports = router;

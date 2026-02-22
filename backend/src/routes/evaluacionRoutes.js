@@ -1,17 +1,24 @@
 const express = require('express');
 const router = express.Router();
 const evaluacionController = require('../controllers/evaluacionController');
-const { isAuthenticated } = require('../middlewares/authMiddleware');
+const { isAuthenticated, requirePermiso } = require('../middlewares/authMiddleware');
 
 // Todas las rutas requieren autenticación
 router.use(isAuthenticated);
 
-router.get('/', evaluacionController.getAll);
-router.get('/:id', evaluacionController.getById);
-router.post('/', evaluacionController.create);
-router.put('/:id', evaluacionController.update);
-router.delete('/bulk', evaluacionController.bulkRemove);
-router.delete('/:id', evaluacionController.remove);
-router.patch('/:id/reactivate', evaluacionController.reactivate);
+// GET - requiere permiso 'leer' en 'evaluaciones'
+router.get('/', requirePermiso('evaluaciones', 'leer'), evaluacionController.getAll);
+router.get('/:id', requirePermiso('evaluaciones', 'leer'), evaluacionController.getById);
+
+// POST - requiere permiso 'crear'
+router.post('/', requirePermiso('evaluaciones', 'crear'), evaluacionController.create);
+
+// PUT - requiere permiso 'actualizar'
+router.put('/:id', requirePermiso('evaluaciones', 'actualizar'), evaluacionController.update);
+router.patch('/:id/reactivate', requirePermiso('evaluaciones', 'actualizar'), evaluacionController.reactivate);
+
+// DELETE - requiere permiso 'eliminar'
+router.delete('/bulk', requirePermiso('evaluaciones', 'eliminar'), evaluacionController.bulkRemove);
+router.delete('/:id', requirePermiso('evaluaciones', 'eliminar'), evaluacionController.remove);
 
 module.exports = router;

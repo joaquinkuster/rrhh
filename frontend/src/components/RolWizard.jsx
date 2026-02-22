@@ -203,7 +203,6 @@ const RolWizard = ({ rol, onClose, onSuccess }) => {
             solicitudes: 'Solicitudes',
             liquidaciones: 'Liquidaciones',
             roles: 'Roles y Permisos',
-            dashboard: 'Dashboard',
             reportes: 'Reportes',
         };
         return labels[modulo] || modulo;
@@ -380,7 +379,6 @@ const RolWizard = ({ rol, onClose, onSuccess }) => {
                                 <tbody>
                                     {(() => {
                                         const MODULE_ORDER = [
-                                            'dashboard',
                                             'empleados',
                                             'empresas',
                                             'contratos',

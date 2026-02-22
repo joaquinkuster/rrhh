@@ -1,3 +1,5 @@
+import { useAuth } from '../context/AuthContext';
+
 // Icons SVG components
 const Icons = {
     calendar: (
@@ -55,6 +57,12 @@ const Icons = {
 
 const EmpresaDetail = ({ empresa, onClose, onEdit }) => {
     if (!empresa) return null;
+
+    // Permisos del módulo empresas
+    const { user } = useAuth();
+    const isEmpleadoUser = user?.esEmpleado && !user?.esAdministrador;
+    const userPermisos = user?.rol?.permisos || [];
+    const canEdit = !isEmpleadoUser || user?.esAdministrador || userPermisos.some(p => p.modulo === 'empresas' && p.accion === 'actualizar');
 
     const primaryColor = '#0d9488';
 
@@ -221,7 +229,7 @@ const EmpresaDetail = ({ empresa, onClose, onEdit }) => {
                                 #{empresa.id}
                             </span>
                         </div>
-                        {onEdit && (
+                        {onEdit && canEdit && (
                             <button className="btn btn-warning btn-sm" onClick={() => onEdit(empresa)} title="Editar">
                                 {Icons.edit}
                                 Editar

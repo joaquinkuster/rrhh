@@ -16,6 +16,9 @@ const {
     Contacto,
     Solicitud,
     Vacaciones,
+    Licencia,
+    HorasExtras,
+    Renuncia,
     Rol,
     Permiso,
     EspacioTrabajo,
@@ -23,21 +26,17 @@ const {
     ParametroLaboral,
 } = require('../models');
 
-/**
- * Verificar si ya existen datos
- */
-const hasData = async () => {
-    return (await Usuario.count()) > 0;
-};
+const hasData = async () => (await Usuario.count()) > 0;
 
 /**
- * Helper: crear empleado realista con usuario, contrato asignado a un rol y un puesto
+ * Helper: crear empleado con usuario, contrato, puesto y último contrato seleccionado
  */
-const crearEmpleado = async ({ nombre, apellido, email, dni, cuil, fechaNacimiento, genero, estadoCivil, calle, numero, espacioId, rol, puesto, salario, tipoContrato }) => {
+const crearEmpleado = async ({
+    nombre, apellido, email, dni, cuil, fechaNacimiento, genero, estadoCivil,
+    calle, numero, codigoPostal, espacioId, rol, puesto, salario, tipoContrato, fechaInicio
+}) => {
     const usuario = await Usuario.create({
-        nombre,
-        apellido,
-        email,
+        nombre, apellido, email,
         contrasena: 'User123!',
         esAdministrador: false,
         esEmpleado: true,
@@ -56,7 +55,7 @@ const crearEmpleado = async ({ nombre, apellido, email, dni, cuil, fechaNacimien
         estadoCivil,
         calle,
         numero,
-        codigoPostal: '1000',
+        codigoPostal: codigoPostal || '3300',
         provinciaId: 1,
         ciudadId: 1,
     });
@@ -65,7 +64,7 @@ const crearEmpleado = async ({ nombre, apellido, email, dni, cuil, fechaNacimien
         empleadoId: empleado.id,
         rolId: rol.id,
         tipoContrato: tipoContrato || 'tiempo_indeterminado',
-        fechaInicio: '2024-03-01',
+        fechaInicio: fechaInicio || '2024-03-01',
         salario,
         estado: 'en_curso',
         activo: true,
@@ -95,14 +94,14 @@ const runSeed = async () => {
         const modulos = [
             'empleados', 'empresas', 'contratos', 'registros_salud',
             'evaluaciones', 'contactos', 'solicitudes', 'liquidaciones',
-            'roles', 'dashboard', 'reportes'
+            'roles', 'reportes'
         ];
         const acciones = ['crear', 'leer', 'actualizar', 'eliminar'];
 
         for (const modulo of modulos) {
             for (const accion of acciones) {
                 if (modulo === 'liquidaciones' && (accion === 'crear' || accion === 'eliminar')) continue;
-                if ((modulo === 'dashboard' || modulo === 'reportes') && accion !== 'leer') continue;
+                if (modulo === 'reportes' && accion !== 'leer') continue;
                 await Permiso.findOrCreate({
                     where: { modulo, accion },
                     defaults: { descripcion: `${accion} ${modulo}` }
@@ -111,12 +110,11 @@ const runSeed = async () => {
         }
         const allPermisos = await Permiso.findAll();
 
-        const getPermisosIds = (criterios) => {
-            return allPermisos.filter(p => criterios.some(c => {
+        const getPermisosIds = (criterios) =>
+            allPermisos.filter(p => criterios.some(c => {
                 if (typeof c === 'string') return p.modulo === c;
                 return p.modulo === c.modulo && c.acciones.includes(p.accion);
             })).map(p => p.id);
-        };
 
         // ─── 1. Usuarios propietarios ─────────────────────────────────────────────
         console.log('👤 Creando usuarios propietarios...');
@@ -153,7 +151,7 @@ const runSeed = async () => {
 
             const rolRRHH = await Rol.create({
                 nombre: 'Administrador de RRHH',
-                descripcion: 'Gestión de RRHH, lectura de Dashboard y Reportes',
+                descripcion: 'Gestión de RRHH y lectura de Reportes',
                 esObligatorio: true,
                 espacioTrabajoId: espacioId,
                 activo: true
@@ -161,7 +159,6 @@ const runSeed = async () => {
             await rolRRHH.setPermisos(getPermisosIds([
                 'empleados', 'contratos', 'registros_salud', 'evaluaciones', 'contactos', 'solicitudes',
                 { modulo: 'empresas', acciones: ['leer'] },
-                { modulo: 'dashboard', acciones: ['leer'] },
                 { modulo: 'reportes', acciones: ['leer'] },
                 { modulo: 'liquidaciones', acciones: ['leer', 'actualizar'] },
             ]));
@@ -184,13 +181,15 @@ const runSeed = async () => {
             return { rolCEO, rolRRHH, rolOperativo };
         };
 
-        // ─── 3. Helper: configuración de espacio (conceptos y parámetros) ─────────
+        // ─── 3. Helper: configuración de espacio ─────────────────────────────────
         const initSpaceConfig = async (espacioId) => {
             await ConceptoSalarial.bulkCreate([
                 { nombre: 'Jubilación', tipo: 'deduccion', esPorcentaje: true, valor: 11, esObligatorio: true, espacioTrabajoId: espacioId },
                 { nombre: 'Obra Social', tipo: 'deduccion', esPorcentaje: true, valor: 3, esObligatorio: true, espacioTrabajoId: espacioId },
                 { nombre: 'PAMI', tipo: 'deduccion', esPorcentaje: true, valor: 3, esObligatorio: true, espacioTrabajoId: espacioId },
                 { nombre: 'Cuota Sindical', tipo: 'deduccion', esPorcentaje: true, valor: 2.5, esObligatorio: true, espacioTrabajoId: espacioId },
+                { nombre: 'Horas Extra 50%', tipo: 'adicional', esPorcentaje: false, valor: 0, esObligatorio: false, espacioTrabajoId: espacioId },
+                { nombre: 'Presentismo', tipo: 'adicional', esPorcentaje: true, valor: 5, esObligatorio: false, espacioTrabajoId: espacioId },
             ]);
             await ParametroLaboral.create({
                 tipo: 'limite_ausencia_injustificada',
@@ -202,240 +201,213 @@ const runSeed = async () => {
         };
 
         // ─── 4. Helper: poblar espacio con empleados y datos ─────────────────────
-        const populateSpaceData = async (espacioId, roles) => {
-            // Empresa
+        const populateSpaceData = async (espacioId, roles, prefix) => {
+
+            // ── Empresa ──────────────────────────────────────────────────────────
             const empresa = await Empresa.create({
-                nombre: 'Cataratas Ingeniería SA',
-                email: 'contacto@cataratas.com',
+                nombre: `${prefix} Ingeniería SA`,
+                email: `contacto@${prefix.toLowerCase().replace(/\s/g, '')}.com`,
                 telefono: '0376-4421500',
                 industria: 'Ingeniería y Construcción',
-                direccion: 'Av. Victoria Aguirre 66',
+                direccion: 'Av. Victoria Aguirre 66, Iguazú, Misiones',
+                cuit: `30-7000000${espacioId}-2`,
                 activo: true,
                 espacioTrabajoId: espacioId,
             });
 
-            // Estructura organizacional
-            const areaDireccion = await Area.create({ nombre: 'Dirección General', descripcion: 'Alta gerencia', empresaId: empresa.id });
-            const areaRRHH = await Area.create({ nombre: 'Recursos Humanos', descripcion: 'Gestión de personas', empresaId: empresa.id });
-            const areaOp = await Area.create({ nombre: 'Operaciones', descripcion: 'Ejecución de proyectos', empresaId: empresa.id });
+            // ── Estructura organizacional ─────────────────────────────────────────
+            const areaDireccion = await Area.create({ nombre: 'Dirección General', descripcion: 'Alta gerencia y estrategia', empresaId: empresa.id });
+            const areaRRHH = await Area.create({ nombre: 'Recursos Humanos', descripcion: 'Gestión del capital humano', empresaId: empresa.id });
+            const areaOp = await Area.create({ nombre: 'Operaciones', descripcion: 'Ejecución de proyectos en campo', empresaId: empresa.id });
+            const areaTec = await Area.create({ nombre: 'Tecnología', descripcion: 'Sistemas e infraestructura', empresaId: empresa.id });
 
-            const deptyDir = await Departamento.create({ nombre: 'Gerencia', descripcion: 'Dirección ejecutiva', areaId: areaDireccion.id });
-            const deptyRRHH = await Departamento.create({ nombre: 'Administración', descripcion: 'RRHH y Nómina', areaId: areaRRHH.id });
-            const deptyOp = await Departamento.create({ nombre: 'Obras y Proyectos', descripcion: 'Campo y oficina', areaId: areaOp.id });
+            const deptDir = await Departamento.create({ nombre: 'Gerencia General', descripcion: 'Dirección ejecutiva', areaId: areaDireccion.id });
+            const deptRRHH = await Departamento.create({ nombre: 'Administración de Personal', descripcion: 'Nómina, legales y RRHH', areaId: areaRRHH.id });
+            const deptObras = await Departamento.create({ nombre: 'Obras y Proyectos', descripcion: 'Gestión de obras civiles', areaId: areaOp.id });
+            const deptSeg = await Departamento.create({ nombre: 'Seguridad e Higiene', descripcion: 'Control y prevención de riesgos', areaId: areaOp.id });
+            const deptIT = await Departamento.create({ nombre: 'Sistemas', descripcion: 'Infraestructura TI y soporte', areaId: areaTec.id });
 
-            const puestoDir = await Puesto.create({ nombre: 'Director General', descripcion: 'Máxima autoridad ejecutiva', departamentoId: deptyDir.id });
-            const puestoRRHH = await Puesto.create({ nombre: 'Analista de RRHH', descripcion: 'Gestión integral de personal', departamentoId: deptyRRHH.id });
-            const puestoTec = await Puesto.create({ nombre: 'Técnico en Obras', descripcion: 'Ejecución y supervisión de obras', departamentoId: deptyOp.id });
+            const puestoDir = await Puesto.create({ nombre: 'Director General', descripcion: 'Máxima autoridad ejecutiva de la empresa', departamentoId: deptDir.id });
+            const puestoRRHH = await Puesto.create({ nombre: 'Analista de RRHH', descripcion: 'Gestión integral del personal y liquidaciones', departamentoId: deptRRHH.id });
+            const puestoJefeOp = await Puesto.create({ nombre: 'Jefe de Obra', descripcion: 'Coordinación y supervisión de obras', departamentoId: deptObras.id });
+            const puestoTec = await Puesto.create({ nombre: 'Técnico en Obras', descripcion: 'Ejecución de tareas en campo y taller', departamentoId: deptObras.id });
+            const puestoSeg = await Puesto.create({ nombre: 'Responsable de Seguridad', descripcion: 'Auditoría y cumplimiento normativo SyH', departamentoId: deptSeg.id });
+            const puestoIT = await Puesto.create({ nombre: 'Analista de Sistemas', descripcion: 'Desarrollo y administración de sistemas', departamentoId: deptIT.id });
 
-            // ── Empleado 1: Director con rol rolCEO ───────────────────────────────
-            const { empleado: empDir, contrato: contratoDir } = await crearEmpleado({
-                nombre: 'Martín',
-                apellido: 'Rodríguez',
-                email: `martin.rodriguez.${espacioId}@cataratas.com`,
-                dni: `2200000${espacioId}`,
-                cuil: `20-2200000${espacioId}-4`,
-                fechaNacimiento: '1979-05-12',
-                genero: 'masculino',
-                estadoCivil: 'casado',
-                calle: 'Av. Córdoba',
-                numero: '1540',
-                espacioId,
-                rol: roles.rolCEO,
-                puesto: puestoDir,
-                salario: 850000,
+            // ── Empleado 1: Director ──────────────────────────────────────────────
+            const { empleado: empDir, contrato: cDir } = await crearEmpleado({
+                nombre: 'Martín', apellido: 'Rodríguez',
+                email: `martin.rodriguez.${espacioId}@empresa.com`,
+                dni: `22000${espacioId}01`, cuil: `20-22000${espacioId}01-4`,
+                fechaNacimiento: '1979-05-12', genero: 'masculino', estadoCivil: 'casado',
+                calle: 'Av. Córdoba', numero: '1540', codigoPostal: '3370',
+                espacioId, rol: roles.rolCEO, puesto: puestoDir, salario: 920000,
+                fechaInicio: '2023-01-15',
             });
 
-            // Registros para el Director
-            await RegistroSalud.create({
-                empleadoId: empDir.id,
-                tipoExamen: 'pre_ocupacional',
-                fechaRealizacion: '2024-03-01',
-                fechaVencimiento: '2025-03-01',
-                resultado: 'apto',
-                activo: true, vigente: true,
-            }, { hooks: false, validate: false });
+            await RegistroSalud.create({ empleadoId: empDir.id, tipoExamen: 'pre_ocupacional', fechaRealizacion: '2023-01-15', fechaVencimiento: '2024-01-15', resultado: 'apto', activo: true, vigente: false }, { hooks: false, validate: false });
+            await RegistroSalud.create({ empleadoId: empDir.id, tipoExamen: 'periodico', fechaRealizacion: '2024-03-10', fechaVencimiento: '2025-03-10', resultado: 'apto', activo: true, vigente: true }, { hooks: false, validate: false });
 
-            await Contacto.create({
-                empleadoId: empDir.id,
-                nombreCompleto: 'Sofía Rodríguez',
-                dni: '28111222',
-                esFamiliar: true,
-                esContactoEmergencia: true,
-            }, { validate: false });
+            await Contacto.create({ empleadoId: empDir.id, nombreCompleto: 'Sofía Rodríguez', dni: '28111222', telefono: '376-4512345', email: 'sofia.rodriguez@gmail.com', parentesco: 'conyugue', esFamiliar: true, esContactoEmergencia: true }, { validate: false });
+            await Contacto.create({ empleadoId: empDir.id, nombreCompleto: 'Lucas Rodríguez', dni: '41222333', telefono: '376-4512346', email: 'lucas.rodriguez@gmail.com', parentesco: 'hijo', esFamiliar: true, esContactoEmergencia: false }, { validate: false });
 
-            // ── Empleado 2: Administrador RRHH con rol rolRRHH ───────────────────
-            const { empleado: empRRHH, contrato: contratoRRHH } = await crearEmpleado({
-                nombre: 'Valeria',
-                apellido: 'Gómez',
-                email: `valeria.gomez.${espacioId}@cataratas.com`,
-                dni: `2700000${espacioId}`,
-                cuil: `27-2700000${espacioId}-6`,
-                fechaNacimiento: '1988-09-23',
-                genero: 'femenino',
-                estadoCivil: 'casado',
-                calle: 'Calle San Martín',
-                numero: '320',
-                espacioId,
-                rol: roles.rolRRHH,
-                puesto: puestoRRHH,
-                salario: 520000,
+            await Evaluacion.create({ contratoEvaluadoId: cDir.id, periodo: 'anual', tipoEvaluacion: 'descendente_90', fecha: '2024-12-10', puntaje: 94, escala: 'supera_expectativas', feedback: 'El director demostró liderazgo excepcional. Superó los objetivos anuales en un 18% y consolidó alianzas estratégicas clave para el crecimiento a largo plazo de la empresa.', estado: 'firmada', activo: true }, { hooks: false, validate: false });
+
+            // Solicitud aprobada de vacaciones del Director
+            const solVacDir = await Solicitud.create({ contratoId: cDir.id, tipoSolicitud: 'vacaciones', activo: true }, { validate: false });
+            await Vacaciones.create({ solicitudId: solVacDir.id, periodo: 2024, diasCorrespondientes: 21, diasTomados: 0, diasDisponibles: 21, fechaInicio: '2024-07-08', fechaFin: '2024-07-26', fechaRegreso: '2024-07-29', diasSolicitud: 15, descripcion: 'Vacaciones de invierno 2024', documentos: [], estado: 'aprobada', notificadoEl: '2024-06-20' }, { hooks: false, validate: false });
+
+            // ── Empleado 2: Analista RRHH ─────────────────────────────────────────
+            const { empleado: empRRHH, contrato: cRRHH } = await crearEmpleado({
+                nombre: 'Valeria', apellido: 'Gómez',
+                email: `valeria.gomez.${espacioId}@empresa.com`,
+                dni: `27000${espacioId}02`, cuil: `27-27000${espacioId}02-6`,
+                fechaNacimiento: '1988-09-23', genero: 'femenino', estadoCivil: 'casado',
+                calle: 'San Martín', numero: '320', codigoPostal: '3370',
+                espacioId, rol: roles.rolRRHH, puesto: puestoRRHH, salario: 580000,
+                fechaInicio: '2023-06-01',
             });
 
-            await RegistroSalud.create({
-                empleadoId: empRRHH.id,
-                tipoExamen: 'periodico',
-                fechaRealizacion: '2024-06-15',
-                fechaVencimiento: '2025-06-15',
-                resultado: 'apto',
-                activo: true, vigente: true,
-            }, { hooks: false, validate: false });
+            await RegistroSalud.create({ empleadoId: empRRHH.id, tipoExamen: 'pre_ocupacional', fechaRealizacion: '2023-06-01', fechaVencimiento: '2024-06-01', resultado: 'apto', activo: true, vigente: false }, { hooks: false, validate: false });
+            await RegistroSalud.create({ empleadoId: empRRHH.id, tipoExamen: 'periodico', fechaRealizacion: '2024-06-15', fechaVencimiento: '2025-06-15', resultado: 'apto', activo: true, vigente: true }, { hooks: false, validate: false });
 
-            await Contacto.create({
-                empleadoId: empRRHH.id,
-                nombreCompleto: 'Roberto Gómez',
-                dni: '24333444',
-                esFamiliar: true,
-                esContactoEmergencia: true,
-            }, { validate: false });
+            await Contacto.create({ empleadoId: empRRHH.id, nombreCompleto: 'Roberto Gómez', dni: '24333444', telefono: '376-4567890', email: 'roberto.gomez@gmail.com', parentesco: 'conyugue', esFamiliar: true, esContactoEmergencia: true }, { validate: false });
 
-            // Evaluación emitida por RRHH al Director
-            await Evaluacion.create({
-                contratoEvaluadoId: contratoDir.id,
-                periodo: 'anual',
-                tipoEvaluacion: 'descendente_90',
-                fecha: '2024-12-10',
-                puntaje: 92,
-                escala: 'supera_expectativas',
-                feedback: 'El director demostró liderazgo excepcional durante el ejercicio. Superó los objetivos anuales en un 15%, consolidó alianzas estratégicas y mejoró el clima organizacional.',
-                estado: 'firmada',
-                activo: true,
-            }, { hooks: false, validate: false });
+            await Evaluacion.create({ contratoEvaluadoId: cRRHH.id, periodo: 'semestre_1', tipoEvaluacion: 'descendente_90', fecha: '2024-07-01', puntaje: 88, escala: 'supera_expectativas', feedback: 'Valeria gestionó el área de personal con gran eficiencia. Implementó mejoras en los procesos de liquidación y redujo los tiempos de respuesta a consultas de empleados.', estado: 'firmada', activo: true }, { hooks: false, validate: false });
 
-            // ── Empleado 3: Técnico con rol rolOperativo ─────────────────────────
-            const { empleado: empTec, contrato: contratoTec } = await crearEmpleado({
-                nombre: 'Diego',
-                apellido: 'Pereyra',
-                email: `diego.pereyra.${espacioId}@cataratas.com`,
-                dni: `3300000${espacioId}`,
-                cuil: `20-3300000${espacioId}-3`,
-                fechaNacimiento: '1995-02-17',
-                genero: 'masculino',
-                estadoCivil: 'soltero',
-                calle: 'Mitre',
-                numero: '780',
-                espacioId,
-                rol: roles.rolOperativo,
-                puesto: puestoTec,
-                salario: 310000,
-                tipoContrato: 'plazo_fijo',
+            // Solicitud pendiente de licencia del RRHH
+            const solLicRRHH = await Solicitud.create({ contratoId: cRRHH.id, tipoSolicitud: 'licencia', activo: true }, { validate: false });
+            await Licencia.create({ solicitudId: solLicRRHH.id, esLicencia: true, motivoLegal: 'tramites_personales', fechaInicio: '2025-02-17', fechaFin: '2025-02-17', diasSolicitud: 1, descripcion: 'Trámites en registro civil', documentos: [], estado: 'pendiente' }, { hooks: false, validate: false });
+
+            // ── Empleado 3: Jefe de Obra ──────────────────────────────────────────
+            const { empleado: empJefe, contrato: cJefe } = await crearEmpleado({
+                nombre: 'Hernán', apellido: 'Aguirre',
+                email: `hernan.aguirre.${espacioId}@empresa.com`,
+                dni: `30000${espacioId}03`, cuil: `20-30000${espacioId}03-5`,
+                fechaNacimiento: '1983-11-08', genero: 'masculino', estadoCivil: 'divorciado',
+                calle: 'Belgrano', numero: '987', codigoPostal: '3370',
+                espacioId, rol: roles.rolOperativo, puesto: puestoJefeOp, salario: 720000,
+                fechaInicio: '2023-03-01',
             });
 
-            await RegistroSalud.create({
-                empleadoId: empTec.id,
-                tipoExamen: 'pre_ocupacional',
-                fechaRealizacion: '2024-03-01',
-                fechaVencimiento: '2025-03-01',
-                resultado: 'apto',
-                activo: true, vigente: true,
-            }, { hooks: false, validate: false });
+            await RegistroSalud.create({ empleadoId: empJefe.id, tipoExamen: 'pre_ocupacional', fechaRealizacion: '2023-03-01', fechaVencimiento: '2024-03-01', resultado: 'apto', activo: true, vigente: false }, { hooks: false, validate: false });
+            await RegistroSalud.create({ empleadoId: empJefe.id, tipoExamen: 'periodico', fechaRealizacion: '2024-09-05', fechaVencimiento: '2025-09-05', resultado: 'apto', activo: true, vigente: true }, { hooks: false, validate: false });
 
-            await RegistroSalud.create({
-                empleadoId: empTec.id,
-                tipoExamen: 'periodico',
-                fechaRealizacion: '2024-09-01',
-                fechaVencimiento: '2025-09-01',
-                resultado: 'apto_preexistencias',
-                activo: true, vigente: true,
-            }, { hooks: false, validate: false });
+            await Contacto.create({ empleadoId: empJefe.id, nombreCompleto: 'María Aguirre', dni: '33444555', telefono: '376-4598765', email: 'maria.aguirre@gmail.com', parentesco: 'madre', esFamiliar: true, esContactoEmergencia: true }, { validate: false });
 
-            await Contacto.create({
-                empleadoId: empTec.id,
-                nombreCompleto: 'Ana Pereyra',
-                dni: '35999888',
-                esFamiliar: true,
-                esContactoEmergencia: true,
-            }, { validate: false });
+            await Evaluacion.create({ contratoEvaluadoId: cJefe.id, periodo: 'anual', tipoEvaluacion: 'descendente_90', fecha: '2024-12-15', puntaje: 83, escala: 'cumple', feedback: 'Hernán coordina el equipo de obras con solvencia técnica. Se recomienda mejorar la comunicación de avances y la gestión de incidentes en tiempo real.', estado: 'firmada', activo: true }, { hooks: false, validate: false });
 
-            // Solicitud de vacaciones del técnico
-            const solicitudVac = await Solicitud.create({
-                contratoId: contratoTec.id,
-                tipoSolicitud: 'vacaciones',
-                activo: true,
-            }, { validate: false });
+            // Solicitud pendiente de horas extras del Jefe
+            const solHEJefe = await Solicitud.create({ contratoId: cJefe.id, tipoSolicitud: 'horas_extras', activo: true }, { validate: false });
+            await HorasExtras.create({ solicitudId: solHEJefe.id, fecha: '2025-01-31', horaInicio: '18:00', horaFin: '21:00', cantidadHoras: 3, tipoHorasExtra: '50', motivo: 'Cierre de etapa de obra por fecha contractual', documentos: [], estado: 'pendiente' }, { hooks: false, validate: false });
 
-            await Vacaciones.create({
-                solicitudId: solicitudVac.id,
-                periodo: 2025,
-                diasCorrespondientes: 14,
-                diasTomados: 0,
-                diasDisponibles: 14,
-                fechaInicio: '2025-01-13',
-                fechaFin: '2025-01-24',
-                fechaRegreso: '2025-01-27',
-                diasSolicitud: 10,
-                estado: 'aprobado',
-            }, { hooks: false, validate: false });
+            // Solicitud aprobada de horas extras
+            const solHEJefe2 = await Solicitud.create({ contratoId: cJefe.id, tipoSolicitud: 'horas_extras', activo: true }, { validate: false });
+            await HorasExtras.create({ solicitudId: solHEJefe2.id, fecha: '2024-12-20', horaInicio: '18:00', horaFin: '22:00', cantidadHoras: 4, tipoHorasExtra: '100', motivo: 'Trabajo de urgencia por inspección programada', documentos: [], estado: 'aprobada' }, { hooks: false, validate: false });
 
-            // Evaluación del técnico emitida por RRHH
-            await Evaluacion.create({
-                contratoEvaluadoId: contratoTec.id,
-                periodo: 'semestre_2',
-                tipoEvaluacion: 'descendente_90',
-                fecha: '2024-12-05',
-                puntaje: 76,
-                escala: 'cumple',
-                feedback: 'El técnico cumple adecuadamente con sus responsabilidades en campo. Se recomienda mayor proactividad en la comunicación de inconvenientes y en la gestión del tiempo.',
-                estado: 'finalizada',
-                activo: true,
-            }, { hooks: false, validate: false });
+            // ── Empleado 4: Técnico ───────────────────────────────────────────────
+            const { empleado: empTec, contrato: cTec } = await crearEmpleado({
+                nombre: 'Diego', apellido: 'Pereyra',
+                email: `diego.pereyra.${espacioId}@empresa.com`,
+                dni: `33000${espacioId}04`, cuil: `20-33000${espacioId}04-3`,
+                fechaNacimiento: '1995-02-17', genero: 'masculino', estadoCivil: 'soltero',
+                calle: 'Mitre', numero: '780', codigoPostal: '3370',
+                espacioId, rol: roles.rolOperativo, puesto: puestoTec, salario: 340000,
+                tipoContrato: 'plazo_fijo', fechaInicio: '2024-03-01',
+            });
+
+            await RegistroSalud.create({ empleadoId: empTec.id, tipoExamen: 'pre_ocupacional', fechaRealizacion: '2024-03-01', fechaVencimiento: '2025-03-01', resultado: 'apto', activo: true, vigente: true }, { hooks: false, validate: false });
+            await RegistroSalud.create({ empleadoId: empTec.id, tipoExamen: 'periodico', fechaRealizacion: '2024-09-01', fechaVencimiento: '2025-09-01', resultado: 'apto_preexistencias', activo: true, vigente: true }, { hooks: false, validate: false });
+
+            await Contacto.create({ empleadoId: empTec.id, nombreCompleto: 'Ana Pereyra', dni: '35999888', telefono: '376-4511111', email: 'ana.pereyra@gmail.com', parentesco: 'madre', esFamiliar: true, esContactoEmergencia: true }, { validate: false });
+            await Contacto.create({ empleadoId: empTec.id, nombreCompleto: 'Carlos Pereyra', dni: '29888777', telefono: '376-4511112', email: 'carlos.pereyra@gmail.com', parentesco: 'padre', esFamiliar: true, esContactoEmergencia: false }, { validate: false });
+
+            await Evaluacion.create({ contratoEvaluadoId: cTec.id, periodo: 'semestre_2', tipoEvaluacion: 'descendente_90', fecha: '2024-12-05', puntaje: 76, escala: 'cumple', feedback: 'Diego cumple con sus obligaciones. Se destaca por la puntualidad y disposición para tareas de campo. Se sugiere mayor autonomía en resolución de problemas técnicos.', estado: 'finalizada', activo: true }, { hooks: false, validate: false });
+
+            // Solicitud pendiente de vacaciones del Técnico
+            const solVacTec = await Solicitud.create({ contratoId: cTec.id, tipoSolicitud: 'vacaciones', activo: true }, { validate: false });
+            await Vacaciones.create({ solicitudId: solVacTec.id, periodo: 2025, diasCorrespondientes: 14, diasTomados: 0, diasDisponibles: 14, fechaInicio: '2025-02-24', fechaFin: '2025-03-07', fechaRegreso: '2025-03-10', diasSolicitud: 10, descripcion: 'Vacaciones de verano 2025', documentos: [], estado: 'pendiente' }, { hooks: false, validate: false });
+
+            // ── Empleado 5: Analista IT ───────────────────────────────────────────
+            const { empleado: empIT, contrato: cIT } = await crearEmpleado({
+                nombre: 'Luciana', apellido: 'Ferreyra',
+                email: `luciana.ferreyra.${espacioId}@empresa.com`,
+                dni: `38000${espacioId}05`, cuil: `27-38000${espacioId}05-8`,
+                fechaNacimiento: '1997-07-30', genero: 'femenino', estadoCivil: 'soltero',
+                calle: 'Rivadavia', numero: '455', codigoPostal: '3370',
+                espacioId, rol: roles.rolOperativo, puesto: puestoIT, salario: 490000,
+                tipoContrato: 'tiempo_indeterminado', fechaInicio: '2024-06-01',
+            });
+
+            await RegistroSalud.create({ empleadoId: empIT.id, tipoExamen: 'pre_ocupacional', fechaRealizacion: '2024-06-01', fechaVencimiento: '2025-06-01', resultado: 'apto', activo: true, vigente: true }, { hooks: false, validate: false });
+
+            await Contacto.create({ empleadoId: empIT.id, nombreCompleto: 'Jorge Ferreyra', dni: '26777666', telefono: '376-4522222', email: 'jorge.ferreyra@gmail.com', parentesco: 'padre', esFamiliar: true, esContactoEmergencia: true }, { validate: false });
+
+            await Evaluacion.create({ contratoEvaluadoId: cIT.id, periodo: 'semestre_2', tipoEvaluacion: 'descendente_90', fecha: '2024-12-20', puntaje: 91, escala: 'supera_expectativas', feedback: 'Luciana demostró gran capacidad técnica y proactividad. Implementó mejoras en la infraestructura que redujeron los tiempos de respuesta del sistema en un 30%.', estado: 'firmada', activo: true }, { hooks: false, validate: false });
+
+            // Solicitud pendiente de licencia de la analista IT
+            const solLicIT = await Solicitud.create({ contratoId: cIT.id, tipoSolicitud: 'licencia', activo: true }, { validate: false });
+            await Licencia.create({ solicitudId: solLicIT.id, esLicencia: true, motivoLegal: 'examen_estudio', fechaInicio: '2025-02-21', fechaFin: '2025-02-21', diasSolicitud: 1, descripcion: 'Examen final Universidad Tecnológica Nacional', documentos: [], estado: 'pendiente' }, { hooks: false, validate: false });
+
+            // Solicitud rechazada de licencia
+            const solLicRec = await Solicitud.create({ contratoId: cIT.id, tipoSolicitud: 'licencia', activo: true }, { validate: false });
+            await Licencia.create({ solicitudId: solLicRec.id, esLicencia: false, motivoLegal: 'tramites_personales', fechaInicio: '2025-01-10', fechaFin: '2025-01-10', diasSolicitud: 1, descripcion: 'Trámites banco', documentos: [], estado: 'rechazada' }, { hooks: false, validate: false });
         };
 
-        // ─── 5. Espacio CEO ────────────────────────────────────────────────────────
-        console.log('🏢 Creando espacio de trabajo (CEO)...');
+        // ─── 5. Espacio CEO - Casa Central ────────────────────────────────────────
+        console.log('🏢 Creando espacio CEO (Casa Central)...');
         const espacioCEO = await EspacioTrabajo.create({
             nombre: 'Cataratas Ingeniería - Casa Central',
-            descripcion: 'Sede principal de operaciones',
+            descripcion: 'Sede principal de operaciones en Puerto Iguazú',
             propietarioId: usuarioCEO.id,
             activo: true,
         });
         await initSpaceConfig(espacioCEO.id);
         const rolesCEO = await createRolesForSpace(espacioCEO.id);
-        await populateSpaceData(espacioCEO.id, rolesCEO);
+        await populateSpaceData(espacioCEO.id, rolesCEO, 'Cataratas');
 
+        // ─── 6. Espacio CEO - Sucursal Posadas ────────────────────────────────────
+        console.log('🏢 Creando espacio CEO (Sucursal Posadas)...');
         const espacioCEO2 = await EspacioTrabajo.create({
             nombre: 'Cataratas - Sucursal Posadas',
-            descripcion: 'Nueva sucursal en desarrollo',
+            descripcion: 'Sucursal regional en Posadas, Misiones',
             propietarioId: usuarioCEO.id,
             activo: true,
         });
         await initSpaceConfig(espacioCEO2.id);
-        await createRolesForSpace(espacioCEO2.id);
+        const rolesCEO2 = await createRolesForSpace(espacioCEO2.id);
+        await populateSpaceData(espacioCEO2.id, rolesCEO2, 'Cataratas Posadas');
 
-        // ─── 6. Espacio Usuario Estándar ───────────────────────────────────────────
-        console.log('🏢 Creando espacio de trabajo (Usuario)...');
+        // ─── 7. Espacio User - Consultora Principal ───────────────────────────────
+        console.log('🏢 Creando espacio User (Consultora)...');
         const espacioUser = await EspacioTrabajo.create({
             nombre: 'Consultora Río Grande SRL',
-            descripcion: 'Consultora de RRHH y capacitación',
+            descripcion: 'Consultora de RRHH y capacitación empresarial',
             propietarioId: usuarioRRHH.id,
             activo: true,
         });
         await initSpaceConfig(espacioUser.id);
         const rolesUser = await createRolesForSpace(espacioUser.id);
-        await populateSpaceData(espacioUser.id, rolesUser);
+        await populateSpaceData(espacioUser.id, rolesUser, 'Río Grande');
 
+        // ─── 8. Espacio User - Filial Norte ──────────────────────────────────────
+        console.log('🏢 Creando espacio User (Filial Norte)...');
         const espacioUser2 = await EspacioTrabajo.create({
             nombre: 'Consultora - Filial Norte',
-            descripcion: 'Filial en etapa de apertura',
+            descripcion: 'Filial en etapa de expansión - Oberá, Misiones',
             propietarioId: usuarioRRHH.id,
             activo: true,
         });
         await initSpaceConfig(espacioUser2.id);
         await createRolesForSpace(espacioUser2.id);
 
+        console.log('');
         console.log('✅ Semilla completada exitosamente.');
         console.log('');
-        console.log('   📧 CEO:    ceo@cataratas.com   / Admin123!');
-        console.log('   📧 User:   user@cataratas.com  / User123!');
+        console.log('   📧 CEO (admin):  ceo@cataratas.com  / Admin123!');
+        console.log('   📧 User (owner): user@cataratas.com / User123!');
+        console.log('   📧 Empleados:    *@empresa.com      / User123!');
+        console.log('');
         return true;
 
     } catch (error) {

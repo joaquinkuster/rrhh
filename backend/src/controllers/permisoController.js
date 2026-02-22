@@ -63,7 +63,6 @@ const initializePermisos = async (req, res) => {
             { key: 'solicitudes', label: 'Solicitudes' },
             { key: 'liquidaciones', label: 'Liquidaciones' },
             { key: 'roles', label: 'Roles y Permisos' },
-            { key: 'dashboard', label: 'Dashboard' },
             { key: 'reportes', label: 'Reportes' },
         ];
 
@@ -82,8 +81,8 @@ const initializePermisos = async (req, res) => {
                     { modulo: 'liquidaciones', accion: { [Op.in]: ['crear', 'eliminar'] } },
                     // Conceptos Salariales: Eliminar módulo completo
                     { modulo: 'conceptos_salariales' },
-                    // Dashboard y Reportes: Solo permitir leer (borrar todo lo que NO sea leer)
-                    { modulo: { [Op.in]: ['dashboard', 'reportes'] }, accion: { [Op.ne]: 'leer' } }
+                    // Reportes: Solo permitir leer (borrar todo lo que NO sea leer)
+                    { modulo: 'reportes', accion: { [Op.ne]: 'leer' } }
                 ]
             }
         });
@@ -97,8 +96,8 @@ const initializePermisos = async (req, res) => {
                     continue;
                 }
 
-                // Restricción para Dashboard y Reportes: Solo permitir leer
-                if ((modulo.key === 'dashboard' || modulo.key === 'reportes') && accion.key !== 'leer') {
+                // Restricción para Reportes: Solo permitir leer
+                if (modulo.key === 'reportes' && accion.key !== 'leer') {
                     continue;
                 }
 

@@ -1,36 +1,28 @@
 const express = require('express');
 const router = express.Router();
 const solicitudController = require('../controllers/solicitudController');
-const { isAuthenticated } = require('../middlewares/authMiddleware');
+const { isAuthenticated, requirePermiso } = require('../middlewares/authMiddleware');
 
 // Todas las rutas requieren autenticación
 router.use(isAuthenticated);
 
-// GET all solicitudes
-router.get('/', solicitudController.getAll);
-
+// GET - requiere permiso 'leer' en 'solicitudes' (si es empleado)
+router.get('/', requirePermiso('solicitudes', 'leer'), solicitudController.getAll);
+router.get('/:id', requirePermiso('solicitudes', 'leer'), solicitudController.getById);
 // GET vacation days for a contract
-router.get('/vacaciones/diasDisponibles/:contratoId', solicitudController.getDiasDisponiblesVacaciones);
-
+router.get('/vacaciones/diasDisponibles/:contratoId', requirePermiso('solicitudes', 'leer'), solicitudController.getDiasDisponiblesVacaciones);
 // GET vacation days for a contract
-router.get('/vacaciones/diasSolicitados', solicitudController.getDiasSolicitadosVacaciones);
+router.get('/vacaciones/diasSolicitados', requirePermiso('solicitudes', 'leer'), solicitudController.getDiasSolicitadosVacaciones);
 
-// GET solicitud by ID
-router.get('/:id', solicitudController.getById);
+// POST - requiere permiso 'crear' en 'solicitudes' (si es empleado)
+router.post('/', requirePermiso('solicitudes', 'crear'), solicitudController.create);
 
-// POST create solicitud
-router.post('/', solicitudController.create);
+// PUT - requiere permiso 'actualizar' en 'solicitudes' (si es empleado)
+router.put('/:id', requirePermiso('solicitudes', 'actualizar'), solicitudController.update);
+router.patch('/:id/reactivate', requirePermiso('solicitudes', 'actualizar'), solicitudController.reactivate);
 
-// PUT update solicitud
-router.put('/:id', solicitudController.update);
-
-// DELETE soft delete solicitud
-router.delete('/:id', solicitudController.remove);
-
-// PATCH reactivate solicitud
-router.patch('/:id/reactivate', solicitudController.reactivate);
-
-// DELETE bulk soft delete
-router.delete('/bulk', solicitudController.bulkRemove);
+// DELETE - requiere permiso 'eliminar' en 'solicitudes' (si es empleado)
+router.delete('/:id', requirePermiso('solicitudes', 'eliminar'), solicitudController.remove);
+router.delete('/bulk', requirePermiso('solicitudes', 'eliminar'), solicitudController.bulkRemove);
 
 module.exports = router;

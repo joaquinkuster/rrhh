@@ -20,7 +20,7 @@ const isAdmin = (req, res, next) => {
     });
 };
 
-// Middleware para verificar si puede editar empleado
+// Middleware para verificar que no es empleado
 const canEditEmployee = (req, res, next) => {
     const empleadoIdTarget = parseInt(req.params.id);
     const empleadoIdSesion = req.session.empleadoId;
@@ -29,6 +29,17 @@ const canEditEmployee = (req, res, next) => {
     if (esAdmin) return next();
 
     if (empleadoIdTarget === empleadoIdSesion) return next();
+
+    return res.status(403).json({
+        error: 'No tiene permisos para acceder a esta información.'
+    });
+};
+
+// Middleware para verificar que no es empleado
+const isNotEmployee = (req, res, next) => {
+    const esEmpleado = req.session.esEmpleado;
+
+    if (!esEmpleado) return next();
 
     return res.status(403).json({
         error: 'No tiene permisos para acceder a esta información.'
@@ -96,6 +107,7 @@ const requirePermiso = (modulo, accion) => async (req, res, next) => {
 
 module.exports = {
     isAuthenticated,
+    isNotEmployee,
     isAdmin,
     canEditEmployee,
     requirePermiso,

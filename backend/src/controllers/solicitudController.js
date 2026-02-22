@@ -76,7 +76,7 @@ const includeTypes = [
 // Get all solicitudes with filters and pagination
 const getAll = async (req, res) => {
     try {
-        const { contratoId, empleadoId, espacioTrabajoId, tipoSolicitud, estado, search, activo, page = 1, limit = 10 } = req.query;
+        const { contratoId, empleadoId, espacioTrabajoId, tipoSolicitud, estado, activo, page = 1, limit = 10 } = req.query;
         const where = {};
 
         // Filtro de activo
@@ -89,6 +89,22 @@ const getAll = async (req, res) => {
         }
 
         if (tipoSolicitud) where.tipoSolicitud = tipoSolicitud;
+
+        // Filtro por estado usando notación $association.column$ de Sequelize (genera JOINs)
+        if (estado) {
+            const estadoVal = estado === 'pendiente'
+                ? { [Op.or]: ['pendiente', ''] } // '' = legacy dato sin estado
+                : estado;
+            where[Op.and] = where[Op.and] || [];
+            where[Op.and].push({
+                [Op.or]: [
+                    { '$licencia.estado$': estadoVal },
+                    { '$vacaciones.estado$': estadoVal },
+                    { '$horasExtras.estado$': estadoVal },
+                    { '$renuncia.estado$': estadoVal },
+                ]
+            });
+        }
 
         // --- Filtrado por Espacio de Trabajo y Permisos ---
         // Las solicitudes pertenecen a contratos, resolver: empleado → contratos → where.contratoId
@@ -199,28 +215,9 @@ const getAll = async (req, res) => {
             order: [['createdAt', 'DESC']],
             limit: parseInt(limit),
             offset,
+            subQuery: false,
             distinct: true,
         });
-
-        // Filter by estado (requires checking type-specific table)
-        if (estado) {
-            result.rows = result.rows.filter(sol => {
-                const typeData = sol.licencia || sol.vacaciones || sol.horasExtras || sol.renuncia;
-                return typeData && typeData.estado === estado;
-            });
-        }
-
-        // Filter by employee name if search
-        if (search) {
-            const searchLower = search.toLowerCase();
-            result.rows = result.rows.filter(sol => {
-                const empleado = sol.contrato?.empleado;
-                if (!empleado || !empleado.usuario) return false;
-                const fullName = `${empleado.usuario.nombre} ${empleado.usuario.apellido}`.toLowerCase();
-                const documento = empleado.usuario.numeroDocumento?.toLowerCase() || '';
-                return fullName.includes(searchLower) || documento.includes(searchLower);
-            });
-        }
 
         res.json({
             data: result.rows,

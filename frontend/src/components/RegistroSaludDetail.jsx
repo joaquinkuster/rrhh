@@ -1,4 +1,5 @@
 import { formatDateOnly, formatDateTime } from '../utils/formatters';
+import { useAuth } from '../context/AuthContext';
 
 // Icons SVG components
 const Icons = {
@@ -65,6 +66,12 @@ const RESULTADO_COLORS = {
 
 const RegistroSaludDetail = ({ registro, onClose, onEdit }) => {
     if (!registro) return null;
+
+    // Permisos del módulo registros de salud
+    const { user } = useAuth();
+    const isEmpleadoUser = user?.esEmpleado && !user?.esAdministrador;
+    const userPermisos = user?.rol?.permisos || [];
+    const canEdit = !isEmpleadoUser || user?.esAdministrador || userPermisos.some(p => p.modulo === 'registros_salud' && p.accion === 'actualizar');
 
     const getRelativeTime = (dateString) => {
         if (!dateString) return 'fecha desconocida';
@@ -177,7 +184,7 @@ const RegistroSaludDetail = ({ registro, onClose, onEdit }) => {
                                 {RESULTADO_LABELS[registro.resultado] || registro.resultado}
                             </span>
                         </div>
-                        {onEdit && (
+                        {onEdit && canEdit && (
                             <button className="btn btn-warning btn-sm" onClick={() => onEdit(registro)} title="Editar">
                                 {Icons.edit}
                                 Editar

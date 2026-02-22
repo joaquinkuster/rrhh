@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
-const { isAuthenticated, isAdmin } = require('../middlewares/authMiddleware');
+const { isAuthenticated } = require('../middlewares/authMiddleware');
 
 // Rutas públicas
 router.post('/login', authController.login);

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Select from 'react-select';
 import {
     getSolicitudes,
@@ -55,7 +55,16 @@ const ESTADO_STYLES = {
 
 const Solicitudes = () => {
     const location = useLocation();
+    const navigate = useNavigate();
     const { user } = useAuth();
+
+    // Permisos del módulo empresas
+    const isEmpleadoUser = user?.esEmpleado && !user?.esAdministrador;
+    const userPermisos = user?.rol?.permisos || [];
+    const canRead = !isEmpleadoUser || user?.esAdministrador || userPermisos.some(p => p.modulo === 'solicitudes' && p.accion === 'leer');
+    const canCreate = !isEmpleadoUser || user?.esAdministrador || userPermisos.some(p => p.modulo === 'solicitudes' && p.accion === 'crear');
+    const canEdit = !isEmpleadoUser || user?.esAdministrador || userPermisos.some(p => p.modulo === 'solicitudes' && p.accion === 'actualizar');
+    const canDelete = !isEmpleadoUser || user?.esAdministrador || userPermisos.some(p => p.modulo === 'solicitudes' && p.accion === 'eliminar');
 
     // Data State
     const [items, setItems] = useState([]);
@@ -113,6 +122,13 @@ const Solicitudes = () => {
         return () => obs.disconnect();
     }, []);
 
+    // Redirigir si no tiene permiso de lectura
+    useEffect(() => {
+        if (user && isEmpleadoUser && !canRead) {
+            navigate('/dashboard', { replace: true });
+        }
+    }, [user, isEmpleadoUser, canRead, navigate]);
+
     // Load filter data
     useEffect(() => {
         const load = async () => {
@@ -130,7 +146,7 @@ const Solicitudes = () => {
 
     // Permisos y restricciones
     const isRestricted = user?.esEmpleado && !user?.esAdministrador;
-    const hasFullAccess = user?.esAdministrador || (user?.rol?.permisos?.some(p => p.modulo === 'solicitudes' && ['crear', 'editar', 'eliminar'].includes(p.accion)));
+    const hasFullAccess = user?.esAdministrador || (user?.rol?.permisos?.some(p => p.modulo === 'solicitudes' && ['crear', 'actualizar', 'eliminar'].includes(p.accion)));
     const isSingleEmployee = (empleadosList.length === 1 && isRestricted) || (isRestricted && !hasFullAccess);
     const isSingleWorkspace = espaciosList.length === 1 && isRestricted;
 
@@ -424,7 +440,7 @@ const Solicitudes = () => {
                         </span>
                     </div>
                     <div className="header-actions">
-                        {selectedIds.size > 0 && !showingInactive && (
+                        {selectedIds.size > 0 && !showingInactive && canDelete && (
                             <button className="btn btn-danger" onClick={handleBulkDeleteClick}>
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 20, height: 20 }}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
@@ -432,12 +448,14 @@ const Solicitudes = () => {
                                 Desactivar seleccionados
                             </button>
                         )}
-                        <button className="btn btn-primary" onClick={handleCreate}>
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 20, height: 20 }}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                            </svg>
-                            Nueva Solicitud
-                        </button>
+                        {canCreate && (
+                            <button className="btn btn-primary" onClick={handleCreate}>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 20, height: 20 }}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                </svg>
+                                Nueva Solicitud
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -569,12 +587,14 @@ const Solicitudes = () => {
                                                 <td>
                                                     <div className="table-actions">
                                                         {showingInactive ? (
-                                                            <button className="btn btn-success btn-sm" onClick={() => handleReactivate(item)} title="Reactivar">
-                                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
-                                                                </svg>
-                                                                Reactivar
-                                                            </button>
+                                                            canEdit && (
+                                                                <button className="btn btn-success btn-sm" onClick={() => handleReactivate(item)} title="Reactivar">
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                                                                    </svg>
+                                                                    Reactivar
+                                                                </button>
+                                                            )
                                                         ) : (
                                                             <>
                                                                 <button className="btn btn-info btn-sm" onClick={() => handleView(item)} title="Ver">
@@ -584,30 +604,34 @@ const Solicitudes = () => {
                                                                     </svg>
                                                                     Ver
                                                                 </button>
-                                                                <button
-                                                                    className="btn btn-warning btn-sm"
-                                                                    onClick={() => handleEdit(item)}
-                                                                    title={estado !== 'pendiente' ? 'Solo se pueden editar solicitudes pendientes' : 'Editar'}
-                                                                    disabled={estado !== 'pendiente'}
-                                                                    style={estado !== 'pendiente' ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
-                                                                >
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-                                                                    </svg>
-                                                                    Editar
-                                                                </button>
-                                                                <button
-                                                                    className="btn btn-danger btn-sm"
-                                                                    onClick={() => handleDeleteClick(item)}
-                                                                    title={estado !== 'pendiente' ? 'Solo se pueden desactivar solicitudes pendientes' : 'Desactivar'}
-                                                                    disabled={estado !== 'pendiente'}
-                                                                    style={estado !== 'pendiente' ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
-                                                                >
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                                                                    </svg>
-                                                                    Desactivar
-                                                                </button>
+                                                                {canEdit && (
+                                                                    <button
+                                                                        className="btn btn-warning btn-sm"
+                                                                        onClick={() => handleEdit(item)}
+                                                                        title={estado !== 'pendiente' ? 'Solo se pueden editar solicitudes pendientes' : 'Editar'}
+                                                                        disabled={estado !== 'pendiente'}
+                                                                        style={estado !== 'pendiente' ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+                                                                    >
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                                                                        </svg>
+                                                                        Editar
+                                                                    </button>
+                                                                )}
+                                                                {canDelete && (
+                                                                    <button
+                                                                        className="btn btn-danger btn-sm"
+                                                                        onClick={() => handleDeleteClick(item)}
+                                                                        title={estado !== 'pendiente' ? 'Solo se pueden desactivar solicitudes pendientes' : 'Desactivar'}
+                                                                        disabled={estado !== 'pendiente'}
+                                                                        style={estado !== 'pendiente' ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+                                                                    >
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                                                                        </svg>
+                                                                        Desactivar
+                                                                    </button>
+                                                                )}
                                                             </>
                                                         )}
                                                     </div>
