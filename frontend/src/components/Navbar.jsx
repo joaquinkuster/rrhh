@@ -4,7 +4,9 @@ import { useAuth } from '../context/AuthContext';
 import { getContratos } from '../services/api';
 import EmpleadoDetail from './EmpleadoDetail';
 import EmpleadoWizard from './EmpleadoWizard';
+import PerfilUsuarioModal from './PerfilUsuarioModal';
 import ConfirmDialog from './ConfirmDialog';
+import Alert from './Alert';
 import './Navbar.css';
 
 // ─── Custom Contract Select ───────────────────────────────────────────────────
@@ -171,11 +173,14 @@ const ContractSelect = ({ contratos, selectedId, onChange }) => {
 const Navbar = () => {
     const navigate = useNavigate();
     const { user, logout, checkAuth, seleccionarContrato } = useAuth();
+
     const [showMenu, setShowMenu] = useState(false);
     const [contratos, setContratos] = useState([]);
     const [showProfile, setShowProfile] = useState(false);
     const [showEditWizard, setShowEditWizard] = useState(false);
+    const [showPerfilModal, setShowPerfilModal] = useState(false);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+    const [globalSuccessAlert, setGlobalSuccessAlert] = useState('');
     const [avatarPath, setAvatarPath] = useState('');
     const menuRef = useRef(null);
 
@@ -224,8 +229,25 @@ const Navbar = () => {
     const role = user.esAdministrador ? 'Administrador' : 'Usuario';
 
     const handleViewProfile = () => { setShowMenu(false); setShowProfile(true); };
-    const handleEditProfile = () => { setShowProfile(false); setShowEditWizard(true); };
-    const handleEditSuccess = async () => { setShowEditWizard(false); await checkAuth(); };
+    const handleEditProfile = () => {
+        setShowProfile(false);
+        if (user.esEmpleado) {
+            // Empleado → wizard de empleado
+            setShowEditWizard(true);
+        } else {
+            // Propietario (no empleado) → modal de edición de perfil
+            setShowPerfilModal(true);
+        }
+    };
+    const handleEditSuccess = async () => {
+        setShowEditWizard(false);
+        await checkAuth();
+        setGlobalSuccessAlert('Perfil actualizado correctamente');
+    };
+    const handlePerfilSuccess = async () => {
+        await checkAuth();
+        setGlobalSuccessAlert('Perfil actualizado correctamente');
+    };
     const handleLogoutClick = () => { setShowMenu(false); setShowLogoutConfirm(true); };
     const handleConfirmLogout = async () => {
         try { await logout(); navigate('/login'); }
@@ -234,6 +256,14 @@ const Navbar = () => {
 
     return (
         <>
+            {globalSuccessAlert && (
+                <Alert
+                    type="success"
+                    message={globalSuccessAlert}
+                    onClose={() => setGlobalSuccessAlert('')}
+                    duration={3000}
+                />
+            )}
             <nav className="navbar">
                 <div className="navbar-content">
                     <div className="navbar-left" />
@@ -300,7 +330,7 @@ const Navbar = () => {
                     empleado={user}
                     onClose={() => setShowProfile(false)}
                     onEdit={handleEditProfile}
-                    hideEditButton={!user.esAdministrador && user.esEmpleado}
+                    hideEditButton={false}
                 />
             )}
 
@@ -309,6 +339,14 @@ const Navbar = () => {
                     empleado={user}
                     onClose={() => setShowEditWizard(false)}
                     onSuccess={handleEditSuccess}
+                />
+            )}
+
+            {showPerfilModal && user && (
+                <PerfilUsuarioModal
+                    user={user}
+                    onClose={() => setShowPerfilModal(false)}
+                    onSuccess={handlePerfilSuccess}
                 />
             )}
 

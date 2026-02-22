@@ -12,5 +12,6 @@ router.post('/logout', isAuthenticated, authController.logout);
 router.get('/me', isAuthenticated, authController.getCurrentUser);
 router.put('/password', isAuthenticated, authController.updatePassword);
 router.put('/selected-contract', isAuthenticated, authController.updateSelectedContract);
+router.put('/me', isAuthenticated, authController.updateMe);
 
 module.exports = router;

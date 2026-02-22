@@ -125,7 +125,7 @@ const EspacioTrabajoDetail = ({ espacio, onClose, onEdit }) => {
 
     return (
         <div className="modal-overlay" onClick={onClose}>
-            <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '800px' }}>
+            <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '950px' }}>
                 {/* Header */}
                 <div className="modal-header">
                     <h2 className="modal-title">Detalle del Espacio de Trabajo</h2>

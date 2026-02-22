@@ -54,7 +54,7 @@ const Empleados = () => {
     const [success, setSuccess] = useState('');
 
     // Welcome Alert
-    const [showWelcomeAlert, setShowWelcomeAlert] = useState(false);
+
 
     // Pagination
     const [page, setPage] = useState(1);
@@ -106,15 +106,8 @@ const Empleados = () => {
     const [showContratoPrompt, setShowContratoPrompt] = useState(false);
     const [nuevoEmpleado, setNuevoEmpleado] = useState(null);
 
-    // Mostrar alerta de bienvenida si viene del login
-    useEffect(() => {
-        if (location.state?.fromLogin) {
-            setShowWelcomeAlert(true);
-            window.history.replaceState({}, document.title);
-        }
-    }, [location]);
-
     // Redirigir si no tiene permiso de lectura
+
     useEffect(() => {
         if (user && isEmpleadoUser && !canRead) {
             navigate('/dashboard', { replace: true });
@@ -386,15 +379,6 @@ const Empleados = () => {
 
     return (
         <>
-            {showWelcomeAlert && (
-                <Alert
-                    type="success"
-                    message="¡Bienvenido! Has iniciado sesión correctamente."
-                    onClose={() => setShowWelcomeAlert(false)}
-                    duration={3000}
-                />
-            )}
-
             <div>
                 {/* Header */}
                 <div className="page-header">

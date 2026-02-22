@@ -34,16 +34,12 @@ const Login = () => {
         setLoading(true);
 
         try {
+            sessionStorage.setItem('justLoggedIn', 'true');
             await login({
                 email: formData.email,
                 contrasena: formData.contrasena,
                 recordarme: formData.recordarme,
             });
-
-            setShowSuccessAlert(true);
-            setTimeout(() => {
-                navigate('/dashboard');
-            }, 1500);
         } catch (err) {
             setError(err.message || 'Error al iniciar sesión');
             setLoading(false);
@@ -58,14 +54,6 @@ const Login = () => {
         <>
             <BackgroundCarousel />
 
-            {showSuccessAlert && (
-                <Alert
-                    type="success"
-                    message="¡Inicio de sesión exitoso! Redirigiendo..."
-                    onClose={() => setShowSuccessAlert(false)}
-                    duration={1500}
-                />
-            )}
 
             <div className="auth-container">
                 <div className="auth-card">

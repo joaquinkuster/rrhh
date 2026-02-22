@@ -10,6 +10,9 @@ router.use(isAuthenticated);
 router.get('/', requirePermiso('liquidaciones', 'leer'), liquidacionController.getAll);
 router.get('/:id', requirePermiso('liquidaciones', 'leer'), liquidacionController.getById);
 
+// POST — requiere permiso 'actualizar' en 'liquidaciones' (si es empleado)
+router.post('/', requirePermiso('liquidaciones', 'actualizar'), liquidacionController.ejecutarLiquidacion);
+
 // PUT — requiere permiso 'actualizar' en 'liquidaciones' (si es empleado)
 router.put('/:id', requirePermiso('liquidaciones', 'actualizar'), liquidacionController.update);
 

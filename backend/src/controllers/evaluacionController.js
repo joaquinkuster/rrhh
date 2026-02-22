@@ -59,7 +59,7 @@ const includeContratoDetalle = (alias) => ({
 // Obtener todas las evaluaciones con paginación y filtros
 const getAll = async (req, res) => {
     try {
-        const { page = 1, limit = 10, activo, periodo, tipoEvaluacion, estado, espacioTrabajoId, evaluadoId } = req.query;
+        const { page = 1, limit = 10, activo, periodo, tipoEvaluacion, estado, escala, puntajeMin, puntajeMax, espacioTrabajoId, evaluadoId } = req.query;
         const where = {};
 
         // Filtros directos
@@ -73,6 +73,12 @@ const getAll = async (req, res) => {
         if (periodo) where.periodo = periodo;
         if (tipoEvaluacion) where.tipoEvaluacion = tipoEvaluacion;
         if (estado) where.estado = estado;
+        if (escala) where.escala = escala;
+        if (puntajeMin || puntajeMax) {
+            where.puntaje = {};
+            if (puntajeMin) where.puntaje[Op.gte] = parseFloat(puntajeMin);
+            if (puntajeMax) where.puntaje[Op.lte] = parseFloat(puntajeMax);
+        }
 
         // --- Filtrado por Espacio de Trabajo y Permisos ---
         // Las evaluaciones se filtran resolviendo primero los empleados permitidos

@@ -248,7 +248,7 @@ const Evaluaciones = () => {
             if (filterEvaluado) params.evaluadoId = filterEvaluado.value;
             if (filterPuntajeMin) params.puntajeMin = filterPuntajeMin;
             if (filterPuntajeMax) params.puntajeMax = filterPuntajeMax;
-            if (filterEscala) params.escalaCualitativa = filterEscala;
+            if (filterEscala) params.escala = filterEscala;
             const result = await getEvaluaciones(params);
             setItems(result.data);
             setTotalPages(result.pagination.totalPages);
@@ -464,50 +464,52 @@ const Evaluaciones = () => {
                 </div>
 
                 {/* Filters */}
-                <div className="filters-bar" style={{ flexWrap: 'wrap' }}>
-                    <div className="filter-group" style={{ minWidth: '160px' }}>
-                        <Select isDisabled={isSingleWorkspace} options={espacioOptions} value={filterEspacio} onChange={opt => { setFilterEspacio(opt); setPage(1); }} placeholder="Espacio..." isClearable={!isSingleWorkspace} styles={selectStyles} noOptionsMessage={() => 'Sin resultados'} />
+                <div className="filters-bar">
+                    <div className="filters-inputs">
+                        <div className="filter-group" style={{ minWidth: '160px' }}>
+                            <Select isDisabled={isSingleWorkspace} options={espacioOptions} value={filterEspacio} onChange={opt => { setFilterEspacio(opt); setPage(1); }} placeholder="Espacio..." isClearable={!isSingleWorkspace} styles={selectStyles} noOptionsMessage={() => 'Sin resultados'} />
+                        </div>
+                        <div className="filter-group" style={{ minWidth: '200px' }}>
+                            <Select isDisabled={isSingleEmployee} options={empleadoOptions} value={filterEvaluado} onChange={opt => { setFilterEvaluado(opt); setPage(1); }} placeholder="Evaluado..." isClearable={!isSingleEmployee} styles={selectStyles} noOptionsMessage={() => 'Sin resultados'} />
+                        </div>
+                        <div className="filter-group">
+                            <select className="filter-input" value={filterPeriodo} onChange={(e) => { setFilterPeriodo(e.target.value); setPage(1); }}>
+                                <option value="">Todos los períodos</option>
+                                {PERIODO_FILTER.map(p => (
+                                    <option key={p.value} value={p.value}>{p.label}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="filter-group">
+                            <select className="filter-input" value={filterEstado} onChange={(e) => { setFilterEstado(e.target.value); setPage(1); }}>
+                                <option value="">Todos los estados</option>
+                                {ESTADO_FILTER.map(e => (
+                                    <option key={e.value} value={e.value}>{e.label}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="filter-group">
+                            <select className="filter-input" value={filterEscala} onChange={(e) => { setFilterEscala(e.target.value); setPage(1); }}>
+                                <option value="">Escala</option>
+                                <option value="supera_expectativas">Supera Expectativas</option>
+                                <option value="cumple">Cumple</option>
+                                <option value="necesita_mejora">Necesita Mejora</option>
+                            </select>
+                        </div>
+                        <div className="filter-group">
+                            <input type="number" className="filter-input" placeholder="Puntaje mín." value={filterPuntajeMin} onChange={e => { setFilterPuntajeMin(e.target.value); setPage(1); }} style={{ width: '200px' }} min="0" max="100" />
+                        </div>
+                        <div className="filter-group">
+                            <input type="number" className="filter-input" placeholder="Puntaje máx." value={filterPuntajeMax} onChange={e => { setFilterPuntajeMax(e.target.value); setPage(1); }} style={{ width: '200px' }} min="0" max="100" />
+                        </div>
+                        <div className="filter-group">
+                            <select className="filter-input" value={filterActivo} onChange={(e) => { setFilterActivo(e.target.value); setPage(1); }}>
+                                <option value="true">Activos</option>
+                                <option value="false">Inactivos</option>
+                            </select>
+                        </div>
                     </div>
-                    <div className="filter-group" style={{ minWidth: '200px' }}>
-                        <Select isDisabled={isSingleEmployee} options={empleadoOptions} value={filterEvaluado} onChange={opt => { setFilterEvaluado(opt); setPage(1); }} placeholder="Evaluado..." isClearable={!isSingleEmployee} styles={selectStyles} noOptionsMessage={() => 'Sin resultados'} />
-                    </div>
-                    <div className="filter-group">
-                        <select className="filter-input" value={filterPeriodo} onChange={(e) => { setFilterPeriodo(e.target.value); setPage(1); }}>
-                            <option value="">Todos los períodos</option>
-                            {PERIODO_FILTER.map(p => (
-                                <option key={p.value} value={p.value}>{p.label}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <div className="filter-group">
-                        <select className="filter-input" value={filterEstado} onChange={(e) => { setFilterEstado(e.target.value); setPage(1); }}>
-                            <option value="">Todos los estados</option>
-                            {ESTADO_FILTER.map(e => (
-                                <option key={e.value} value={e.value}>{e.label}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <div className="filter-group">
-                        <select className="filter-input" value={filterEscala} onChange={(e) => { setFilterEscala(e.target.value); setPage(1); }}>
-                            <option value="">Escala</option>
-                            <option value="supera_expectativas">Supera Expectativas</option>
-                            <option value="cumple">Cumple</option>
-                            <option value="necesita_mejora">Necesita Mejora</option>
-                        </select>
-                    </div>
-                    <div className="filter-group">
-                        <input type="number" className="filter-input" placeholder="Puntaje mín." value={filterPuntajeMin} onChange={e => { setFilterPuntajeMin(e.target.value); setPage(1); }} style={{ width: '110px' }} min="0" max="100" />
-                    </div>
-                    <div className="filter-group">
-                        <input type="number" className="filter-input" placeholder="Puntaje máx." value={filterPuntajeMax} onChange={e => { setFilterPuntajeMax(e.target.value); setPage(1); }} style={{ width: '110px' }} min="0" max="100" />
-                    </div>
-                    <div className="filter-group">
-                        <select className="filter-input" value={filterActivo} onChange={(e) => { setFilterActivo(e.target.value); setPage(1); }}>
-                            <option value="true">Activos</option>
-                            <option value="false">Inactivos</option>
-                        </select>
-                    </div>
-                    <div className="filter-group">
+                    <div className="filters-actions">
                         <div className="column-selector-wrapper">
                             <button className="btn btn-secondary btn-sm" onClick={() => setShowColumnSelector(!showColumnSelector)}>
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
@@ -527,15 +529,15 @@ const Evaluaciones = () => {
                                 </div>
                             )}
                         </div>
+                        {hasActiveFilters && (
+                            <button className="btn btn-secondary btn-sm" onClick={clearFilters}>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                                Limpiar
+                            </button>
+                        )}
                     </div>
-                    {hasActiveFilters && (
-                        <button className="btn btn-secondary btn-sm" onClick={clearFilters}>
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                            Limpiar
-                        </button>
-                    )}
                 </div>
 
                 {/* Content */}

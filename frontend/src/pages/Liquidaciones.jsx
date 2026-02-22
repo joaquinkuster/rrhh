@@ -11,6 +11,7 @@ import {
     updateParametrosLaborales,
     getEmpleados,
     getEspaciosTrabajo,
+    ejecutarLiquidacion,
 } from '../services/api';
 import { formatDateOnly, formatCurrency, truncateText } from '../utils/formatters';
 import LiquidacionFormulario from '../components/LiquidacionFormulario';
@@ -65,7 +66,8 @@ const Liquidaciones = () => {
     const [filterEspacio, setFilterEspacio] = useState(null);
     const [filterEmpleado, setFilterEmpleado] = useState(null);
     const [filterEstado, setFilterEstado] = useState('');
-    const [filterPeriodo, setFilterPeriodo] = useState('');
+    const [filterFechaDesde, setFilterFechaDesde] = useState('');
+    const [filterFechaHasta, setFilterFechaHasta] = useState('');
 
     // Filter lists
     const [empleadosList, setEmpleadosList] = useState([]);
@@ -181,7 +183,8 @@ const Liquidaciones = () => {
             if (filterEspacio) params.espacioTrabajoId = filterEspacio.value;
             if (filterEmpleado) params.empleadoId = filterEmpleado.value;
             if (filterEstado !== '') params.estaPagada = filterEstado;
-            if (filterPeriodo) params.periodo = filterPeriodo;
+            if (filterFechaDesde) params.fechaDesde = filterFechaDesde;
+            if (filterFechaHasta) params.fechaHasta = filterFechaHasta;
             const result = await getLiquidaciones(params);
             setItems(result.liquidaciones);
             setTotalPages(result.totalPages);
@@ -192,7 +195,7 @@ const Liquidaciones = () => {
         } finally {
             setLoading(false);
         }
-    }, [filterEstado, page, limit, filterEspacio, filterEmpleado, filterPeriodo]);
+    }, [filterEstado, page, limit, filterEspacio, filterEmpleado, filterFechaDesde, filterFechaHasta]);
 
     useEffect(() => {
         loadItems();
@@ -203,11 +206,12 @@ const Liquidaciones = () => {
         if (!isSingleWorkspace) setFilterEspacio(null);
         if (!isSingleEmployee) setFilterEmpleado(null);
         setFilterEstado('');
-        setFilterPeriodo('');
+        setFilterFechaDesde('');
+        setFilterFechaHasta('');
         setPage(1);
     };
 
-    const hasActiveFilters = filterEstado || (!isSingleWorkspace && filterEspacio) || (!isSingleEmployee && filterEmpleado) || filterPeriodo;
+    const hasActiveFilters = filterEstado || (!isSingleWorkspace && filterEspacio) || (!isSingleEmployee && filterEmpleado) || filterFechaDesde || filterFechaHasta;
 
     // Selection Handlers
     const handleSelectAll = (e) => {
@@ -280,6 +284,18 @@ const Liquidaciones = () => {
         }
     };
 
+    const handleSimularLiquidacion = async () => {
+        try {
+            setLoading(true);
+            await ejecutarLiquidacion();
+            setSuccess('Simulación de liquidaciones ejecutada correctamente');
+            loadItems();
+        } catch (err) {
+            setError(err.message);
+            setLoading(false);
+        }
+    };
+
     return (
         <div>
             {/* Header */}
@@ -315,6 +331,14 @@ const Liquidaciones = () => {
                     </div>
                     <div className="header-actions">
                         {canEdit && (
+                            <button className="btn btn-primary" onClick={handleSimularLiquidacion}>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 20, height: 20 }}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                                </svg>
+                                Simular Liquidación
+                            </button>
+                        )}
+                        {canEdit && (
                             <button className="btn btn-secondary" onClick={() => setShowConceptosModal(true)}>
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 20, height: 20 }}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -343,7 +367,22 @@ const Liquidaciones = () => {
                         <Select isDisabled={isSingleEmployee} options={empleadoOptions} value={filterEmpleado} onChange={opt => { setFilterEmpleado(opt); setPage(1); }} placeholder="Empleado..." isClearable={!isSingleEmployee} styles={selectStyles} noOptionsMessage={() => 'Sin resultados'} />
                     </div>
                     <div className="filter-group">
-                        <input type="text" className="filter-input" placeholder="Período (ej: 2024-12)" value={filterPeriodo} onChange={(e) => { setFilterPeriodo(e.target.value); setPage(1); }} style={{ minWidth: '150px' }} />
+                        <input
+                            type="date"
+                            className="filter-input"
+                            value={filterFechaDesde}
+                            onChange={(e) => { setFilterFechaDesde(e.target.value); setPage(1); }}
+                            title="Desde"
+                        />
+                    </div>
+                    <div className="filter-group">
+                        <input
+                            type="date"
+                            className="filter-input"
+                            value={filterFechaHasta}
+                            onChange={(e) => { setFilterFechaHasta(e.target.value); setPage(1); }}
+                            title="Hasta"
+                        />
                     </div>
                     <div className="filter-group">
                         <select className="filter-input" value={filterEstado} onChange={(e) => { setFilterEstado(e.target.value); setPage(1); }}>

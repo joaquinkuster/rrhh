@@ -59,6 +59,16 @@ export const updatePassword = async (passwordData) => {
     return result;
 };
 
+export const updateMe = async (data) => {
+    const response = await fetchWithCredentials(`${API_URL}/auth/me`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al actualizar perfil');
+    return result;
+};
+
 export const updateSelectedContract = async (contratoId) => {
     const response = await fetchWithCredentials(`${API_URL}/auth/selected-contract`, {
         method: 'PUT',
@@ -668,6 +678,16 @@ export const getLiquidaciones = async (params = {}) => {
     if (!response.ok) throw new Error('Error al obtener liquidaciones');
     return response.json();
 };
+
+export const ejecutarLiquidacion = async () => {
+    const response = await fetch(`${API_URL}/liquidaciones`, {
+        method: 'POST',
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Error al ejecutar liquidación');
+    return result;
+};
+
 
 export const getLiquidacionById = async (id) => {
     const response = await fetch(`${API_URL}/liquidaciones/${id}`);

@@ -135,6 +135,23 @@ const Liquidacion = sequelize.define('Liquidacion', {
         },
     },
     // Detalle de conceptos aplicados (JSON array)
+    detalleRemunerativo: {
+        type: DataTypes.JSON,
+        allowNull: true,
+        defaultValue: [],
+        get() {
+            const rawValue = this.getDataValue('detalleRemunerativo');
+            if (!rawValue) return [];
+            if (typeof rawValue === 'string') {
+                try {
+                    return JSON.parse(rawValue);
+                } catch {
+                    return [];
+                }
+            }
+            return rawValue;
+        },
+    },
     detalleRetenciones: {
         type: DataTypes.JSON,
         allowNull: true,

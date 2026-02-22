@@ -155,8 +155,27 @@ const calcularAntiguedad = (contrato, fechaInicio) => {
  */
 const calcularPresentismo = async (basico, antiguedad, contrato, fechaInicio, fechaFin) => {
     // Obtener límite de ausencias desde parámetros laborales
-    const parametros = await ParametroLaboral.findOne();
-    const limiteAusencias = parametros ? parametros.limiteAusenciaInjustificada : 1;
+    let limiteAusencias = 1;
+    if (contrato.empleado && contrato.empleado.espacioTrabajoId) {
+        const parametro = await ParametroLaboral.findOne({
+            where: {
+                espacioTrabajoId: contrato.empleado.espacioTrabajoId,
+                tipo: 'limite_ausencia_injustificada'
+            }
+        });
+        if (parametro && parametro.valor) {
+            limiteAusencias = parseInt(parametro.valor, 10);
+            if (isNaN(limiteAusencias)) limiteAusencias = 1;
+        }
+    } else {
+        const parametro = await ParametroLaboral.findOne({
+            where: { tipo: 'limite_ausencia_injustificada' }
+        });
+        if (parametro && parametro.valor) {
+            limiteAusencias = parseInt(parametro.valor, 10);
+            if (isNaN(limiteAusencias)) limiteAusencias = 1;
+        }
+    }
 
     // Obtener inasistencias injustificadas del período
     const licencias = await Licencia.findAll({
@@ -340,12 +359,18 @@ const calcularInasistencias = async (contrato, bruto, fechaInicio, fechaFin) => 
 /**
  * Calcular retenciones desde conceptos salariales en DB
  */
-const calcularRetenciones = async (totalBruto, tipoContrato) => {
+const calcularRetenciones = async (contrato, totalBruto, tipoContrato) => {
+    let whereClause = {
+        tipo: 'deduccion',
+        activo: true,
+    };
+
+    if (contrato.empleado && contrato.empleado.espacioTrabajoId) {
+        whereClause.espacioTrabajoId = contrato.empleado.espacioTrabajoId;
+    }
+
     const conceptos = await ConceptoSalarial.findAll({
-        where: {
-            tipo: 'deduccion',
-            activo: true,
-        },
+        where: whereClause,
     });
 
     let totalRetenciones = 0;
@@ -384,6 +409,56 @@ const calcularRetenciones = async (totalBruto, tipoContrato) => {
     }
 
     return { totalRetenciones, detalleRetenciones };
+};
+
+/**
+ * Calcular remunerativos adicionales desde conceptos salariales en DB
+ */
+const calcularRemunerativosAdicionales = async (contrato, totalMontoBase) => {
+    let whereClause = {
+        tipo: 'remunerativo',
+        activo: true,
+    };
+
+    if (contrato.empleado && contrato.empleado.espacioTrabajoId) {
+        whereClause.espacioTrabajoId = contrato.empleado.espacioTrabajoId;
+    }
+
+    const conceptos = await ConceptoSalarial.findAll({
+        where: whereClause,
+    });
+
+    let totalAdicionales = 0;
+    const detalleRemunerativo = [];
+
+    for (const concepto of conceptos) {
+        let monto = 0;
+        if (concepto.esPorcentaje) {
+            monto = totalMontoBase * (parseFloat(concepto.valor) / 100);
+        } else {
+            monto = parseFloat(concepto.valor);
+        }
+
+        // Ensure monto is a valid number
+        if (isNaN(monto) || !isFinite(monto)) {
+            monto = 0;
+        }
+
+        totalAdicionales += monto;
+        detalleRemunerativo.push({
+            nombre: concepto.nombre,
+            tipo: 'remunerativo',
+            porcentaje: concepto.esPorcentaje ? concepto.valor : null,
+            monto: parseFloat(monto.toFixed(2)),
+        });
+    }
+
+    // Ensure totalAdicionales is valid
+    if (isNaN(totalAdicionales) || !isFinite(totalAdicionales)) {
+        totalAdicionales = 0;
+    }
+
+    return { totalAdicionales, detalleRemunerativo };
 };
 
 const calcularDiasCorrespondientes = async (contrato, fechaFinLiquidacion) => {
@@ -495,15 +570,16 @@ const calcularRemunerativos = async (contrato, fechaInicio, fechaFin) => {
     const sac = await calcularSAC(contrato, bruto, fechaInicio, fechaFin);
     const inasistencias = await calcularInasistencias(contrato, bruto, fechaInicio, fechaFin);
 
-    const totalBruto = bruto + horasExtras + vacaciones + sac - inasistencias;
+    // Conceptos adicionales remunerativos calculados sobre el bruto base
+    const { totalAdicionales, detalleRemunerativo } = await calcularRemunerativosAdicionales(contrato, bruto);
 
-    const { totalRetenciones, detalleRetenciones } = await calcularRetenciones(totalBruto, contrato.tipoContrato);
+    // Total Bruto es la suma de todo lo remunerativo menos las inasistencias
+    const totalBruto = bruto + horasExtras + vacaciones + sac + totalAdicionales - inasistencias;
+
+    const { totalRetenciones, detalleRetenciones } = await calcularRetenciones(contrato, totalBruto, contrato.tipoContrato);
     const vacacionesNoGozadas = await calcularVacacionesNoGozadas(contrato, bruto, fechaInicio, fechaFin);
 
     const neto = totalBruto - totalRetenciones + vacacionesNoGozadas;
-
-    // Construir detalle de retenciones (solo retenciones, no todos los conceptos)
-    // El detalle completo se maneja en el frontend
 
     return {
         basico: safeNumber(basico),
@@ -517,6 +593,7 @@ const calcularRemunerativos = async (contrato, fechaInicio, fechaFin) => {
         totalRetenciones: safeNumber(totalRetenciones),
         vacacionesNoGozadas: safeNumber(vacacionesNoGozadas),
         neto: safeNumber(neto),
+        detalleRemunerativo,
         detalleRetenciones,
     };
 };
@@ -550,14 +627,16 @@ const calcularNoLaborales = async (contrato, fechaInicio, fechaFin) => {
 
     // Descuento: Salario base / 80 horas mensuales × cantidad de inasistencias
     const descuentoInasistencias = (basico / 80) * diasInasistencias;
-    const totalBruto = basico - descuentoInasistencias;
+
+    // A diferencia de los laborales, para los no laborales también calculamos adicionales sobre el básico
+    const { totalAdicionales, detalleRemunerativo } = await calcularRemunerativosAdicionales(contrato, basico);
+
+    const totalBruto = basico + totalAdicionales - descuentoInasistencias;
 
     // Solo Obra Social para no laborales
-    const { totalRetenciones, detalleRetenciones } = await calcularRetenciones(totalBruto, contrato.tipoContrato);
+    const { totalRetenciones, detalleRetenciones } = await calcularRetenciones(contrato, totalBruto, contrato.tipoContrato);
 
     const neto = totalBruto - totalRetenciones;
-
-    // Detalle de retenciones (solo retenciones)
 
     return {
         basico: safeNumber(basico),
@@ -571,6 +650,7 @@ const calcularNoLaborales = async (contrato, fechaInicio, fechaFin) => {
         totalRetenciones: safeNumber(totalRetenciones),
         vacacionesNoGozadas: 0,
         neto: safeNumber(neto),
+        detalleRemunerativo,
         detalleRetenciones,
     };
 };

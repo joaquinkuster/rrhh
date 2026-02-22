@@ -1,12 +1,23 @@
 const { Liquidacion, Contrato, Empleado, Usuario, EspacioTrabajo, Rol, Permiso } = require('../models');
 const { Op } = require('sequelize');
+const { liquidarSueldos } = require('../services/prueba_liq');
 
 // Helper: verifica si el usuario en sesión tiene un permiso específico en el módulo liquidaciones
 const tienePermiso = async (session, accion) => {
     if (session.esAdministrador) return true;
+
+    // Si no es empleado (es Propietario), tiene acceso total
+    if (session.esEmpleado === false) return true;
+
     const usuarioId = session.usuarioId || session.empleadoId;
     const empleado = await Empleado.findOne({ where: { usuarioId } });
-    if (!empleado || !empleado.ultimoContratoSeleccionadoId) return false;
+
+    // Si no se encontró el empleado en DB, asumimos que es propietario
+    if (!empleado) return true;
+
+    // Es empleado pero no tiene contrato seleccionado, denegar
+    if (!empleado.ultimoContratoSeleccionadoId) return false;
+
     const contrato = await Contrato.findByPk(empleado.ultimoContratoSeleccionadoId, {
         include: [{ model: Rol, as: 'rol', include: [{ model: Permiso, as: 'permisos', through: { attributes: [] } }] }]
     });
@@ -209,7 +220,7 @@ const update = async (req, res) => {
         const {
             basico, antiguedad, presentismo, horasExtras, vacaciones, sac,
             inasistencias, totalBruto, totalRetenciones, vacacionesNoGozadas,
-            neto, detalleConceptos, estado,
+            neto, detalleConceptos, detalleRemunerativo, detalleRetenciones, estado,
         } = req.body;
 
         const liquidacion = await Liquidacion.findByPk(id);
@@ -229,6 +240,8 @@ const update = async (req, res) => {
         if (vacacionesNoGozadas !== undefined) liquidacion.vacacionesNoGozadas = vacacionesNoGozadas;
         if (neto !== undefined) liquidacion.neto = neto;
         if (detalleConceptos !== undefined) liquidacion.detalleConceptos = detalleConceptos;
+        if (detalleRemunerativo !== undefined) liquidacion.detalleRemunerativo = detalleRemunerativo;
+        if (detalleRetenciones !== undefined) liquidacion.detalleRetenciones = detalleRetenciones;
         if (estado !== undefined) liquidacion.estado = estado;
         if (req.body.estaPagada !== undefined) liquidacion.estaPagada = req.body.estaPagada;
 
@@ -307,6 +320,19 @@ const bulkRemove = async (req, res) => {
     }
 };
 
+const ejecutarLiquidacion = async (req, res) => {
+    try {
+        if (!(await tienePermiso(req.session, 'crear')) && !(await tienePermiso(req.session, 'actualizar'))) {
+            return res.status(403).json({ error: 'No tiene permiso para ejecutar liquidaciones' });
+        }
+        await liquidarSueldos();
+        res.json({ message: 'Liquidaciones simuladas/ejecutadas exitosamente' });
+    } catch (error) {
+        console.error('Error al ejecutar liquidaciones:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
 module.exports = {
     getAll,
     getById,
@@ -314,4 +340,5 @@ module.exports = {
     remove,
     reactivate,
     bulkRemove,
+    ejecutarLiquidacion,
 };

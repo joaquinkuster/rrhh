@@ -21,12 +21,12 @@ export const AuthProvider = ({ children }) => {
 
     // Verificar sesión al cargar
     useEffect(() => {
-        checkAuth();
+        checkAuth(true);
     }, []);
 
-    const checkAuth = async () => {
+    const checkAuth = async (showLoading = false) => {
         try {
-            setLoading(true);
+            if (showLoading) setLoading(true);
             const userData = await getCurrentUser();
             if (userData) {
                 setUser(userData);
@@ -40,7 +40,7 @@ export const AuthProvider = ({ children }) => {
             setUser(null);
             setIsAuthenticated(false);
         } finally {
-            setLoading(false);
+            if (showLoading) setLoading(false);
         }
     };
 

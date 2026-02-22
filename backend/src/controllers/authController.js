@@ -414,6 +414,43 @@ const updateSelectedContract = async (req, res) => {
     }
 };
 
+/**
+ * Actualizar perfil del usuario actual (nombre, apellido, email)
+ */
+const updateMe = async (req, res) => {
+    try {
+        const usuarioId = req.session.usuarioId || req.session.empleadoId;
+        if (!usuarioId) return res.status(401).json({ error: 'No autorizado' });
+
+        const { nombre, apellido, email } = req.body;
+
+        if (!nombre?.trim()) return res.status(400).json({ error: 'El nombre es requerido' });
+        if (!apellido?.trim()) return res.status(400).json({ error: 'El apellido es requerido' });
+        if (!email?.trim()) return res.status(400).json({ error: 'El email es requerido' });
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Email inválido' });
+
+        const usuario = await Usuario.findByPk(usuarioId);
+        if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+        // Verificar email único (ignorando el propio)
+        if (email.toLowerCase() !== usuario.email.toLowerCase()) {
+            const existing = await Usuario.findOne({ where: { email } });
+            if (existing) return res.status(400).json({ error: 'El email ya está registrado por otro usuario' });
+        }
+
+        await usuario.update({ nombre: nombre.trim(), apellido: apellido.trim(), email: email.trim() });
+
+        res.json({
+            message: 'Perfil actualizado correctamente', usuario: {
+                id: usuario.id, nombre: usuario.nombre, apellido: usuario.apellido, email: usuario.email
+            }
+        });
+    } catch (error) {
+        console.error('Error al actualizar perfil:', error);
+        res.status(500).json({ error: 'Error al actualizar el perfil' });
+    }
+};
+
 module.exports = {
     login,
     logout,
@@ -421,4 +458,5 @@ module.exports = {
     getCurrentUser,
     updatePassword,
     updateSelectedContract,
+    updateMe,
 };

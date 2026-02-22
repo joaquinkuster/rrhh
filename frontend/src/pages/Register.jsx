@@ -12,25 +12,13 @@ const Register = () => {
     const [showSuccessAlert, setShowSuccessAlert] = useState(false);
 
     const handleSuccess = async () => {
-        setShowSuccessAlert(true);
+        sessionStorage.setItem('justLoggedIn', 'true');
         await checkAuth();
-        setTimeout(() => {
-            navigate('/dashboard');
-        }, 1500);
     };
 
     return (
         <>
             <BackgroundCarousel />
-
-            {showSuccessAlert && (
-                <Alert
-                    type="success"
-                    message="¡Registro exitoso! Iniciando sesión..."
-                    onClose={() => setShowSuccessAlert(false)}
-                    duration={1500}
-                />
-            )}
 
             <div className="auth-container">
                 <div className="auth-card register-card">

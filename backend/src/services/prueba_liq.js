@@ -1,5 +1,4 @@
-const cron = require('node-cron');
-const { Contrato, Liquidacion } = require('../models');
+const { Contrato, Liquidacion, Empleado } = require('../models');
 const { calcularLiquidacionContrato } = require('./liquidacionService');
 const { parseLocalDate } = require('../utils/fechas');
 const { Op } = require('sequelize');
@@ -18,6 +17,11 @@ async function liquidarSueldos() {
                 estado: 'en_curso',
                 activo: true,
             },
+            include: [{
+                model: Empleado,
+                as: 'empleado',
+                attributes: ['espacioTrabajoId']
+            }]
         });
 
         let liquidacionesGeneradas = 0;
@@ -95,6 +99,7 @@ async function liquidarSueldos() {
                     totalRetenciones: datosLiquidacion.totalRetenciones,
                     vacacionesNoGozadas: datosLiquidacion.vacacionesNoGozadas,
                     neto: datosLiquidacion.neto,
+                    detalleRemunerativo: datosLiquidacion.detalleRemunerativo,
                     detalleRetenciones: datosLiquidacion.detalleRetenciones,
                     estaPagada: false,
                     activo: true,

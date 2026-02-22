@@ -34,91 +34,129 @@ ulo dentro del body */}
                         </p>
                     </div>
 
-                    {/* Información del Empleado */}
-                    <div style={{ marginBottom: '2rem' }}>
-                        <h4 style={{ marginBottom: '1rem', fontSize: '1rem', fontWeight: '600' }}>Empleado</h4>
-                        <div style={{ padding: '1rem', background: 'var(--bg-secondary)', borderRadius: '8px' }}>
-                            <div><strong>Nombre:</strong> {liquidacion?.contrato?.empleado?.usuario?.apellido}, {liquidacion?.contrato?.empleado?.usuario?.nombre}</div>
-                            <div><strong>Documento:</strong> {liquidacion?.contrato?.empleado?.usuario?.numeroDocumento}</div>
-                            <div><strong>Período:</strong> {formatDateOnly(liquidacion?.fechaInicio)} - {formatDateOnly(liquidacion?.fechaFin)}</div>
+                    {/* Información y Totales */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '1.5rem', marginBottom: '2rem' }}>
+                        {/* Información del Empleado */}
+                        <div>
+                            <h4 style={{ marginBottom: '1rem', fontSize: '1rem', fontWeight: '600' }}>Empleado</h4>
+                            <div style={{ padding: '1.25rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '8px', boxSizing: 'border-box' }}>
+                                <div style={{ marginBottom: '0.75rem', fontSize: '1.05rem' }}>
+                                    <strong>{liquidacion?.contrato?.empleado?.usuario?.apellido}, {liquidacion?.contrato?.empleado?.usuario?.nombre}</strong>
+                                </div>
+                                <div style={{ marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                    <strong style={{ color: 'var(--text-secondary)' }}>Documento:</strong> {liquidacion?.contrato?.empleado?.numeroDocumento}
+                                </div>
+                                <div style={{ fontSize: '0.9rem' }}>
+                                    <strong style={{ color: 'var(--text-secondary)' }}>Período:</strong> {formatDateOnly(liquidacion?.fechaInicio)} al {formatDateOnly(liquidacion?.fechaFin)}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Totales */}
+                        <div>
+                            <h4 style={{ marginBottom: '1rem', fontSize: '1rem', fontWeight: '600' }}>Resumen de Liquidación</h4>
+                            <div style={{ padding: '1.25rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '8px', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                    <strong>Total Bruto:</strong>
+                                    <span>{formatCurrency(liquidacion?.totalBruto)}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                    <strong>Total Deducciones:</strong>
+                                    <span style={{ color: '#ef4444' }}>-{formatCurrency(Number(liquidacion?.inasistencias || 0) + Number(liquidacion?.totalRetenciones || 0))}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.75rem', borderTop: '2px solid var(--border-color)', fontSize: '1.2rem', marginTop: '0.25rem' }}>
+                                    <strong>Neto:</strong>
+                                    <strong style={{ color: 'var(--primary-color)' }}>{formatCurrency(liquidacion?.neto)}</strong>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Conceptos Remunerativos */}
-                    <div style={{ marginBottom: '2rem' }}>
-                        <h4 style={{ marginBottom: '1rem', fontSize: '1rem', fontWeight: '600' }}>Conceptos Remunerativos</h4>
-                        <table className="table" style={{ border: '1px solid var(--border-color)' }}>
-                            <tbody>
-                                <tr><td>Básico</td><td style={{ textAlign: 'right' }}>{formatCurrency(liquidacion?.basico)}</td></tr>
-                                <tr><td>Antigüedad</td><td style={{ textAlign: 'right' }}>{formatCurrency(liquidacion?.antiguedad)}</td></tr>
-                                <tr><td>Presentismo</td><td style={{ textAlign: 'right' }}>{formatCurrency(liquidacion?.presentismo)}</td></tr>
-                                {liquidacion?.horasExtras > 0 && <tr><td>Horas Extras</td><td style={{ textAlign: 'right' }}>{formatCurrency(liquidacion?.horasExtras)}</td></tr>}
-                                {liquidacion?.vacaciones > 0 && <tr><td>Vacaciones</td><td style={{ textAlign: 'right' }}>{formatCurrency(liquidacion?.vacaciones)}</td></tr>}
-                                {liquidacion?.sac > 0 && <tr><td>SAC</td><td style={{ textAlign: 'right' }}>{formatCurrency(liquidacion?.sac)}</td></tr>}
-                                {liquidacion?.vacacionesNoGozadas > 0 && <tr><td>Vacaciones No Gozadas</td><td style={{ textAlign: 'right' }}>{formatCurrency(liquidacion?.vacacionesNoGozadas)}</td></tr>}
-                            </tbody>
-                        </table>
-                    </div>
+                    {/* Detalles */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '1.5rem', marginBottom: '2rem' }}>
+                        {/* Conceptos Remunerativos */}
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <h4 style={{ marginBottom: '1rem', fontSize: '1rem', fontWeight: '600' }}>Conceptos Remunerativos</h4>
+                            <div style={{ flexGrow: 1, border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden' }}>
+                                <table className="table" style={{ margin: 0, border: 'none' }}>
+                                    <tbody>
+                                        <tr><td style={{ padding: '0.75rem 1rem' }}>Básico</td><td style={{ textAlign: 'right', padding: '0.75rem 1rem' }}>{formatCurrency(liquidacion?.basico)}</td></tr>
+                                        <tr><td style={{ padding: '0.75rem 1rem' }}>Antigüedad</td><td style={{ textAlign: 'right', padding: '0.75rem 1rem' }}>{formatCurrency(liquidacion?.antiguedad)}</td></tr>
+                                        <tr><td style={{ padding: '0.75rem 1rem' }}>Presentismo</td><td style={{ textAlign: 'right', padding: '0.75rem 1rem' }}>{formatCurrency(liquidacion?.presentismo)}</td></tr>
+                                        {liquidacion?.horasExtras > 0 && <tr><td style={{ padding: '0.75rem 1rem' }}>Horas Extras</td><td style={{ textAlign: 'right', padding: '0.75rem 1rem' }}>{formatCurrency(liquidacion?.horasExtras)}</td></tr>}
+                                        {liquidacion?.vacaciones > 0 && <tr><td style={{ padding: '0.75rem 1rem' }}>Vacaciones</td><td style={{ textAlign: 'right', padding: '0.75rem 1rem' }}>{formatCurrency(liquidacion?.vacaciones)}</td></tr>}
+                                        {liquidacion?.sac > 0 && <tr><td style={{ padding: '0.75rem 1rem' }}>SAC</td><td style={{ textAlign: 'right', padding: '0.75rem 1rem' }}>{formatCurrency(liquidacion?.sac)}</td></tr>}
+                                        {liquidacion?.vacacionesNoGozadas > 0 && <tr><td style={{ padding: '0.75rem 1rem' }}>Vacaciones No Gozadas</td><td style={{ textAlign: 'right', padding: '0.75rem 1rem' }}>{formatCurrency(liquidacion?.vacacionesNoGozadas)}</td></tr>}
 
-                    {/* Deducciones/Retenciones */}
-                    {(liquidacion?.inasistencias > 0 || liquidacion?.totalRetenciones > 0 || (liquidacion?.detalleRetenciones && liquidacion.detalleRetenciones.length > 0)) && (
-                        <div style={{ marginBottom: '2rem' }}>
+                                        {/* Detalle Remunerativo Adicional */}
+                                        {liquidacion?.detalleRemunerativo && liquidacion.detalleRemunerativo.length > 0 && liquidacion.detalleRemunerativo.map((remunerativo, index) => (
+                                            <tr key={`rem-${index}`}>
+                                                <td style={{ padding: '0.75rem 1rem' }}>
+                                                    <div>{remunerativo.nombre}</div>
+                                                    {remunerativo.porcentaje && (
+                                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                                            {remunerativo.porcentaje}%
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td style={{ textAlign: 'right', padding: '0.75rem 1rem' }}>{formatCurrency(remunerativo.monto)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* Deducciones/Retenciones */}
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
                             <h4 style={{ marginBottom: '1rem', fontSize: '1rem', fontWeight: '600' }}>Deducciones</h4>
-                            <table className="table" style={{ border: '1px solid var(--border-color)' }}>
-                                <tbody>
-                                    {liquidacion?.inasistencias > 0 && <tr><td>Inasistencias Injustificadas</td><td style={{ textAlign: 'right' }}>{formatCurrency(liquidacion?.inasistencias)}</td></tr>}
+                            <div style={{ flexGrow: 1, border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                                {(liquidacion?.inasistencias > 0 || liquidacion?.totalRetenciones > 0 || (liquidacion?.detalleRetenciones && liquidacion.detalleRetenciones.length > 0)) ? (
+                                    <table className="table" style={{ margin: 0, border: 'none' }}>
+                                        <tbody>
+                                            {liquidacion?.inasistencias > 0 && <tr><td style={{ padding: '0.75rem 1rem', color: '#ef4444' }}>Inasistencias Injustificadas</td><td style={{ textAlign: 'right', padding: '0.75rem 1rem', color: '#ef4444' }}>-{formatCurrency(liquidacion?.inasistencias)}</td></tr>}
 
-                                    {/* Detalle de Retenciones */}
-                                    {liquidacion?.detalleRetenciones && liquidacion.detalleRetenciones.length > 0 && liquidacion.detalleRetenciones.map((retencion, index) => (
-                                        <tr key={index}>
-                                            <td>
-                                                <div>{retencion.nombre}</div>
-                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                                                    {retencion.porcentaje}% del bruto
-                                                </div>
-                                            </td>
-                                            <td style={{ textAlign: 'right' }}>{formatCurrency(retencion.monto)}</td>
-                                        </tr>
-                                    ))}
+                                            {/* Detalle de Retenciones */}
+                                            {liquidacion?.detalleRetenciones && liquidacion.detalleRetenciones.length > 0 && liquidacion.detalleRetenciones.map((retencion, index) => (
+                                                <tr key={index}>
+                                                    <td style={{ padding: '0.75rem 1rem' }}>
+                                                        <div>{retencion.nombre}</div>
+                                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                                            {retencion.porcentaje}% del bruto
+                                                        </div>
+                                                    </td>
+                                                    <td style={{ textAlign: 'right', padding: '0.75rem 1rem', color: '#ef4444' }}>-{formatCurrency(retencion.monto)}</td>
+                                                </tr>
+                                            ))}
 
-                                    {/* Total Retenciones */}
-                                    {liquidacion?.totalRetenciones > 0 && (
-                                        <tr style={{ borderTop: '2px solid var(--border-color)', fontWeight: 'bold' }}>
-                                            <td>Total Retenciones</td>
-                                            <td style={{ textAlign: 'right' }}>{formatCurrency(liquidacion?.totalRetenciones)}</td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-
-                    {/* Totales */}
-                    <div style={{ padding: '1rem', background: 'var(--bg-secondary)', borderRadius: '8px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                            <strong>Total Bruto:</strong>
-                            <span>{formatCurrency(liquidacion?.totalBruto)}</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                            <strong>Total Deducciones:</strong>
-                            <span>-{formatCurrency((liquidacion?.inasistencias || 0) + (liquidacion?.totalRetenciones || 0))}</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.5rem', borderTop: '2px solid var(--border-color)', fontSize: '1.2rem' }}>
-                            <strong>Neto:</strong>
-                            <strong style={{ color: 'var(--primary-color)' }}>{formatCurrency(liquidacion?.neto)}</strong>
+                                            {/* Total Retenciones */}
+                                            {liquidacion?.totalRetenciones > 0 && (
+                                                <tr style={{ background: 'var(--bg-secondary)', fontWeight: 'bold' }}>
+                                                    <td style={{ padding: '0.75rem 1rem' }}>Total Retenciones</td>
+                                                    <td style={{ textAlign: 'right', padding: '0.75rem 1rem', color: '#ef4444' }}>-{formatCurrency(liquidacion?.totalRetenciones)}</td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                ) : (
+                                    <div style={{ padding: '3rem 1rem', textAlign: 'center', color: 'var(--text-secondary)', margin: 'auto' }}>
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 48, height: 48, opacity: 0.5, margin: '0 auto 1rem' }}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
+                                        </svg>
+                                        <div>Sin deducciones en este período.</div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
+
+
                 </div>
 
                 <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', padding: '1.5rem 2rem', borderTop: '1px solid var(--border-color)' }}>
                     <button type="button" className="btn btn-secondary" onClick={onClose}>
                         Cerrar
                     </button>
-                    {canEdit && (
-                        <button type="button" className="btn btn-primary" onClick={() => onEdit(liquidacion)}>
-                            Editar
-                        </button>
-                    )}
                 </div>
             </div>
         </div>
