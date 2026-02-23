@@ -1,4 +1,4 @@
-const { Empleado, Usuario, RegistroSalud, Contrato, EspacioTrabajo, sequelize } = require('../models');
+const { Empleado, Usuario, RegistroSalud, Contrato, EspacioTrabajo, sequelize, Contacto } = require('../models');
 const { Op } = require('sequelize');
 
 // Obtener todos los empleados con filtros y paginación
@@ -280,7 +280,9 @@ const update = async (req, res) => {
 const remove = async (req, res) => {
     const t = await sequelize.transaction();
     try {
-        const empleado = await Empleado.findByPk(req.params.id);
+        const empleado = await Empleado.findByPk(req.params.id, {
+            include: [{ model: Usuario, as: 'usuario' }]
+        });
 
         if (!empleado) {
             return res.status(404).json({ error: 'Empleado no encontrado' });
@@ -293,9 +295,20 @@ const remove = async (req, res) => {
         const contratosActivos = await Contrato.count({
             where: { empleadoId: empleado.id, activo: true }
         });
+        const contactosActivos = await Contacto.count({
+            where: { empleadoId: empleado.id, activo: true }
+        });
 
-        if (registrosActivos > 0 || contratosActivos > 0) {
-            return res.status(400).json({ error: 'No se puede desactivar por registros activos' });
+        if (registrosActivos > 0) {
+            return res.status(400).json({ error: `No se puede desactivar el empleado "${empleado.usuario.nombre}" porque tiene ${registrosActivos} registro(s) de salud activo(s). Primero desactive los registros de salud.` });
+        }
+
+        if (contratosActivos > 0) {
+            return res.status(400).json({ error: `No se puede desactivar el empleado "${empleado.usuario.nombre}" porque tiene ${contratosActivos} contrato(s) activo(s). Primero desactive los contratos.` });
+        }
+
+        if (contactosActivos > 0) {
+            return res.status(400).json({ error: `No se puede desactivar el empleado "${empleado.usuario.nombre}" porque tiene ${contactosActivos} contacto(s) activo(s). Primero desactive los contactos.` });
         }
 
         // Empleado ya no tiene campo activo
@@ -338,11 +351,33 @@ const bulkRemove = async (req, res) => {
         const { ids } = req.body;
         if (!ids || !ids.length) return res.status(400).json({ error: 'IDs requeridos' });
 
-        const empleados = await Empleado.findAll({ where: { id: ids } });
-        const usuarioIds = empleados.map(e => e.usuarioId);
+        // --- Verificaciones de entidades asociadas activas para cada empleado ---
+        for (const id of ids) {
+            const empleado = await Empleado.findByPk(id, {
+                include: [{ model: Usuario, as: 'usuario' }]
+            });
+            if (!empleado) continue;
+
+            const registrosActivos = await RegistroSalud.count({ where: { empleadoId: id, activo: true } });
+            if (registrosActivos > 0) {
+                return res.status(400).json({ error: `No se puede desactivar el empleado "${empleado.usuario.nombre}" porque tiene ${registrosActivos} registro(s) de salud activo(s). Primero desactive los registros de salud.` });
+            }
+
+            const contratosActivos = await Contrato.count({
+                where: { empleadoId: id, activo: true }
+            });
+            if (contratosActivos > 0) {
+                return res.status(400).json({ error: `No se puede desactivar el empleado "${empleado.usuario.nombre}" porque tiene ${contratosActivos} contrato(s) activo(s). Primero desactive los contratos.` });
+            }
+
+            const contactosActivos = await Contacto.count({ where: { empleadoId: id, activo: true } });
+            if (contactosActivos > 0) {
+                return res.status(400).json({ error: `No se puede desactivar el empleado "${empleado.usuario.nombre}" porque tiene ${contactosActivos} contacto(s) activo(s). Primero desactive los contactos.` });
+            }
+        }
 
         // await Empleado.update({ activo: false }, { where: { id: ids } });
-        await Usuario.update({ activo: false }, { where: { id: usuarioIds } });
+        await Usuario.update({ activo: false }, { where: { id: ids } });
 
         res.json({ message: 'Empleados desactivados' });
     } catch (error) {

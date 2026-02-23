@@ -1,4 +1,4 @@
-const { Rol, Permiso, RolPermiso, EspacioTrabajo, Empleado } = require('../models');
+const { Rol, Permiso, RolPermiso, EspacioTrabajo, Empleado, Contrato } = require('../models');
 const { Op } = require('sequelize');
 
 /**
@@ -244,6 +244,12 @@ const deleteRol = async (req, res) => {
             return res.status(404).json({ error: 'Rol no encontrado' });
         }
 
+        // --- Verificaciones de entidades asociadas activas ---
+        const contratosActivos = await Contrato.count({ where: { rolId: rol.id, activo: true } });
+        if (contratosActivos > 0) {
+            return res.status(400).json({ error: `No se puede desactivar el rol "${rol.nombre}" porque tiene ${contratosActivos} contrato(s) activo(s). Primero desactive los contratos.` });
+        }
+
         // Desactivar en lugar de eliminar
         rol.activo = false;
         await rol.save();
@@ -287,6 +293,17 @@ const deleteBulk = async (req, res) => {
 
         if (!ids || !Array.isArray(ids) || ids.length === 0) {
             return res.status(400).json({ error: 'Se requiere un array de IDs' });
+        }
+
+        for (const id of ids) {
+            const rol = await Rol.findByPk(id);
+            if (!rol) continue;
+
+            // --- Verificaciones de entidades asociadas activas ---
+            const contratosActivos = await Contrato.count({ where: { rolId: rol.id, activo: true } });
+            if (contratosActivos > 0) {
+                return res.status(400).json({ error: `No se puede desactivar el rol "${rol.nombre}" porque tiene ${contratosActivos} contrato(s) activo(s). Primero desactive los contratos.` });
+            }
         }
 
         await Rol.update(

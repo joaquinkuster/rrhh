@@ -1,4 +1,4 @@
-const { Contrato, Empleado, Puesto, Departamento, Area, Empresa, ContratoPuesto, Rol, Usuario, EspacioTrabajo } = require('../models');
+const { Contrato, Empleado, Puesto, Departamento, Area, Empresa, ContratoPuesto, Rol, Usuario, EspacioTrabajo, Evaluacion, Solicitud, Liquidacion } = require('../models');
 const { Op } = require('sequelize');
 const sequelize = require('../config/database');
 
@@ -397,6 +397,35 @@ const remove = async (req, res) => {
             return res.status(404).json({ error: 'Contrato no encontrado' });
         }
 
+        // --- Verificaciones de entidades asociadas activas ---
+        const evaluadosActivos = await Evaluacion.count({ where: { contratoEvaluadoId: contrato.id, activo: true } });
+        if (evaluadosActivos > 0) {
+            return res.status(400).json({ error: `No se puede desactivar el contrato porque tiene ${evaluadosActivos} evaluación(es) de desempeño activa(s) como evaluado. Primero desactive las evaluaciones.` });
+        }
+
+        const evaluadoresActivos = await Evaluacion.count({
+            where: { activo: true },
+            include: [{
+                model: Contrato,
+                as: 'evaluadores',
+                where: { id: contrato.id },
+                attributes: []
+            }]
+        });
+        if (evaluadoresActivos > 0) {
+            return res.status(400).json({ error: `No se puede desactivar el contrato porque es evaluador en ${evaluadoresActivos} evaluación(es) de desempeño activa(s). Primero desactive las evaluaciones o asigne otro evaluador.` });
+        }
+
+        const solicitudesActivas = await Solicitud.count({ where: { contratoId: contrato.id, activo: true } });
+        if (solicitudesActivas > 0) {
+            return res.status(400).json({ error: `No se puede desactivar el contrato porque tiene ${solicitudesActivas} solicitud(es) activa(s). Primero desactive las solicitudes.` });
+        }
+
+        const liquidacionesActivas = await Liquidacion.count({ where: { contratoId: contrato.id, activo: true } });
+        if (liquidacionesActivas > 0) {
+            return res.status(400).json({ error: `No se puede desactivar el contrato porque tiene ${liquidacionesActivas} liquidación(es) activa(s). Primero desactive las liquidaciones.` });
+        }
+
         await contrato.update({ activo: false });
         res.json({ message: 'Contrato desactivado correctamente' });
     } catch (error) {
@@ -432,6 +461,36 @@ const bulkRemove = async (req, res) => {
 
         if (!ids || !Array.isArray(ids) || ids.length === 0) {
             return res.status(400).json({ error: 'Se requiere un array de IDs' });
+        }
+
+        for (const id of ids) {
+            const evaluadosActivos = await Evaluacion.count({ where: { contratoEvaluadoId: id, activo: true } });
+            if (evaluadosActivos > 0) {
+                return res.status(400).json({ error: `No se puede desactivar un contrato seleccionado porque tiene ${evaluadosActivos} evaluación(es) activa(s) como evaluado. Primero desactive las evaluaciones.` });
+            }
+
+            const evaluadoresActivos = await Evaluacion.count({
+                where: { activo: true },
+                include: [{
+                    model: Contrato,
+                    as: 'evaluadores',
+                    where: { id: id },
+                    attributes: []
+                }]
+            });
+            if (evaluadoresActivos > 0) {
+                return res.status(400).json({ error: `No se puede desactivar un contrato seleccionado porque es evaluador en ${evaluadoresActivos} evaluación(es) activa(s). Primero desactive las evaluaciones o asigne otro evaluador.` });
+            }
+
+            const solicitudesActivas = await Solicitud.count({ where: { contratoId: id, activo: true } });
+            if (solicitudesActivas > 0) {
+                return res.status(400).json({ error: `No se puede desactivar el contrato porque tiene ${solicitudesActivas} solicitud(es) activa(s). Primero desactive las solicitudes.` });
+            }
+
+            const liquidacionesActivas = await Liquidacion.count({ where: { contratoId: id, activo: true } });
+            if (liquidacionesActivas > 0) {
+                return res.status(400).json({ error: `No se puede desactivar el contrato porque tiene ${liquidacionesActivas} liquidación(es) activa(s). Primero desactive las liquidaciones.` });
+            }
         }
 
         await Contrato.update(

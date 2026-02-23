@@ -1,4 +1,4 @@
-const { RegistroSalud, Empleado, Usuario, EspacioTrabajo, Contrato, Rol, Permiso } = require('../models');
+const { RegistroSalud, Empleado, Usuario, EspacioTrabajo, Contrato, Rol, Permiso, Licencia } = require('../models');
 const { Op } = require('sequelize');
 
 // Helper: verifica si el usuario en sesión tiene un permiso específico en el módulo registros_salud
@@ -6,12 +6,29 @@ const tienePermiso = async (session, accion) => {
     if (session.esAdministrador) return true;
     const usuarioId = session.usuarioId || session.empleadoId;
     const empleado = await Empleado.findOne({ where: { usuarioId } });
-    if (!empleado || !empleado.ultimoContratoSeleccionadoId) return false;
+
+    // No es empleado (propietario/externo) → pasa siempre
+    if (!empleado) return true;
+
+    // Es empleado sin contrato seleccionado → pasa (sin restricción configurada)
+    if (!empleado.ultimoContratoSeleccionadoId) return true;
+
     const contrato = await Contrato.findByPk(empleado.ultimoContratoSeleccionadoId, {
         include: [{ model: Rol, as: 'rol', include: [{ model: Permiso, as: 'permisos', through: { attributes: [] } }] }]
     });
-    if (!contrato?.rol?.permisos) return false;
-    return contrato.rol.permisos.some(p => p.modulo === 'registros_salud' && p.accion === accion);
+
+    // Sin rol asignado al contrato → pasa
+    if (!contrato?.rol) return true;
+
+    const permisosDelModulo = (contrato.rol.permisos || []).filter(
+        p => p.modulo === 'registros_salud'
+    );
+
+    // El módulo no tiene permisos configurados en este rol → pasa
+    if (permisosDelModulo.length === 0) return true;
+
+    // Verificar si tiene la acción especifica
+    return permisosDelModulo.some(p => p.accion === accion);
 };
 
 // Include para obtener empleado
@@ -305,6 +322,12 @@ const remove = async (req, res) => {
             return res.status(404).json({ error: 'Registro de salud no encontrado' });
         }
 
+        // --- Verificaciones de entidades asociadas activas ---
+        const licenciasActivas = await Licencia.count({ where: { registroSaludId: registro.id, activo: true } });
+        if (licenciasActivas > 0) {
+            return res.status(400).json({ error: `No se puede desactivar el registro de salud porque tiene ${licenciasActivas} licencia(s) activa(s). Primero desactive las licencias.` });
+        }
+
         await registro.update({ activo: false });
         res.json({ message: 'Registro de salud desactivado correctamente' });
     } catch (error) {
@@ -324,6 +347,17 @@ const bulkRemove = async (req, res) => {
 
         if (!ids || !Array.isArray(ids) || ids.length === 0) {
             return res.status(400).json({ error: 'Se requiere un array de IDs' });
+        }
+
+        for (const id of ids) {
+            const registro = await RegistroSalud.findByPk(id);
+            if (!registro) continue;
+
+            // --- Verificaciones de entidades asociadas activas ---
+            const licenciasActivas = await Licencia.count({ where: { registroSaludId: registro.id, activo: true } });
+            if (licenciasActivas > 0) {
+                return res.status(400).json({ error: `No se puede desactivar el registro de salud porque tiene ${licenciasActivas} licencia(s) activa(s). Primero desactive las licencias.` });
+            }
         }
 
         await RegistroSalud.update(

@@ -6,12 +6,29 @@ const tienePermiso = async (session, accion) => {
     if (session.esAdministrador) return true;
     const usuarioId = session.usuarioId || session.empleadoId;
     const empleado = await Empleado.findOne({ where: { usuarioId } });
-    if (!empleado || !empleado.ultimoContratoSeleccionadoId) return false;
+
+    // No es empleado (propietario/externo) → pasa siempre
+    if (!empleado) return true;
+
+    // Es empleado sin contrato seleccionado → pasa (sin restricción configurada)
+    if (!empleado.ultimoContratoSeleccionadoId) return true;
+
     const contrato = await Contrato.findByPk(empleado.ultimoContratoSeleccionadoId, {
         include: [{ model: Rol, as: 'rol', include: [{ model: Permiso, as: 'permisos', through: { attributes: [] } }] }]
     });
-    if (!contrato?.rol?.permisos) return false;
-    return contrato.rol.permisos.some(p => p.modulo === 'contactos' && p.accion === accion);
+
+    // Sin rol asignado al contrato → pasa
+    if (!contrato?.rol) return true;
+
+    const permisosDelModulo = (contrato.rol.permisos || []).filter(
+        p => p.modulo === 'contactos'
+    );
+
+    // El módulo no tiene permisos configurados en este rol → pasa
+    if (permisosDelModulo.length === 0) return true;
+
+    // Verificar si tiene la acción especifica
+    return permisosDelModulo.some(p => p.accion === accion);
 };
 
 // Include estándar con empleado

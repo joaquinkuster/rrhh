@@ -16,6 +16,12 @@ import ContactoDetail from '../components/ContactoDetail';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { truncateText } from '../utils/formatters';
 
+const PARENTESCOS = [
+    'Cónyuge', 'Padre', 'Madre', 'Hijo/a', 'Hermano/a',
+    'Abuelo/a', 'Nieto/a', 'Tío/a', 'Sobrino/a', 'Primo/a',
+    'Suegro/a', 'Cuñado/a', 'Yerno', 'Nuera', 'Otro'
+];
+
 const buildSelectStyles = (isDark) => ({
     control: (b, s) => ({ ...b, backgroundColor: isDark ? '#1e293b' : 'white', borderColor: s.isFocused ? '#0d9488' : (isDark ? '#334155' : '#e2e8f0'), boxShadow: 'none', '&:hover': { borderColor: '#0d9488' }, minHeight: '36px', fontSize: '0.875rem', borderRadius: '0.5rem' }),
     menu: (b) => ({ ...b, backgroundColor: isDark ? '#1e293b' : 'white', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`, borderRadius: '0.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 9999 }),
@@ -59,6 +65,7 @@ const Contactos = () => {
     const [filterActivo, setFilterActivo] = useState('true');
     const [filterEspacio, setFilterEspacio] = useState(null);
     const [filterEmpleado, setFilterEmpleado] = useState(null);
+    const [dniInput, setDniInput] = useState('');
     const [filterDni, setFilterDni] = useState('');
     const [filterParentesco, setFilterParentesco] = useState('');
     const [filterTipo, setFilterTipo] = useState('');
@@ -172,6 +179,14 @@ const Contactos = () => {
         return () => clearTimeout(timer);
     }, [searchInput]);
 
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setFilterDni(dniInput);
+            setPage(1);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [dniInput]);
+
     // Load Items
     const loadItems = useCallback(async () => {
         try {
@@ -212,6 +227,7 @@ const Contactos = () => {
         if (!isSingleWorkspace) setFilterEspacio(null);
         if (!isSingleEmployee) setFilterEmpleado(null);
         setFilterDni('');
+        setDniInput('');
         setFilterParentesco('');
         setFilterTipo('');
         setPage(1);
@@ -429,43 +445,43 @@ const Contactos = () => {
                 </div>
 
                 {/* Filters */}
-                <div className="filters-bar" style={{ flexWrap: 'wrap' }}>
-                    <div className="filter-group" style={{ width: '200px' }}>
-                        <Select isDisabled={isSingleWorkspace} options={espacioOptions} value={filterEspacio} onChange={opt => { setFilterEspacio(opt); setPage(1); }} placeholder="Espacio..." isClearable={!isSingleWorkspace} styles={selectStyles} noOptionsMessage={() => 'Sin resultados'} />
+                <div className="filters-bar">
+                    <div className="filters-inputs">
+                        <div className="filter-group" style={{ width: '200px' }}>
+                            <Select isDisabled={isSingleWorkspace} options={espacioOptions} value={filterEspacio} onChange={opt => { setFilterEspacio(opt); setPage(1); }} placeholder="Espacio..." isClearable={!isSingleWorkspace} styles={selectStyles} noOptionsMessage={() => 'Sin resultados'} />
+                        </div>
+                        <div className="filter-group" style={{ width: '200px' }}>
+                            <Select isDisabled={isSingleEmployee} options={empleadoOptions} value={filterEmpleado} onChange={opt => { setFilterEmpleado(opt); setPage(1); }} placeholder="Empleado..." isClearable={!isSingleEmployee} styles={selectStyles} noOptionsMessage={() => 'Sin resultados'} />
+                        </div>
+                        <div className="filter-group">
+                            <input type="text" className="filter-input" placeholder="Buscar por nombre..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} style={{ width: '200px' }} />
+                        </div>
+                        <div className="filter-group">
+                            <input type="text" className="filter-input" placeholder="DNI" value={dniInput} onChange={(e) => setDniInput(e.target.value)} style={{ width: '200px' }} />
+                        </div>
+                        <div className="filter-group">
+                            <select className="filter-input" value={filterParentesco} onChange={(e) => { setFilterParentesco(e.target.value); setPage(1); }} style={{ width: '200px' }}>
+                                <option value="">Parentesco</option>
+                                {PARENTESCOS.map(p => (
+                                    <option key={p} value={p}>{p}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="filter-group">
+                            <select className="filter-input" value={filterTipo} onChange={(e) => { setFilterTipo(e.target.value); setPage(1); }} style={{ width: '200px' }}>
+                                <option value="">Tipo</option>
+                                <option value="Familiar">Familiar</option>
+                                <option value="Emergencia">Emergencia</option>
+                            </select>
+                        </div>
+                        <div className="filter-group">
+                            <select className="filter-input" value={filterActivo} onChange={(e) => { setFilterActivo(e.target.value); setPage(1); }} style={{ width: '200px' }}>
+                                <option value="true">Activos</option>
+                                <option value="false">Inactivos</option>
+                            </select>
+                        </div>
                     </div>
-                    <div className="filter-group" style={{ width: '200px' }}>
-                        <Select isDisabled={isSingleEmployee} options={empleadoOptions} value={filterEmpleado} onChange={opt => { setFilterEmpleado(opt); setPage(1); }} placeholder="Empleado..." isClearable={!isSingleEmployee} styles={selectStyles} noOptionsMessage={() => 'Sin resultados'} />
-                    </div>
-                    <div className="filter-group">
-                        <input type="text" className="filter-input" placeholder="Buscar por nombre..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} style={{ width: '200px' }} />
-                    </div>
-                    <div className="filter-group">
-                        <input type="text" className="filter-input" placeholder="DNI" value={filterDni} onChange={(e) => { setFilterDni(e.target.value); setPage(1); }} style={{ width: '200px' }} />
-                    </div>
-                    <div className="filter-group">
-                        <select className="filter-input" value={filterParentesco} onChange={(e) => { setFilterParentesco(e.target.value); setPage(1); }} style={{ width: '200px' }}>
-                            <option value="">Parentesco</option>
-                            <option value="Hijo/a">Hijo/a</option>
-                            <option value="Cónyuge">Cónyuge</option>
-                            <option value="Padre/Madre">Padre/Madre</option>
-                            <option value="Otro">Otro</option>
-                        </select>
-                    </div>
-                    <div className="filter-group">
-                        <select className="filter-input" value={filterTipo} onChange={(e) => { setFilterTipo(e.target.value); setPage(1); }} style={{ width: '200px' }}>
-                            <option value="">Tipo</option>
-                            <option value="Familiar">Familiar</option>
-                            <option value="Emergencia">Emergencia</option>
-                            <option value="Otro">Otro</option>
-                        </select>
-                    </div>
-                    <div className="filter-group">
-                        <select className="filter-input" value={filterActivo} onChange={(e) => { setFilterActivo(e.target.value); setPage(1); }} style={{ width: '200px' }}>
-                            <option value="true">Activos</option>
-                            <option value="false">Inactivos</option>
-                        </select>
-                    </div>
-                    <div className="filter-group">
+                    <div className="filters-actions">
                         <div className="column-selector-wrapper">
                             <button className="btn btn-secondary btn-sm" onClick={() => setShowColumnSelector(!showColumnSelector)}>
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
@@ -485,15 +501,15 @@ const Contactos = () => {
                                 </div>
                             )}
                         </div>
+                        {hasActiveFilters && (
+                            <button className="btn btn-secondary btn-sm" onClick={clearFilters}>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                                Limpiar
+                            </button>
+                        )}
                     </div>
-                    {hasActiveFilters && (
-                        <button className="btn btn-secondary btn-sm" onClick={clearFilters}>
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                            Limpiar
-                        </button>
-                    )}
                 </div>
 
                 {/* Content */}

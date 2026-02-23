@@ -535,19 +535,23 @@ const EspaciosTrabajo = () => {
 
             {confirmOpen && (
                 <ConfirmDialog
-                    title="Eliminar espacio de trabajo"
-                    message={`¿Está seguro de que desea eliminar el espacio "${itemToDelete?.nombre}"?`}
+                    isOpen={true}
+                    title="Desactivar espacio de trabajo"
+                    message={`¿Está seguro de que desea desactivar el espacio "${itemToDelete?.nombre}"?`}
                     onConfirm={handleConfirmDelete}
                     onCancel={handleCancelDelete}
+                    confirmText="Desactivar"
                 />
             )}
 
             {confirmBulkOpen && (
                 <ConfirmDialog
-                    title="Eliminar espacios de trabajo"
-                    message={`¿Está seguro de que desea eliminar ${selectedIds.size} espacio(s) de trabajo?`}
+                    isOpen={true}
+                    title="Desactivar espacios de trabajo"
+                    message={`¿Está seguro de que desea desactivar ${selectedIds.size} espacio(s) de trabajo?`}
                     onConfirm={handleConfirmBulkDelete}
                     onCancel={() => setConfirmBulkOpen(false)}
+                    confirmText="Desactivar todos"
                 />
             )}
         </>

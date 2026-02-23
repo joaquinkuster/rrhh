@@ -293,6 +293,35 @@ const deleteEspacio = async (req, res) => {
             return res.status(404).json({ error: 'Espacio de trabajo no encontrado' });
         }
 
+        // --- Verificaciones de entidades asociadas activas ---
+        const empresasActivas = await Empresa.count({ where: { espacioTrabajoId: espacio.id, activo: true } });
+        if (empresasActivas > 0) {
+            return res.status(400).json({ error: `No se puede desactivar el espacio de trabajo porque tiene ${empresasActivas} empresa(s) activa(s). Primero desactive las empresas.` });
+        }
+
+        const empleadosActivos = await Empleado.count({
+            where: { espacioTrabajoId: espacio.id },
+            include: [{ model: Usuario, as: 'usuario', where: { activo: true } }]
+        });
+        if (empleadosActivos > 0) {
+            return res.status(400).json({ error: `No se puede desactivar el espacio de trabajo porque tiene ${empleadosActivos} empleado(s) activo(s). Primero desactive los empleados.` });
+        }
+
+        const rolesActivos = await Rol.count({ where: { espacioTrabajoId: espacio.id, activo: true } });
+        if (rolesActivos > 0) {
+            return res.status(400).json({ error: `No se puede desactivar el espacio de trabajo porque tiene ${rolesActivos} rol(es) personalizado(s) activo(s). Primero desactive los roles.` });
+        }
+
+        const conceptosActivos = await ConceptoSalarial.count({ where: { espacioTrabajoId: espacio.id, activo: true } });
+        if (conceptosActivos > 0) {
+            return res.status(400).json({ error: `No se puede desactivar el espacio de trabajo porque tiene ${conceptosActivos} concepto(s) salarial(es) activo(s). Primero desactive los conceptos salariales.` });
+        }
+
+        const parametrosActivos = await ParametroLaboral.count({ where: { espacioTrabajoId: espacio.id } });
+        if (parametrosActivos > 0) {
+            return res.status(400).json({ error: `No se puede desactivar el espacio de trabajo porque tiene ${parametrosActivos} parámetro(s) laboral(es) personalizado(s). Primero elimine los parámetros laborales.` });
+        }
+
         await espacio.update({ activo: false });
         res.json({ message: 'Espacio de trabajo desactivado exitosamente' });
     } catch (error) {
@@ -307,6 +336,40 @@ const deleteBulk = async (req, res) => {
 
         if (!ids || !Array.isArray(ids) || ids.length === 0) {
             return res.status(400).json({ error: 'Se requiere un array de IDs' });
+        }
+
+        // --- Verificaciones de entidades asociadas activas para cada espacio ---
+        for (const id of ids) {
+            const espacio = await EspacioTrabajo.findByPk(id);
+            if (!espacio) continue;
+
+            const empresasActivas = await Empresa.count({ where: { espacioTrabajoId: id, activo: true } });
+            if (empresasActivas > 0) {
+                return res.status(400).json({ error: `No se puede desactivar el espacio de trabajo "${espacio.nombre}" porque tiene ${empresasActivas} empresa(s) activa(s). Primero desactive las empresas.` });
+            }
+
+            const empleadosActivos = await Empleado.count({
+                where: { espacioTrabajoId: id },
+                include: [{ model: Usuario, as: 'usuario', where: { activo: true } }]
+            });
+            if (empleadosActivos > 0) {
+                return res.status(400).json({ error: `No se puede desactivar el espacio de trabajo "${espacio.nombre}" porque tiene ${empleadosActivos} empleado(s) activo(s). Primero desactive los empleados.` });
+            }
+
+            const rolesActivos = await Rol.count({ where: { espacioTrabajoId: id, activo: true } });
+            if (rolesActivos > 0) {
+                return res.status(400).json({ error: `No se puede desactivar el espacio de trabajo "${espacio.nombre}" porque tiene ${rolesActivos} rol(es) activo(s). Primero desactive los roles.` });
+            }
+
+            const conceptosActivos = await ConceptoSalarial.count({ where: { espacioTrabajoId: id, activo: true } });
+            if (conceptosActivos > 0) {
+                return res.status(400).json({ error: `No se puede desactivar el espacio de trabajo "${espacio.nombre}" porque tiene ${conceptosActivos} concepto(s) salarial(es) activo(s). Primero desactive los conceptos salariales.` });
+            }
+
+            const parametrosActivos = await ParametroLaboral.count({ where: { espacioTrabajoId: id } });
+            if (parametrosActivos > 0) {
+                return res.status(400).json({ error: `No se puede desactivar el espacio de trabajo "${espacio.nombre}" porque tiene ${parametrosActivos} parámetro(s) laboral(es) personalizado(s). Primero elimine los parámetros laborales.` });
+            }
         }
 
         await EspacioTrabajo.update(

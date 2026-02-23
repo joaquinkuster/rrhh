@@ -1,4 +1,4 @@
-const { Empresa, Area, Departamento, Puesto, Contrato, EspacioTrabajo, Empleado } = require('../models');
+const { Empresa, Area, Departamento, Puesto, Contrato, EspacioTrabajo, Empleado, ContratoPuesto } = require('../models');
 const { Op } = require('sequelize');
 
 const includeStructure = [{
@@ -157,7 +157,6 @@ const create = async (req, res) => {
 // Eliminar empresa (eliminación lógica)
 const remove = async (req, res) => {
     try {
-        const { Contrato, ContratoPuesto } = require('../models');
         const empresa = await Empresa.findByPk(req.params.id, {
             include: includeStructure
         });
@@ -189,7 +188,7 @@ const remove = async (req, res) => {
 
             if (contratosActivos > 0) {
                 return res.status(400).json({
-                    error: `No se puede desactivar la empresa porque tiene ${contratosActivos} contrato(s) activo(s). Primero desactive los contratos.`
+                    error: `No se puede desactivar la empresa "${empresa.nombre}" porque tiene ${contratosActivos} contrato(s) activo(s). Primero desactive los contratos.`
                 });
             }
         }
@@ -208,6 +207,43 @@ const removeBulk = async (req, res) => {
 
         if (!ids || !Array.isArray(ids) || ids.length === 0) {
             return res.status(400).json({ error: 'Se requiere un array de IDs' });
+        }
+
+        // --- Verificaciones de entidades asociadas activas para cada empresa ---
+        for (const id of ids) {
+            const empresa = await Empresa.findByPk(id, {
+                include: includeStructure
+            });
+
+            if (!empresa) continue;
+
+            // Obtener todos los puestos de esta empresa
+            const puestoIds = [];
+            empresa.areas?.forEach(area => {
+                area.departamentos?.forEach(depto => {
+                    depto.puestos?.forEach(puesto => {
+                        puestoIds.push(puesto.id);
+                    });
+                });
+            });
+
+            // Verificar si hay contratos activos asociados a los puestos de esta empresa
+            if (puestoIds.length > 0) {
+                const contratosActivos = await ContratoPuesto.count({
+                    where: { puestoId: puestoIds },
+                    include: [{
+                        model: Contrato,
+                        as: 'contrato',
+                        where: { activo: true }
+                    }]
+                });
+
+                if (contratosActivos > 0) {
+                    return res.status(400).json({
+                        error: `No se puede desactivar la empresa "${empresa.nombre}" porque tiene ${contratosActivos} contrato(s) activo(s). Primero desactive los contratos.`
+                    });
+                }
+            }
         }
 
         await Empresa.update(

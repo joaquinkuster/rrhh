@@ -359,39 +359,41 @@ const Liquidaciones = () => {
                 </div>
 
                 {/* Filters */}
-                <div className="filters-bar" style={{ flexWrap: 'wrap' }}>
-                    <div className="filter-group" style={{ minWidth: '160px' }}>
-                        <Select isDisabled={isSingleWorkspace} options={espacioOptions} value={filterEspacio} onChange={opt => { setFilterEspacio(opt); setPage(1); }} placeholder="Espacio..." isClearable={!isSingleWorkspace} styles={selectStyles} noOptionsMessage={() => 'Sin resultados'} />
+                <div className="filters-bar">
+                    <div className="filters-inputs">
+                        <div className="filter-group" style={{ minWidth: '160px' }}>
+                            <Select isDisabled={isSingleWorkspace} options={espacioOptions} value={filterEspacio} onChange={opt => { setFilterEspacio(opt); setPage(1); }} placeholder="Espacio..." isClearable={!isSingleWorkspace} styles={selectStyles} noOptionsMessage={() => 'Sin resultados'} />
+                        </div>
+                        <div className="filter-group" style={{ minWidth: '200px' }}>
+                            <Select isDisabled={isSingleEmployee} options={empleadoOptions} value={filterEmpleado} onChange={opt => { setFilterEmpleado(opt); setPage(1); }} placeholder="Empleado..." isClearable={!isSingleEmployee} styles={selectStyles} noOptionsMessage={() => 'Sin resultados'} />
+                        </div>
+                        <div className="filter-group">
+                            <input
+                                type="date"
+                                className="filter-input"
+                                value={filterFechaDesde}
+                                onChange={(e) => { setFilterFechaDesde(e.target.value); setPage(1); }}
+                                title="Desde"
+                            />
+                        </div>
+                        <div className="filter-group">
+                            <input
+                                type="date"
+                                className="filter-input"
+                                value={filterFechaHasta}
+                                onChange={(e) => { setFilterFechaHasta(e.target.value); setPage(1); }}
+                                title="Hasta"
+                            />
+                        </div>
+                        <div className="filter-group">
+                            <select className="filter-input" value={filterEstado} onChange={(e) => { setFilterEstado(e.target.value); setPage(1); }}>
+                                <option value="">Todas</option>
+                                <option value="false">Generadas</option>
+                                <option value="true">Pagadas</option>
+                            </select>
+                        </div>
                     </div>
-                    <div className="filter-group" style={{ minWidth: '200px' }}>
-                        <Select isDisabled={isSingleEmployee} options={empleadoOptions} value={filterEmpleado} onChange={opt => { setFilterEmpleado(opt); setPage(1); }} placeholder="Empleado..." isClearable={!isSingleEmployee} styles={selectStyles} noOptionsMessage={() => 'Sin resultados'} />
-                    </div>
-                    <div className="filter-group">
-                        <input
-                            type="date"
-                            className="filter-input"
-                            value={filterFechaDesde}
-                            onChange={(e) => { setFilterFechaDesde(e.target.value); setPage(1); }}
-                            title="Desde"
-                        />
-                    </div>
-                    <div className="filter-group">
-                        <input
-                            type="date"
-                            className="filter-input"
-                            value={filterFechaHasta}
-                            onChange={(e) => { setFilterFechaHasta(e.target.value); setPage(1); }}
-                            title="Hasta"
-                        />
-                    </div>
-                    <div className="filter-group">
-                        <select className="filter-input" value={filterEstado} onChange={(e) => { setFilterEstado(e.target.value); setPage(1); }}>
-                            <option value="">Todas</option>
-                            <option value="false">Generadas</option>
-                            <option value="true">Pagadas</option>
-                        </select>
-                    </div>
-                    <div className="filter-group">
+                    <div className="filters-actions">
                         <div className="column-selector-wrapper">
                             <button className="btn btn-secondary btn-sm" onClick={() => setShowColumnSelector(!showColumnSelector)}>
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
@@ -411,15 +413,15 @@ const Liquidaciones = () => {
                                 </div>
                             )}
                         </div>
+                        {hasActiveFilters && (
+                            <button className="btn btn-secondary btn-sm" onClick={clearFilters}>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                                Limpiar
+                            </button>
+                        )}
                     </div>
-                    {hasActiveFilters && (
-                        <button className="btn btn-secondary btn-sm" onClick={clearFilters}>
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                            Limpiar
-                        </button>
-                    )}
                 </div>
 
                 {/* Content */}
