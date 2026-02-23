@@ -320,7 +320,7 @@ const ContratoWizard = ({ contrato: contratoToEdit, onClose, onSuccess, empleado
     };
 
     const handleEmpleadoChange = async (options, skipPuestosReset = false) => {
-        const selectedOptions = options || [];
+        const selectedOptions = isEditMode ? (options ? [options] : []) : (options || []);
         setSelectedEmpleados(selectedOptions);
 
         // Resetear puestos al cambiar selección, except when loading edit data
@@ -590,7 +590,8 @@ const ContratoWizard = ({ contrato: contratoToEdit, onClose, onSuccess, empleado
         }, {})
     );
 
-    const isEmpleadoLocked = isEditMode;
+    const areFieldsLocked = isEditMode && contratoToEdit?.estado !== 'pendiente';
+    const isEmpleadoLocked = areFieldsLocked;
 
     // Update puestos options when puestosConContrato changes
     useEffect(() => {
@@ -646,6 +647,7 @@ const ContratoWizard = ({ contrato: contratoToEdit, onClose, onSuccess, empleado
                 <div className="form-group">
                     <label className="form-label">Empresa *</label>
                     <Select
+                        isDisabled={areFieldsLocked}
                         options={Object.values(empresas.reduce((acc, emp) => {
                             const wsName = emp.espacioTrabajo?.nombre || 'General';
                             if (!acc[wsName]) acc[wsName] = { label: wsName, options: [] };
@@ -691,6 +693,7 @@ const ContratoWizard = ({ contrato: contratoToEdit, onClose, onSuccess, empleado
                         </div>
                     )}
                     <Select
+                        isDisabled={areFieldsLocked}
                         isMulti
                         options={puestosDisponibles}
                         value={selectedPuestos}
@@ -762,6 +765,7 @@ const ContratoWizard = ({ contrato: contratoToEdit, onClose, onSuccess, empleado
                     <input
                         type="date"
                         name="fechaInicio"
+                        disabled={areFieldsLocked}
                         className={`form-input ${touched.fechaInicio && fieldErrors.fechaInicio ? 'input-error' : ''}`}
                         value={formData.fechaInicio}
                         onChange={handleChange}

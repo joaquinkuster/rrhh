@@ -229,7 +229,18 @@ const getAll = async (req, res) => {
         let result = await Solicitud.findAndCountAll({
             where,
             include: [includeContrato, ...includeTypes],
-            order: [['createdAt', 'DESC']],
+            order: [
+                [sequelize.literal(`CASE 
+                    WHEN COALESCE(\`licencia\`.\`estado\`, \`vacaciones\`.\`estado\`, \`horasExtras\`.\`estado\`, \`renuncia\`.\`estado\`, '') IN ('pendiente', '') THEN 1 
+                    WHEN COALESCE(\`licencia\`.\`estado\`, \`vacaciones\`.\`estado\`, \`horasExtras\`.\`estado\`, \`renuncia\`.\`estado\`) = 'aprobada' THEN 2 
+                    WHEN COALESCE(\`licencia\`.\`estado\`, \`vacaciones\`.\`estado\`, \`horasExtras\`.\`estado\`, \`renuncia\`.\`estado\`) = 'aceptada' THEN 3 
+                    WHEN COALESCE(\`licencia\`.\`estado\`, \`vacaciones\`.\`estado\`, \`horasExtras\`.\`estado\`, \`renuncia\`.\`estado\`) = 'justificada' THEN 4 
+                    WHEN COALESCE(\`licencia\`.\`estado\`, \`vacaciones\`.\`estado\`, \`horasExtras\`.\`estado\`, \`renuncia\`.\`estado\`) = 'procesada' THEN 5 
+                    WHEN COALESCE(\`licencia\`.\`estado\`, \`vacaciones\`.\`estado\`, \`horasExtras\`.\`estado\`, \`renuncia\`.\`estado\`) = 'injustificada' THEN 6 
+                    WHEN COALESCE(\`licencia\`.\`estado\`, \`vacaciones\`.\`estado\`, \`horasExtras\`.\`estado\`, \`renuncia\`.\`estado\`) = 'rechazada' THEN 7 
+                    ELSE 8 END`), 'ASC'],
+                ['createdAt', 'DESC']
+            ],
             limit: parseInt(limit),
             offset,
             subQuery: false,

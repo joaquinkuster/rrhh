@@ -176,7 +176,7 @@ const getAll = async (req, res) => {
         const { count, rows } = await Liquidacion.findAndCountAll({
             where,
             include: includeContrato,
-            order: [['id', 'DESC']],
+            order: [['estaPagada', 'ASC'], ['fechaInicio', 'DESC']],
             limit: parseInt(limit),
             offset: parseInt(offset),
         });

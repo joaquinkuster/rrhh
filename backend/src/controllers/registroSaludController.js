@@ -171,7 +171,10 @@ const getAll = async (req, res) => {
         const { count, rows } = await RegistroSalud.findAndCountAll({
             where,
             include: includeEmpleado,
-            order: [['fechaRealizacion', 'DESC']],
+            order: [
+                ['vigente', 'DESC'], // 'true' (1) before 'false' (0)
+                ['fechaRealizacion', 'DESC']
+            ],
             limit: parseInt(limit),
             offset,
         });

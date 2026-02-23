@@ -120,7 +120,14 @@ const getAll = async (req, res) => {
         let result = await Contrato.findAndCountAll({
             where,
             include: includeRelations,
-            order: [['createdAt', 'DESC']],
+            order: [
+                [sequelize.literal(`CASE 
+                    WHEN \`Contrato\`.\`estado\` = 'pendiente' THEN 1 
+                    WHEN \`Contrato\`.\`estado\` = 'en_curso' THEN 2 
+                    WHEN \`Contrato\`.\`estado\` = 'finalizado' THEN 3 
+                    ELSE 4 END`), 'ASC'],
+                ['fechaInicio', 'DESC']
+            ],
             limit: parseInt(limit),
             offset,
             distinct: true, // Para contar correctamente con M:N

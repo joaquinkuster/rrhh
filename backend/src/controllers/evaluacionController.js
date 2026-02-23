@@ -208,7 +208,15 @@ const getAll = async (req, res) => {
                 includeContratoDetalle('contratoEvaluado'),
                 includeContratoDetalle('evaluadores')
             ],
-            order: [['fecha', 'DESC']],
+            order: [
+                [sequelize.literal(`CASE 
+                    WHEN \`Evaluacion\`.\`estado\` = 'pendiente' THEN 1 
+                    WHEN \`Evaluacion\`.\`estado\` = 'en_curso' THEN 2 
+                    WHEN \`Evaluacion\`.\`estado\` = 'finalizada' THEN 3 
+                    WHEN \`Evaluacion\`.\`estado\` = 'firmada' THEN 4 
+                    ELSE 5 END`), 'ASC'],
+                ['fecha', 'DESC']
+            ],
             limit: parseInt(limit),
             offset,
             distinct: true,
