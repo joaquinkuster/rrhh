@@ -436,10 +436,47 @@ const remove = async (req, res) => {
 // Reactivar contrato
 const reactivate = async (req, res) => {
     try {
-        const contrato = await Contrato.findByPk(req.params.id);
+        const contrato = await Contrato.findByPk(req.params.id, {
+            include: [{
+                model: Puesto,
+                as: 'puestos',
+                through: { attributes: [] }
+            }]
+        });
 
         if (!contrato) {
             return res.status(404).json({ error: 'Contrato no encontrado' });
+        }
+
+        const puestoIds = contrato.puestos.map(p => p.id);
+
+        if (puestoIds.length > 0) {
+            // Validar que el empleado no tenga ya otro contrato activo (y no finalizado) para alguno de estos puestos
+            const contratosExistentes = await ContratoPuesto.findAll({
+                where: { puestoId: puestoIds },
+                include: [{
+                    model: Contrato,
+                    as: 'contrato',
+                    where: {
+                        empleadoId: contrato.empleadoId,
+                        activo: true,
+                        estado: { [Op.ne]: 'finalizado' },
+                        id: { [Op.ne]: contrato.id } // Excluir el contrato actual
+                    }
+                }]
+            });
+
+            if (contratosExistentes.length > 0) {
+                const puestosConContrato = contratosExistentes.map(cp => cp.puestoId);
+                const puestosNombres = contrato.puestos
+                    .filter(p => puestosConContrato.includes(p.id))
+                    .map(p => p.nombre)
+                    .join(', ');
+
+                return res.status(400).json({
+                    error: `El empleado ya tiene un contrato activo (no finalizado) para el/los puesto(s): ${puestosNombres}`
+                });
+            }
         }
 
         await contrato.update({ activo: true });

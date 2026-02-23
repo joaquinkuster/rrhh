@@ -169,6 +169,28 @@ const create = async (req, res) => {
             throw new Error('No se pudo determinar el espacio de trabajo para crear el empleado');
         }
 
+        // Validar unicidad de documento dentro del mismo espacioTrabajo y tipoDocumento
+        if (numeroDocumento && tipoDocumento) {
+            const docExistente = await Empleado.findOne({
+                where: { espacioTrabajoId, tipoDocumento, numeroDocumento }
+            });
+            if (docExistente) {
+                await t.rollback();
+                return res.status(400).json({ error: `El número de documento ya está registrado para el tipo ${tipoDocumento} en este espacio de trabajo` });
+            }
+        }
+
+        // Validar unicidad de CUIL dentro del mismo espacioTrabajo
+        if (cuil) {
+            const cuilExistente = await Empleado.findOne({
+                where: { espacioTrabajoId, cuil }
+            });
+            if (cuilExistente) {
+                await t.rollback();
+                return res.status(400).json({ error: 'El CUIL ya está registrado en este espacio de trabajo' });
+            }
+        }
+
         // 1. Crear Usuario (Solo Auth + Nombre)
         const rawPassword = contrasena || 'Sistema123!';
 
@@ -209,8 +231,6 @@ const create = async (req, res) => {
         if (error.name === 'SequelizeUniqueConstraintError') {
             const field = error.errors?.[0]?.path || '';
             if (field === 'email') return res.status(400).json({ error: 'El email ya está registrado' });
-            if (field === 'numeroDocumento') return res.status(400).json({ error: 'El número de documento ya está registrado' });
-            if (field === 'cuil') return res.status(400).json({ error: 'El CUIL ya está registrado' });
         }
         res.status(500).json({ error: error.message });
     }
@@ -231,9 +251,43 @@ const update = async (req, res) => {
             nombre, apellido, email,
             // Datos personales ahora en Empleado
             telefono, tipoDocumento, numeroDocumento, cuil, fechaNacimiento, nacionalidadId, genero, estadoCivil,
-            calle, numero, piso, departamento, codigoPostal, provinciaId, ciudadId,
+            calle, numero, piso, departamento, codigoPostal, provinciaId, ciudadId, espacioTrabajoId,
             ...empleadoData
         } = req.body;
+
+        const currentEspacio = espacioTrabajoId || empleado.espacioTrabajoId;
+        const currentTipo = tipoDocumento || empleado.tipoDocumento;
+        const currentDoc = numeroDocumento || empleado.numeroDocumento;
+
+        if (currentDoc && currentTipo) {
+            const docExistente = await Empleado.findOne({
+                where: {
+                    espacioTrabajoId: currentEspacio,
+                    tipoDocumento: currentTipo,
+                    numeroDocumento: currentDoc,
+                    id: { [Op.ne]: empleado.id }
+                }
+            });
+            if (docExistente) {
+                await t.rollback();
+                return res.status(400).json({ error: `El número de documento ya está registrado para el tipo ${currentTipo} en este espacio de trabajo` });
+            }
+        }
+
+        const currentCuil = cuil !== undefined ? cuil : empleado.cuil;
+        if (currentCuil) {
+            const cuilExistente = await Empleado.findOne({
+                where: {
+                    espacioTrabajoId: currentEspacio,
+                    cuil: currentCuil,
+                    id: { [Op.ne]: empleado.id }
+                }
+            });
+            if (cuilExistente) {
+                await t.rollback();
+                return res.status(400).json({ error: 'El CUIL ya está registrado en este espacio de trabajo' });
+            }
+        }
 
         // Actualizar Empleado (Datos personales + Dirección + Otros)
         await empleado.update({
@@ -270,7 +324,7 @@ const update = async (req, res) => {
     } catch (error) {
         await t.rollback();
         if (error.name === 'SequelizeUniqueConstraintError') {
-            return res.status(400).json({ error: 'El email o documento ya está en uso' });
+            return res.status(400).json({ error: 'El email ya está en uso' });
         }
         res.status(500).json({ error: error.message });
     }
@@ -329,11 +383,64 @@ const remove = async (req, res) => {
 const reactivate = async (req, res) => {
     const t = await sequelize.transaction();
     try {
-        const empleado = await Empleado.findByPk(req.params.id);
+        const empleado = await Empleado.findByPk(req.params.id, {
+            include: [{ model: Usuario, as: 'usuario' }]
+        });
         if (!empleado) return res.status(404).json({ error: 'Empleado no encontrado' });
 
-        // Empleado ya no tiene campo activo
-        // await empleado.update({ activo: true }, { transaction: t });
+        // 1. Validar unicidad de email activo
+        const emailDuplicado = await Usuario.findOne({
+            where: {
+                email: empleado.usuario.email,
+                activo: true,
+                id: { [Op.ne]: empleado.usuarioId }
+            }
+        });
+        if (emailDuplicado) {
+            await t.rollback();
+            return res.status(400).json({ error: 'Ya existe un usuario activo con este email' });
+        }
+
+        // 2. Validar unicidad de documento activo en el mismo espacio
+        if (empleado.numeroDocumento && empleado.tipoDocumento) {
+            const docExistente = await Empleado.findOne({
+                where: {
+                    espacioTrabajoId: empleado.espacioTrabajoId,
+                    tipoDocumento: empleado.tipoDocumento,
+                    numeroDocumento: empleado.numeroDocumento,
+                    id: { [Op.ne]: empleado.id }
+                },
+                include: [{
+                    model: Usuario,
+                    as: 'usuario',
+                    where: { activo: true }
+                }]
+            });
+            if (docExistente) {
+                await t.rollback();
+                return res.status(400).json({ error: `El número de documento ya está registrado para el tipo ${empleado.tipoDocumento} en este espacio de trabajo` });
+            }
+        }
+
+        // 3. Validar unicidad de CUIL activo en el mismo espacio
+        if (empleado.cuil) {
+            const cuilExistente = await Empleado.findOne({
+                where: {
+                    espacioTrabajoId: empleado.espacioTrabajoId,
+                    cuil: empleado.cuil,
+                    id: { [Op.ne]: empleado.id }
+                },
+                include: [{
+                    model: Usuario,
+                    as: 'usuario',
+                    where: { activo: true }
+                }]
+            });
+            if (cuilExistente) {
+                await t.rollback();
+                return res.status(400).json({ error: 'El CUIL ya está registrado en este espacio de trabajo' });
+            }
+        }
 
         await Usuario.update({ activo: true }, { where: { id: empleado.usuarioId }, transaction: t });
 

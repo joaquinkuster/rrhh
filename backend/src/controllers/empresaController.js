@@ -129,6 +129,16 @@ const create = async (req, res) => {
             return res.status(400).json({ error: 'Debe pertenecer a un espacio de trabajo para crear una empresa. Por favor cree un Espacio de Trabajo primero.' });
         }
 
+        // Validar unicidad de email dentro del mismo espacioTrabajo
+        if (email) {
+            const emailExistente = await Empresa.findOne({
+                where: { espacioTrabajoId, email }
+            });
+            if (emailExistente) {
+                return res.status(400).json({ error: 'El email ya está registrado en este espacio de trabajo' });
+            }
+        }
+
         const nuevaEmpresa = await Empresa.create({
             nombre,
             email,
@@ -266,6 +276,16 @@ const reactivate = async (req, res) => {
             return res.status(404).json({ error: 'Empresa no encontrada' });
         }
 
+        // Validar unicidad de email dentro del mismo espacioTrabajo
+        if (empresa.email) {
+            const emailExistente = await Empresa.findOne({
+                where: { espacioTrabajoId: empresa.espacioTrabajoId, email: empresa.email, id: { [Op.ne]: empresa.id } }
+            });
+            if (emailExistente) {
+                return res.status(400).json({ error: 'El email ya está registrado en este espacio de trabajo' });
+            }
+        }
+
         await empresa.update({ activo: true });
 
         const empresaReactivada = await Empresa.findByPk(req.params.id, {
@@ -282,11 +302,25 @@ const reactivate = async (req, res) => {
 const update = async (req, res) => {
     try {
         const { id } = req.params;
-        const { nombre, email, telefono, industria, direccion, areas } = req.body;
+        const { nombre, email, telefono, industria, direccion, areas, espacioTrabajoId } = req.body;
+
+        if (!espacioTrabajoId) {
+            return res.status(400).json({ error: 'Debe pertenecer a un espacio de trabajo para crear una empresa. Por favor cree un Espacio de Trabajo primero.' });
+        }
 
         const empresa = await Empresa.findByPk(id);
         if (!empresa) {
             return res.status(404).json({ error: 'Empresa no encontrada' });
+        }
+
+        // Validar unicidad de email dentro del mismo espacioTrabajo
+        if (email) {
+            const emailExistente = await Empresa.findOne({
+                where: { espacioTrabajoId, email, id: { [Op.ne]: id } }
+            });
+            if (emailExistente) {
+                return res.status(400).json({ error: 'El email ya está registrado en este espacio de trabajo' });
+            }
         }
 
         await empresa.update({ nombre, email, telefono, industria, direccion });

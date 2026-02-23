@@ -292,6 +292,26 @@ const create = async (req, res) => {
             return res.status(400).json({ error: 'El contrato no está activo' });
         }
 
+        // Validate no pending solicitudes for this contract
+        const solicitudesPendientes = await Solicitud.findOne({
+            where: {
+                contratoId: contratoId,
+                activo: true,
+                [Op.and]: [{
+                    [Op.or]: [
+                        { '$licencia.estado$': { [Op.or]: ['pendiente', ''] } },
+                        { '$vacaciones.estado$': { [Op.or]: ['pendiente', ''] } },
+                        { '$horasExtras.estado$': { [Op.or]: ['pendiente', ''] } },
+                        { '$renuncia.estado$': { [Op.or]: ['pendiente', ''] } }
+                    ]
+                }]
+            },
+            include: includeTypes
+        });
+        if (solicitudesPendientes) {
+            return res.status(400).json({ error: 'No se puede crear la solicitud porque ya existe otra solicitud pendiente para este contrato' });
+        }
+
         // Type-specific validations using services
         if (tipoSolicitud === 'vacaciones') {
             const validacion = await vacacionesService.validarVacaciones(contratoId, typeData);
@@ -595,6 +615,27 @@ const reactivate = async (req, res) => {
 
         if (!solicitud) {
             return res.status(404).json({ error: 'Solicitud no encontrada' });
+        }
+
+        const solicitudesPendientes = await Solicitud.findOne({
+            where: {
+                contratoId: solicitud.contratoId,
+                activo: true,
+                id: { [Op.ne]: solicitud.id },
+                [Op.and]: [{
+                    [Op.or]: [
+                        { '$licencia.estado$': { [Op.or]: ['pendiente', ''] } },
+                        { '$vacaciones.estado$': { [Op.or]: ['pendiente', ''] } },
+                        { '$horasExtras.estado$': { [Op.or]: ['pendiente', ''] } },
+                        { '$renuncia.estado$': { [Op.or]: ['pendiente', ''] } }
+                    ]
+                }]
+            },
+            include: includeTypes
+        });
+
+        if (solicitudesPendientes) {
+            return res.status(400).json({ error: 'No se puede reactivar porque ya existe otra solicitud pendiente para este contrato' });
         }
 
         await solicitud.update({ activo: true });
