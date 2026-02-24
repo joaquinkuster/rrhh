@@ -1,4 +1,4 @@
-const { RegistroSalud, Empleado, Usuario, EspacioTrabajo, Contrato, Rol, Permiso, Licencia } = require('../models');
+const { RegistroSalud, Empleado, Usuario, EspacioTrabajo, Contrato, Rol, Permiso, Licencia, Solicitud } = require('../models');
 const { Op } = require('sequelize');
 
 // Helper: verifica si el usuario en sesión tiene un permiso específico en el módulo registros_salud
@@ -326,7 +326,14 @@ const remove = async (req, res) => {
         }
 
         // --- Verificaciones de entidades asociadas activas ---
-        const licenciasActivas = await Licencia.count({ where: { registroSaludId: registro.id, activo: true } });
+        const licenciasActivas = await Licencia.count({
+            include: [{
+                model: Solicitud,
+                as: 'solicitud',
+                where: { activo: true }
+            }],
+            where: { registroSaludId: registro.id }
+        });
         if (licenciasActivas > 0) {
             return res.status(400).json({ error: `No se puede desactivar el registro de salud porque tiene ${licenciasActivas} licencia(s) activa(s). Primero desactive las licencias.` });
         }
@@ -357,7 +364,14 @@ const bulkRemove = async (req, res) => {
             if (!registro) continue;
 
             // --- Verificaciones de entidades asociadas activas ---
-            const licenciasActivas = await Licencia.count({ where: { registroSaludId: registro.id, activo: true } });
+            const licenciasActivas = await Licencia.count({
+                include: [{
+                    model: Solicitud,
+                    as: 'solicitud',
+                    where: { activo: true }
+                }],
+                where: { registroSaludId: registro.id }
+            });
             if (licenciasActivas > 0) {
                 return res.status(400).json({ error: `No se puede desactivar el registro de salud porque tiene ${licenciasActivas} licencia(s) activa(s). Primero desactive las licencias.` });
             }

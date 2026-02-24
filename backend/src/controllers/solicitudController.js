@@ -10,6 +10,14 @@ const licenciaService = require('../services/licenciaService');
 const horasExtrasService = require('../services/horasExtrasService');
 const renunciaService = require('../services/renunciaService');
 
+const TIPOS_RELACION_DEPENDENCIA = [
+    'tiempo_indeterminado',
+    'periodo_prueba',
+    'plazo_fijo',
+    'eventual',
+    'teletrabajo'
+];
+
 // Helper: verifica si el usuario en sesión tiene un permiso específico en el módulo solicitudes
 const tienePermiso = async (session, accion) => {
     if (session.esAdministrador) return true;
@@ -303,6 +311,13 @@ const create = async (req, res) => {
             return res.status(400).json({ error: 'El contrato no está activo' });
         }
 
+        // Validar tipo de contrato vs tipo de solicitud
+        const esRelacionDependencia = TIPOS_RELACION_DEPENDENCIA.includes(contrato.tipoContrato);
+        if (!esRelacionDependencia && tipoSolicitud !== 'licencia') {
+            await transaction.rollback();
+            return res.status(400).json({ error: 'Este tipo de contrato solo permite solicitudes de Licencia / Inasistencia' });
+        }
+
         // Validate no pending solicitudes for this contract
         const solicitudesPendientes = await Solicitud.findOne({
             where: {
@@ -320,7 +335,7 @@ const create = async (req, res) => {
             include: includeTypes
         });
         if (solicitudesPendientes) {
-            return res.status(400).json({ error: 'No se puede crear la solicitud porque ya existe otra solicitud pendiente para este contrato' });
+            return res.status(400).json({ error: 'No podés crear la solicitud porque ya existe una pendiente para este contrato. Por favor, esperá a que se resuelva la solicitud actual.' });
         }
 
         // Type-specific validations using services
@@ -446,7 +461,7 @@ const update = async (req, res) => {
             const otherFields = Object.keys(typeData).filter(k => !allowedFields.includes(k));
             if (otherFields.length > 0) {
                 await transaction.rollback();
-                return res.status(400).json({ error: 'No se puede editar una solicitud que no está en estado Pendiente' });
+                return res.status(400).json({ error: 'No podés editar la solicitud porque no está pendiente. Solo podés cambiar su estado.' });
             }
         }
 
@@ -517,6 +532,13 @@ const update = async (req, res) => {
                     if (diasLicencia > 0) {
                         await licenciaService.onAprobacion(solicitud.contratoId, diasLicencia, transaction);
                     }
+                }
+
+                // Limpiar registroSaludId si el motivo no es de salud
+                const MOTIVOS_SALUD_VAL = ['accidente_trabajo_art', 'enfermedad_inculpable'];
+                const nuevoMotivo = typeData.motivoLegal || solicitud.licencia.motivoLegal;
+                if (!MOTIVOS_SALUD_VAL.includes(nuevoMotivo)) {
+                    typeData.registroSaludId = null;
                 }
 
                 await Licencia.update(typeData, {
@@ -646,7 +668,7 @@ const reactivate = async (req, res) => {
         });
 
         if (solicitudesPendientes) {
-            return res.status(400).json({ error: 'No se puede reactivar porque ya existe otra solicitud pendiente para este contrato' });
+            return res.status(400).json({ error: 'No podés reactivar la solicitud porque ya existe una pendiente para este contrato. Por favor, esperá a que se resuelva la solicitud actual.' });
         }
 
         await solicitud.update({ activo: true });

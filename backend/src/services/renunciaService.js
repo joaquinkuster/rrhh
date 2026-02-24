@@ -94,7 +94,7 @@ const validarRenuncia = async (contratoId, solicitudIdActual = null) => {
     });
 
     if (pendiente) {
-        return { valido: false, error: 'Ya existe una renuncia pendiente para este empleado' };
+        return { valido: false, error: 'Ya existe una renuncia pendiente para este empleado. Revísala antes de continuar.' };
     }
 
     // 2. Verificar que HOY no tenga ausencia aprobada
@@ -102,7 +102,7 @@ const validarRenuncia = async (contratoId, solicitudIdActual = null) => {
     if (ausencia.tieneAusencia) {
         return {
             valido: false,
-            error: `No se puede presentar renuncia mientras el empleado tiene ${ausencia.tipo}`
+            error: `No se puede presentar renuncia mientras el empleado tiene ${ausencia.tipo}. Por favor, elige otro período.`
         };
     }
 
@@ -123,7 +123,7 @@ const validarAprobacion = async (contratoId) => {
     if (ausencia.tieneAusencia) {
         return {
             valido: false,
-            error: `No se puede procesar la renuncia mientras el empleado tiene ${ausencia.tipo}`
+            error: `No se puede procesar la renuncia mientras el empleado tiene ${ausencia.tipo}. Por favor, elige otro período.`
         };
     }
     return { valido: true };

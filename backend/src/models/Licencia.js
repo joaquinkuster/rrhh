@@ -85,23 +85,6 @@ const Licencia = sequelize.define('Licencia', {
             min: { args: [1], msg: 'Los días solicitados deben ser mayor a 0' },
         },
     },
-    documentos: {
-        type: DataTypes.JSON,
-        allowNull: true,
-        defaultValue: [],
-        get() {
-            const rawValue = this.getDataValue('documentos');
-            if (!rawValue) return [];
-            if (typeof rawValue === 'string') {
-                try {
-                    return JSON.parse(rawValue);
-                } catch {
-                    return [];
-                }
-            }
-            return rawValue;
-        },
-    },
     urlJustificativo: {
         type: DataTypes.STRING(100),
         allowNull: true,

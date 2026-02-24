@@ -77,23 +77,6 @@ const HorasExtras = sequelize.define('HorasExtras', {
             len: { args: [0, 500], msg: 'El motivo no puede exceder 500 caracteres' },
         },
     },
-    documentos: {
-        type: DataTypes.JSON,
-        allowNull: true,
-        defaultValue: [],
-        get() {
-            const rawValue = this.getDataValue('documentos');
-            if (!rawValue) return [];
-            if (typeof rawValue === 'string') {
-                try {
-                    return JSON.parse(rawValue);
-                } catch {
-                    return [];
-                }
-            }
-            return rawValue;
-        },
-    },
     urlJustificativo: {
         type: DataTypes.STRING(100),
         allowNull: true,
@@ -129,11 +112,6 @@ HorasExtras.addHook('beforeValidate', (horasExtras) => {
         fecha.setHours(0, 0, 0, 0);
         if (fecha > today) {
             throw new Error('La fecha no puede ser futura');
-        }
-
-        // Validar día hábil
-        if (!esDiaHabil(horasExtras.fecha)) {
-            throw new Error('La fecha debe ser un día hábil (lunes a viernes, excluyendo feriados)');
         }
     }
 

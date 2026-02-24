@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import Select from 'react-select';
 import StepTracker from './StepTracker';
 import { getContratos, getRegistrosSalud, createSolicitud, updateSolicitud, getDiasDisponiblesVacaciones, getDiasSolicitadosVacaciones } from '../services/api';
-import { validarDiaHabil } from '../utils/diasHabiles';
+import { validarDiaHabil, esDiaHabilSincrono } from '../utils/diasHabiles';
 import { getTodayStr, formatFullName } from '../utils/formatters';
 
 // Constants
@@ -11,6 +11,14 @@ const TIPOS_SOLICITUD = [
     { value: 'licencia', label: 'Licencia / Inasistencia' },
     { value: 'horas_extras', label: 'Horas Extras' },
     { value: 'renuncia', label: 'Renuncia' },
+];
+
+const TIPOS_RELACION_DEPENDENCIA = [
+    'tiempo_indeterminado',
+    'periodo_prueba',
+    'plazo_fijo',
+    'eventual',
+    'teletrabajo'
 ];
 
 const MOTIVOS_LEGALES = [
@@ -32,8 +40,14 @@ const MOTIVOS_LEGALES = [
     { value: 'compensatorio_franco', label: 'Compensatorio / Franco' },
 ];
 
-// Motivos que requieren registro de salud
 const MOTIVOS_SALUD = ['accidente_trabajo_art', 'enfermedad_inculpable'];
+
+const TIPO_EXAMEN_LABELS = {
+    pre_ocupacional: 'Pre-ocupacional',
+    periodico: 'Periódico',
+    post_ocupacional: 'Post-ocupacional',
+    retorno_trabajo: 'Retorno al trabajo',
+};
 
 const ESTADOS_LICENCIA = [
     { value: 'pendiente', label: 'Pendiente' },
@@ -112,21 +126,14 @@ const getSelectStyles = (isDark) => ({
     placeholder: (base) => ({ ...base, color: '#94a3b8' }),
 });
 
-// Calculate hours between two times
-const calcularHoras = (horaInicio, horaFin) => {
-    if (!horaInicio || !horaFin) return '';
-    const [h1, m1] = horaInicio.split(':').map(Number);
-    const [h2, m2] = horaFin.split(':').map(Number);
-    const mins1 = h1 * 60 + m1;
-    const mins2 = h2 * 60 + m2;
-    const diff = mins2 - mins1;
-    if (diff <= 0) return '';
-    const hours = Math.floor(diff / 60);
-    const mins = diff % 60;
-    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+// Helper to format decimal hours (e.g., 2.50) to human readable time (e.g., 2:30)
+const formatDecimalToTime = (decimalValue) => {
+    if (!decimalValue || isNaN(decimalValue)) return '0:00 hs';
+    const totalMinutes = Math.round(parseFloat(decimalValue) * 60);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return `${hours}:${minutes.toString().padStart(2, '0')} hs`;
 };
-
-
 
 const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
     const isEditing = !!solicitud;
@@ -143,6 +150,25 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
         fechaInicio: getTodayStr(),
         fechaNotificacion: getTodayStr()
     });
+
+    const getAvailableTipos = () => {
+        if (!selectedContrato) return TIPOS_SOLICITUD;
+        const tipoContrato = selectedContrato.contrato?.tipoContrato;
+        const esRelacionDependencia = TIPOS_RELACION_DEPENDENCIA.includes(tipoContrato);
+        if (esRelacionDependencia) return TIPOS_SOLICITUD;
+        return TIPOS_SOLICITUD.filter(tipo => tipo.value === 'licencia');
+    };
+
+    // Reset selectedTipo if it's no longer available for the new contract
+    useEffect(() => {
+        if (selectedContrato && selectedTipo) {
+            const disponibles = getAvailableTipos().map(t => t.value);
+            if (!disponibles.includes(selectedTipo)) {
+                setSelectedTipo('');
+                setFormData(prev => ({ ...prev, tipoSolicitud: '' }));
+            }
+        }
+    }, [selectedContrato]);
     const [touched, setTouched] = useState({});
     const [fieldErrors, setFieldErrors] = useState({});
     const [error, setError] = useState('');
@@ -211,20 +237,64 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
     // Initialize form
     useEffect(() => {
         if (solicitud) {
-            setFormData(prev => ({
-                ...prev,
+            const tipo = solicitud.tipoSolicitud;
+            // The association might be named 'horasExtras' (camelCase) while tipo is 'horas_extras' (snake_case)
+            // Checking all possible keys is the safest way to find the data sub-object
+            const subData = solicitud.licencia || solicitud.vacaciones || solicitud.horasExtras || solicitud.renuncia || solicitud[tipo] || {};
+
+            // Normalize dates to YYYY-MM-DD
+            const normalizeDate = (d) => {
+                if (!d) return '';
+                if (typeof d === 'string' && d.includes('T')) return d.split('T')[0];
+                return d;
+            };
+
+            const baseData = {
                 contratoId: solicitud.contratoId || '',
-                tipo: solicitud.tipo || '',
-                fechaInicio: solicitud.fechaInicio ? solicitud.fechaInicio.split('T')[0] : '',
-                fechaFin: solicitud.fechaFin ? solicitud.fechaFin.split('T')[0] : '',
-                motivo: solicitud.motivo || '',
-                descripcion: solicitud.descripcion || '',
-                documentos: solicitud.documentos || [],
-                estado: solicitud.estado || 'pendiente',
-                fechaSolicitud: solicitud.fechaSolicitud || getTodayStr(),
+                tipoSolicitud: tipo || '',
+                // Combine top-level and sub-data, prioritizing top-level for base fields
+                fechaInicio: normalizeDate(solicitud.fechaInicio || subData.fechaInicio),
+                fechaFin: normalizeDate(solicitud.fechaFin || subData.fechaFin),
+                motivo: solicitud.motivo || subData.motivo || '',
+                descripcion: solicitud.descripcion || subData.descripcion || '',
+                documentos: solicitud.documentos || subData.documentos || [],
+                estado: subData.estado || 'pendiente',
+                fechaSolicitud: normalizeDate(solicitud.fechaSolicitud || getTodayStr()),
                 diasHabiles: solicitud.diasHabiles || 0,
-            }));
-            setSelectedTipo(solicitud.tipoSolicitud);
+
+                // Fields from sub-objects
+                // Licencia
+                esLicencia: subData.esLicencia,
+                motivoLegal: subData.motivoLegal,
+                registroSaludId: subData.registroSaludId,
+                urlJustificativo: subData.urlJustificativo,
+                diasSolicitados: subData.diasSolicitud || subData.diasSolicitados,
+
+                // Vacaciones
+                periodo: subData.periodo,
+                diasCorrespondientes: subData.diasCorrespondientes,
+                diasTomados: subData.diasTomados,
+                diasDisponibles: subData.diasDisponibles,
+                diasSolicitud: subData.diasSolicitud,
+                fechaRegreso: normalizeDate(subData.fechaRegreso),
+                notificadoEl: normalizeDate(subData.notificadoEl),
+
+                // Horas Extras
+                fecha: normalizeDate(subData.fecha),
+                horaInicio: subData.horaInicio || '',
+                horaFin: subData.horaFin || '',
+                tipoHorasExtra: subData.tipoHorasExtra ? String(subData.tipoHorasExtra) : '',
+                cantidadHoras: subData.cantidadHoras || 0,
+
+                // Renuncia
+                fechaNotificacion: normalizeDate(subData.fechaNotificacion),
+                fechaBajaEfectiva: normalizeDate(subData.fechaBajaEfectiva),
+                urlComprobante: subData.urlComprobante,
+                preaviso: subData.preaviso
+            };
+
+            setFormData(baseData);
+            setSelectedTipo(tipo);
 
             if (solicitud.contrato) {
                 const c = solicitud.contrato;
@@ -240,20 +310,70 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
         }
     }, [solicitud]);
 
-    // Calcular días hábiles automáticamente al cambiar fechas
+    // Auto-select Horas Extras type when selected
     useEffect(() => {
-        if (selectedTipo === 'licencia' && formData.fechaInicio && formData.fechaFin) {
+        if (selectedTipo === 'horas_extras' && formData.fecha) {
+            setFormData(prev => ({
+                ...prev,
+                tipoHorasExtra: esDiaHabilSincrono(formData.fecha) ? '50' : '100'
+            }));
+        }
+    }, [selectedTipo, formData.fecha]);
+
+    // Cargar información de vacaciones (días disponibles, correspondientes, tomados)
+    useEffect(() => {
+        const loadVacationInfo = async () => {
+            if (selectedTipo === 'vacaciones' && selectedContrato?.value && formData.periodo) {
+                try {
+                    const result = await getDiasDisponiblesVacaciones(selectedContrato.value, formData.periodo);
+                    if (result) {
+                        setFormData(prev => ({
+                            ...prev,
+                            diasCorrespondientes: result.diasCorrespondientes,
+                            diasTomados: result.diasTomados,
+                            diasDisponibles: result.diasDisponibles
+                        }));
+                    }
+                } catch (err) {
+                    console.error('Error loading vacation info:', err);
+                }
+            }
+        };
+        loadVacationInfo();
+    }, [selectedTipo, selectedContrato, formData.periodo]);
+
+    // Calcular días solicitados y fecha de regreso (Vacaciones y Licencias)
+    useEffect(() => {
+        const calculateDays = async () => {
+            if (!formData.fechaInicio || !formData.fechaFin) return;
+
             const inicio = new Date(formData.fechaInicio);
             const fin = new Date(formData.fechaFin);
-            if (fin >= inicio) {
+            if (fin < inicio) return;
+
+            if (selectedTipo === 'vacaciones') {
+                try {
+                    const result = await getDiasSolicitadosVacaciones(formData.fechaInicio, formData.fechaFin);
+                    if (result) {
+                        setFormData(prev => ({
+                            ...prev,
+                            diasSolicitud: result.diasSolicitud,
+                            fechaRegreso: result.fechaRegreso
+                        }));
+                    }
+                } catch (err) {
+                    console.error('Error loading requested days:', err);
+                }
+            } else if (selectedTipo === 'licencia') {
                 const diffTime = Math.abs(fin - inicio);
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
                 setFormData(prev => ({
                     ...prev,
-                    diasSolicitados: diffDays,
+                    diasSolicitud: diffDays, // Usar diasSolicitud para unificar con vacaciones
                 }));
             }
-        }
+        };
+        calculateDays();
     }, [formData.fechaInicio, formData.fechaFin, selectedTipo]);
 
     // Load registros de salud when motivo requires it
@@ -264,8 +384,8 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
             if (selectedTipo === 'licencia' && MOTIVOS_SALUD.includes(formData.motivoLegal) && empleadoId) {
                 try {
                     setLoadingRegistros(true);
-                    // Solo filtrar por empleadoId y activo, sin vigente para mostrar todos los disponibles
-                    const result = await getRegistrosSalud({ empleadoId, activo: 'true', limit: 100 });
+                    // Solo filtrar por empleadoId, activo y VIGENTE
+                    const result = await getRegistrosSalud({ empleadoId, activo: 'true', vigente: 'true', limit: 100 });
                     setRegistrosSalud(result.data || []);
                 } catch (err) {
                     console.error('Error loading registros:', err);
@@ -282,13 +402,51 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
 
 
 
-    const handleChange = (field, value) => { // ✅ Síncrono ahora
-        setFormData(prev => ({ ...prev, [field]: value }));
+    const handleChange = (field, value) => {
+        setFormData(prev => {
+            const newData = { ...prev, [field]: value };
+
+            // Logic for Horas Extras
+            if (selectedTipo === 'horas_extras') {
+                // Auto-calculate duration
+                if (field === 'horaInicio' || field === 'horaFin') {
+                    const inicio = field === 'horaInicio' ? value : prev.horaInicio;
+                    const fin = field === 'horaFin' ? value : prev.horaFin;
+                    if (inicio && fin) {
+                        const [h1, m1] = inicio.split(':').map(Number);
+                        const [h2, m2] = fin.split(':').map(Number);
+                        const diff = (h2 * 60 + m2) - (h1 * 60 + m1);
+                        if (diff > 0) {
+                            newData.cantidadHoras = (diff / 60).toFixed(2);
+                        } else {
+                            newData.cantidadHoras = '0.00';
+                        }
+                    }
+                }
+
+                // Auto-select Type based on Date
+                if (field === 'fecha' && value) {
+                    const esHabil = esDiaHabilSincrono(value);
+                    newData.tipoHorasExtra = esHabil ? '50' : '100';
+                }
+            }
+
+            // Logic for Licencia
+            if (selectedTipo === 'licencia') {
+                if (field === 'motivoLegal' && !MOTIVOS_SALUD.includes(value)) {
+                    newData.registroSaludId = null;
+                }
+            }
+
+            return newData;
+        });
         setError('');
 
         // Validar día hábil en tiempo real SÍNCRONO
         const camposFecha = ['fechaInicio', 'fechaFin', 'fecha', 'fechaNotificacion', 'fechaBajaEfectiva', 'notificadoEl'];
-        if (camposFecha.includes(field) && value) {
+        const esHorasExtrasFecha = selectedTipo === 'horas_extras' && field === 'fecha';
+
+        if (camposFecha.includes(field) && value && !esHorasExtrasFecha) {
             try {
                 const nombresCampos = {
                     fechaInicio: 'La fecha de inicio',
@@ -304,6 +462,9 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
                 setFieldErrors(prev => ({ ...prev, [field]: error.message }));
                 setTouched(prev => ({ ...prev, [field]: true })); // Marcar como touched para mostrar error
             }
+        } else if (esHorasExtrasFecha) {
+            // Limpiar error de día hábil si existiera (aunque ya no se valida)
+            setFieldErrors(prev => ({ ...prev, [field]: null }));
         }
 
         if (touched[field]) {
@@ -361,6 +522,21 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
             if (formData.fechaFin && formData.fechaInicio && formData.fechaFin < formData.fechaInicio) {
                 errors.fechaFin = 'La fecha de fin no puede ser anterior a la de inicio';
             }
+
+            // Validar rango por período (1 de Mayo año X al 30 de Abril año X+1)
+            if (formData.periodo && (formData.fechaInicio || formData.fechaFin)) {
+                const anio = parseInt(formData.periodo);
+                const minFecha = `${anio}-05-01`;
+                const maxFecha = `${anio + 1}-04-30`;
+
+                if (formData.fechaInicio && (formData.fechaInicio < minFecha || formData.fechaInicio > maxFecha)) {
+                    errors.fechaInicio = `Para el período ${anio}, la fecha debe ser entre el 01/05/${anio} y el 30/04/${anio + 1}`;
+                }
+                if (formData.fechaFin && (formData.fechaFin < minFecha || formData.fechaFin > maxFecha)) {
+                    errors.fechaFin = `Para el período ${anio}, la fecha debe ser entre el 01/05/${anio} y el 30/04/${anio + 1}`;
+                }
+            }
+
             if (formData.diasSolicitud && formData.diasDisponibles && formData.diasSolicitud > formData.diasDisponibles) {
                 errors.fechaFin = `Los días solicitados (${formData.diasSolicitud}) exceden los disponibles (${formData.diasDisponibles})`;
             }
@@ -504,7 +680,7 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
                     disabled={isEditing}
                 >
                     <option value="">Seleccionar tipo de solicitud</option>
-                    {TIPOS_SOLICITUD.map(tipo => (
+                    {getAvailableTipos().map(tipo => (
                         <option key={tipo.value} value={tipo.value}>{tipo.label}</option>
                     ))}
                 </select>
@@ -549,7 +725,7 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
 
                 {requiresSalud && (
                     <div className="form-group">
-                        <label className="form-label">Registro de Salud Asociado</label>
+                        <label className="form-label">Registro de Salud</label>
                         <select
                             className="form-input"
                             value={formData.registroSaludId || ''}
@@ -559,7 +735,7 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
                             <option value="">Seleccionar registro de salud...</option>
                             {registrosSalud.map(r => (
                                 <option key={r.id} value={r.id}>
-                                    {r.tipo === 'accidente' ? 'Accidente' : r.tipo === 'enfermedad_inculpable' ? 'Enfermedad' : r.tipo} - {new Date(r.fechaInicio).toLocaleDateString('es-AR')}
+                                    {TIPO_EXAMEN_LABELS[r.tipoExamen] || r.tipoExamen} - {r.fechaRealizacion ? new Date(r.fechaRealizacion + 'T00:00:00').toLocaleDateString('es-AR') : 'Sin fecha'}
                                 </option>
                             ))}
                         </select>
@@ -601,7 +777,7 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
                         <input
                             type="number"
                             className="form-input"
-                            value={formData.diasSolicitados || 0}
+                            value={formData.diasSolicitud || 0}
                             disabled
                         />
                     </div>
@@ -636,6 +812,7 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
                     <label className="form-label">Descripción</label>
                     <textarea
                         className="form-input"
+                        placeholder="Información adicional sobre la licencia..."
                         value={formData.descripcion || ''}
                         onChange={e => handleChange('descripcion', e.target.value)}
                         rows={2}
@@ -774,6 +951,7 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
                     <label className="form-label">Descripción</label>
                     <textarea
                         className="form-input"
+                        placeholder="Información adicional sobre las vacaciones..."
                         value={formData.descripcion || ''}
                         onChange={e => handleChange('descripcion', e.target.value)}
                         rows={2}
@@ -829,7 +1007,15 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
                 </div>
                 <div className="form-group">
                     <label className="form-label">Cantidad Horas</label>
-                    <input type="text" className="form-input" value={formData.cantidadHoras || 0} disabled />
+                    <input
+                        type="text"
+                        className="form-input"
+                        value={formatDecimalToTime(formData.cantidadHoras)}
+                        disabled
+                    />
+                    <small style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
+                        (Equivale a {formData.cantidadHoras || '0.00'} hs decimales)
+                    </small>
                 </div>
             </div>
 
@@ -841,7 +1027,7 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
                         value={formData.tipoHorasExtra || ''}
                         onChange={e => handleChange('tipoHorasExtra', e.target.value)}
                         onBlur={() => handleBlur('tipoHorasExtra')}
-                        disabled={isReadOnly()}
+                        disabled={true}
                     >
                         <option value="">Seleccionar...</option>
                         {TIPOS_HORAS_EXTRA.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
@@ -867,15 +1053,17 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
                     className="form-input"
                     value={formData.urlJustificativo || ''}
                     onChange={e => handleChange('urlJustificativo', e.target.value)}
+                    placeholder="https://..."
                     maxLength={100}
                     disabled={isReadOnly()}
                 />
             </div>
 
             <div className="form-group">
-                <label className="form-label">Motivo / Descripción</label>
+                <label className="form-label">Motivo</label>
                 <textarea
                     className="form-input"
+                    placeholder="Describa el motivo de las horas extras (opcional)..."
                     value={formData.motivo || ''}
                     onChange={e => handleChange('motivo', e.target.value)}
                     rows={2}
@@ -949,8 +1137,9 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
                     <input
                         type="url"
                         className="form-input"
-                        value={formData.urlComprobanteRenuncia || ''}
-                        onChange={e => handleChange('urlComprobanteRenuncia', e.target.value)}
+                        value={formData.urlComprobante || ''}
+                        onChange={e => handleChange('urlComprobante', e.target.value)}
+                        placeholder="https://..."
                         maxLength={100}
                         disabled={isReadOnly()}
                     />
@@ -961,6 +1150,7 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
                 <label className="form-label">Motivo</label>
                 <textarea
                     className="form-input"
+                    placeholder="Describa los motivos de la renuncia (opcional)..."
                     value={formData.motivo || ''}
                     onChange={e => handleChange('motivo', e.target.value)}
                     rows={2}

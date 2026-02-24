@@ -103,23 +103,6 @@ const Vacaciones = sequelize.define('Vacaciones', {
             len: { args: [0, 500], msg: 'La descripción no puede exceder 500 caracteres' },
         },
     },
-    documentos: {
-        type: DataTypes.JSON,
-        allowNull: true,
-        defaultValue: [],
-        get() {
-            const rawValue = this.getDataValue('documentos');
-            if (!rawValue) return [];
-            if (typeof rawValue === 'string') {
-                try {
-                    return JSON.parse(rawValue);
-                } catch {
-                    return [];
-                }
-            }
-            return rawValue;
-        },
-    },
     estado: {
         type: DataTypes.ENUM(...ESTADOS_VACACIONES),
         allowNull: false,

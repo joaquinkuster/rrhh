@@ -57,7 +57,7 @@ const validarLicencia = async (contratoId, datos, solicitudIdActual = null) => {
     });
 
     if (pendiente) {
-        return { valido: false, error: 'Ya existe una solicitud de licencia/inasistencia pendiente para este contrato' };
+        return { valido: false, error: 'Ya existe una solicitud de licencia / inasistencia pendiente para este contrato. Revísala antes de continuar.' };
     }
 
     // 2. Verificar solapamiento con licencias justificadas
@@ -79,7 +79,7 @@ const validarLicencia = async (contratoId, datos, solicitudIdActual = null) => {
     });
 
     if (licenciasJustificadas) {
-        return { valido: false, error: 'Las fechas se solapan con una licencia justificada existente' };
+        return { valido: false, error: 'Las fechas se solapan con una licencia justificada existente. Por favor, elige otro período.' };
     }
 
     // 3. Verificar solapamiento con vacaciones aprobadas
@@ -100,7 +100,7 @@ const validarLicencia = async (contratoId, datos, solicitudIdActual = null) => {
     });
 
     if (vacacionesAprobadas) {
-        return { valido: false, error: 'Las fechas se solapan con vacaciones aprobadas existentes' };
+        return { valido: false, error: 'Las fechas se solapan con vacaciones aprobadas existentes. Por favor, elige otro período.' };
     }
 
     // 4. Verificar solapamiento con horas extras aprobadas
@@ -123,7 +123,7 @@ const validarLicencia = async (contratoId, datos, solicitudIdActual = null) => {
     });
 
     if (horasExtrasAprobadas) {
-        return { valido: false, error: 'Las fechas incluyen un día con horas extras aprobadas' };
+        return { valido: false, error: 'Las fechas incluyen un día con horas extras aprobadas. Por favor, elige otro período.' };
     }
 
     return { valido: true };

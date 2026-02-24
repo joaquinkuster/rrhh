@@ -222,12 +222,25 @@ const SolicitudDetail = ({ solicitud, onEdit, onClose }) => {
     const renderHorasExtrasDetails = () => {
         const data = solicitud.horasExtras;
         if (!data) return null;
+
+        const formatDecimalToTime = (decimalValue) => {
+            if (!decimalValue || isNaN(decimalValue)) return '0:00 hs';
+            const totalMinutes = Math.round(parseFloat(decimalValue) * 60);
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = totalMinutes % 60;
+            return `${hours}:${minutes.toString().padStart(2, '0')} hs`;
+        };
+
         return (
             <>
                 <Field icon={Icons.calendar} label="Fecha" value={formatDateOnly(data.fecha)} />
                 <Field icon={Icons.clock} label="Hora Inicio" value={data.horaInicio} />
                 <Field icon={Icons.clock} label="Hora Fin" value={data.horaFin} />
-                <Field icon={Icons.clock} label="Cantidad de Horas" value={data.cantidadHoras} />
+                <Field
+                    icon={Icons.clock}
+                    label="Cantidad de Horas"
+                    value={`${formatDecimalToTime(data.cantidadHoras)}`}
+                />
                 <Field icon={Icons.document} label="Tipo" value={data.tipoHorasExtra === '50' ? '50% (hábiles)' : '100% (fines de semana/feriados)'} />
                 {data.urlJustificativo && <Field icon={Icons.document} label="Justificativo" value={<a href={data.urlJustificativo} target="_blank" rel="noreferrer" style={{ color: 'var(--primary-color)' }}>Ver documento</a>} />}
                 {data.motivo && <Field icon={Icons.document} label="Motivo" value={data.motivo} />}
@@ -243,7 +256,7 @@ const SolicitudDetail = ({ solicitud, onEdit, onClose }) => {
                 <Field icon={Icons.calendar} label="Fecha Notificación" value={formatDateOnly(data.fechaNotificacion)} />
                 <Field icon={Icons.calendar} label="Fecha Baja Efectiva" value={formatDateOnly(data.fechaBajaEfectiva)} />
                 <Field icon={Icons.document} label="Preaviso" value={data.preaviso === true ? 'Sí' : data.preaviso === false ? 'No' : '-'} />
-                {data.urlComprobanteRenuncia && <Field icon={Icons.document} label="Comprobante" value={<a href={data.urlComprobanteRenuncia} target="_blank" rel="noreferrer" style={{ color: 'var(--primary-color)' }}>Ver documento</a>} />}
+                {data.urlComprobante && <Field icon={Icons.document} label="Comprobante" value={<a href={data.urlComprobante} target="_blank" rel="noreferrer" style={{ color: 'var(--primary-color)' }}>Ver documento</a>} />}
                 {data.motivo && <Field icon={Icons.document} label="Motivo" value={data.motivo} />}
             </>
         );

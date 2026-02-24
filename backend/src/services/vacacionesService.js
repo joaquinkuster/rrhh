@@ -13,7 +13,27 @@ const { esDiaHabil, parseLocalDate } = require('../utils/fechas');
  * @returns {object} - { valido: boolean, error?: string }
  */
 const validarVacaciones = async (contratoId, datos, solicitudIdActual = null) => {
-    const { fechaInicio, fechaFin } = datos;
+    const { fechaInicio, fechaFin, periodo } = datos;
+
+    // 0. Validar rango de fechas según período (1 de Mayo año X al 30 de Abril año X+1)
+    if (periodo && fechaInicio && fechaFin) {
+        const anioPeriodo = parseInt(periodo);
+        const fechaMinima = `${anioPeriodo}-05-01`;
+        const fechaMaxima = `${anioPeriodo + 1}-04-30`;
+
+        if (fechaInicio < fechaMinima || fechaInicio > fechaMaxima) {
+            return {
+                valido: false,
+                error: `Para el período ${periodo}, la fecha de inicio debe estar entre el 01/05/${anioPeriodo} y el 30/04/${anioPeriodo + 1}`
+            };
+        }
+        if (fechaFin < fechaMinima || fechaFin > fechaMaxima) {
+            return {
+                valido: false,
+                error: `Para el período ${periodo}, la fecha de fin debe estar entre el 01/05/${anioPeriodo} y el 30/04/${anioPeriodo + 1}`
+            };
+        }
+    }
 
     // Condición para excluir la solicitud actual (para edición)
     const excludeCondition = solicitudIdActual
@@ -36,7 +56,7 @@ const validarVacaciones = async (contratoId, datos, solicitudIdActual = null) =>
     });
 
     if (pendiente) {
-        return { valido: false, error: 'Ya existe una solicitud de vacaciones pendiente para este contrato' };
+        return { valido: false, error: 'Ya existe una solicitud de vacaciones pendiente para este contrato. Revísala antes de continuar.' };
     }
 
     // 2. Verificar solapamiento con vacaciones aprobadas
@@ -58,7 +78,7 @@ const validarVacaciones = async (contratoId, datos, solicitudIdActual = null) =>
     });
 
     if (vacacionesAprobadas) {
-        return { valido: false, error: 'Las fechas se solapan con vacaciones aprobadas existentes' };
+        return { valido: false, error: 'Las fechas se solapan con vacaciones aprobadas existentes. Por favor, elige otro período.' };
     }
 
     // 3. Verificar solapamiento con licencias justificadas
@@ -79,7 +99,7 @@ const validarVacaciones = async (contratoId, datos, solicitudIdActual = null) =>
     });
 
     if (licenciasJustificadas) {
-        return { valido: false, error: 'Las fechas se solapan con una licencia justificada existente' };
+        return { valido: false, error: 'Las fechas se solapan con una licencia justificada existente. Por favor, elige otro período.' };
     }
 
     // 4. Verificar solapamiento con horas extras aprobadas
@@ -102,7 +122,7 @@ const validarVacaciones = async (contratoId, datos, solicitudIdActual = null) =>
     });
 
     if (horasExtrasAprobadas) {
-        return { valido: false, error: 'Las fechas incluyen un día con horas extras aprobadas' };
+        return { valido: false, error: 'Las fechas incluyen un día con horas extras aprobadas. Por favor, elige otro período.' };
     }
 
     return { valido: true };

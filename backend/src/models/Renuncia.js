@@ -43,24 +43,7 @@ const Renuncia = sequelize.define('Renuncia', {
             len: { args: [0, 500], msg: 'El motivo no puede exceder 500 caracteres' },
         },
     },
-    documentos: {
-        type: DataTypes.JSON,
-        allowNull: true,
-        defaultValue: [],
-        get() {
-            const rawValue = this.getDataValue('documentos');
-            if (!rawValue) return [];
-            if (typeof rawValue === 'string') {
-                try {
-                    return JSON.parse(rawValue);
-                } catch {
-                    return [];
-                }
-            }
-            return rawValue;
-        },
-    },
-    urlComprobanteRenuncia: {
+    urlComprobante: {
         type: DataTypes.STRING(100),
         allowNull: true,
         validate: {

@@ -33,7 +33,7 @@ const validarHorasExtras = async (contratoId, datos, solicitudIdActual = null) =
     });
 
     if (pendiente) {
-        return { valido: false, error: 'Ya existe una solicitud de horas extras pendiente para este contrato' };
+        return { valido: false, error: 'Ya existe una solicitud de horas extras pendiente para este contrato. Revísala antes de continuar.' };
     }
 
     // 2. Verificar solapamiento de horas con HH.EE. aprobadas del mismo día
@@ -55,7 +55,7 @@ const validarHorasExtras = async (contratoId, datos, solicitudIdActual = null) =
     });
 
     if (horasExtrasAprobadas) {
-        return { valido: false, error: 'Las horas se solapan con otra solicitud de horas extras aprobada del mismo día' };
+        return { valido: false, error: 'Las horas se solapan con otra solicitud de horas extras aprobada del mismo día. Por favor, elige otro período.' };
     }
 
     // 3. Verificar que la fecha no tenga vacaciones aprobadas
@@ -77,7 +77,7 @@ const validarHorasExtras = async (contratoId, datos, solicitudIdActual = null) =
     });
 
     if (vacacionesAprobadas) {
-        return { valido: false, error: 'No se pueden solicitar horas extras en una fecha con vacaciones aprobadas' };
+        return { valido: false, error: 'No se pueden solicitar horas extras en una fecha con vacaciones aprobadas. Por favor, elige otro período.' };
     }
 
     // 4. Verificar que la fecha no tenga licencia justificada
@@ -99,7 +99,7 @@ const validarHorasExtras = async (contratoId, datos, solicitudIdActual = null) =
     });
 
     if (licenciaJustificada) {
-        return { valido: false, error: 'No se pueden solicitar horas extras en una fecha con licencia justificada' };
+        return { valido: false, error: 'No se pueden solicitar horas extras en una fecha con licencia justificada. Por favor, elige otro período.' };
     }
 
     return { valido: true };

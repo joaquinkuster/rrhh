@@ -566,10 +566,16 @@ const Solicitudes = () => {
                                             <tr key={item.id} className={`${selectedIds.has(item.id) ? 'row-selected' : ''} ${!item.activo ? 'row-inactive' : ''}`}>
                                                 <td><input type="checkbox" disabled={estado !== 'pendiente'} checked={selectedIds.has(item.id)} onChange={() => handleSelectOne(item.id)} /></td>
                                                 <td>
-                                                    <strong>{getEmpleadoNombre(item)}</strong>
-                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                                                        {getEmpleadoDoc(item)}
-                                                    </div>
+                                                    {item.contrato?.empleado ? (
+                                                        <>
+                                                            <strong>{truncateText(item.contrato.empleado.usuario.apellido + ', ' + item.contrato.empleado.usuario.nombre, 15)}</strong>
+                                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                                                {truncateText(item.contrato.puestos?.[0]?.nombre || 'Sin puesto', 15)}
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>Sin evaluado</span>
+                                                    )}
                                                 </td>
                                                 {visibleColumns.tipo && <td><span className="badge badge-primary">{TIPO_LABELS[item.tipoSolicitud] || item.tipoSolicitud}</span></td>}
                                                 {visibleColumns.espacio && <td>{truncateText(item.contrato?.empleado?.espacioTrabajo?.nombre || '-')}</td>}
