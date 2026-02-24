@@ -9,6 +9,7 @@ const vacacionesService = require('../services/vacacionesService');
 const licenciaService = require('../services/licenciaService');
 const horasExtrasService = require('../services/horasExtrasService');
 const renunciaService = require('../services/renunciaService');
+const { generarLiquidacionFinal } = require('../services/prueba_liq');
 
 const TIPOS_RELACION_DEPENDENCIA = [
     'tiempo_indeterminado',
@@ -240,8 +241,8 @@ const getAll = async (req, res) => {
             order: [
                 [sequelize.literal(`CASE 
                     WHEN COALESCE(\`licencia\`.\`estado\`, \`vacaciones\`.\`estado\`, \`horasExtras\`.\`estado\`, \`renuncia\`.\`estado\`, '') IN ('pendiente', '') THEN 1 
-                    WHEN COALESCE(\`licencia\`.\`estado\`, \`vacaciones\`.\`estado\`, \`horasExtras\`.\`estado\`, \`renuncia\`.\`estado\`) = 'aprobada' THEN 2 
-                    WHEN COALESCE(\`licencia\`.\`estado\`, \`vacaciones\`.\`estado\`, \`horasExtras\`.\`estado\`, \`renuncia\`.\`estado\`) = 'aceptada' THEN 3 
+                    WHEN COALESCE(\`licencia\`.\`estado\`, \`vacaciones\`.\`estado\`, \`horasExtras\`.\`estado\`, \`renuncia\`.\`estado\`) = 'aceptada' THEN 2 
+                    WHEN COALESCE(\`licencia\`.\`estado\`, \`vacaciones\`.\`estado\`, \`horasExtras\`.\`estado\`, \`renuncia\`.\`estado\`) = 'aprobada' THEN 3 
                     WHEN COALESCE(\`licencia\`.\`estado\`, \`vacaciones\`.\`estado\`, \`horasExtras\`.\`estado\`, \`renuncia\`.\`estado\`) = 'justificada' THEN 4 
                     WHEN COALESCE(\`licencia\`.\`estado\`, \`vacaciones\`.\`estado\`, \`horasExtras\`.\`estado\`, \`renuncia\`.\`estado\`) = 'procesada' THEN 5 
                     WHEN COALESCE(\`licencia\`.\`estado\`, \`vacaciones\`.\`estado\`, \`horasExtras\`.\`estado\`, \`renuncia\`.\`estado\`) = 'injustificada' THEN 6 
@@ -387,12 +388,33 @@ const create = async (req, res) => {
                     solicitudId: solicitud.id,
                     ...typeData,
                 }, { transaction });
+
+                // Acciones si se crea ya justificada
+                if (typeData.estado === 'justificada') {
+                    const diasLicencia = typeRecord.diasSolicitud || 0;
+                    if (diasLicencia > 0) {
+                        await licenciaService.onAprobacion(contratoId, diasLicencia, transaction);
+                    }
+                }
                 break;
             case 'vacaciones':
+                // Si se crea ya aprobada, establecer notificadoEl
+                if (typeData.estado === 'aprobada' && !typeData.notificadoEl) {
+                    typeData.notificadoEl = new Date().toISOString().split('T')[0];
+                }
+
                 typeRecord = await Vacaciones.create({
                     solicitudId: solicitud.id,
                     ...typeData,
                 }, { transaction });
+
+                // Acciones si se crea ya aprobada
+                if (typeData.estado === 'aprobada') {
+                    const diasVacaciones = typeRecord.diasSolicitud || 0;
+                    if (diasVacaciones > 0) {
+                        await vacacionesService.onAprobacion(contratoId, diasVacaciones, transaction);
+                    }
+                }
                 break;
             case 'horas_extras':
                 typeRecord = await HorasExtras.create({
@@ -401,10 +423,37 @@ const create = async (req, res) => {
                 }, { transaction });
                 break;
             case 'renuncia':
+                // Si se crea ya aceptada
+                if (typeData.estado === 'aceptada' && !typeData.fechaBajaEfectiva) {
+                    typeData.fechaBajaEfectiva = renunciaService.calcularFechaBajaEfectiva();
+                }
+
+                // Si se crea ya procesada
+                if (typeData.estado === 'procesada') {
+                    typeData.fechaBajaEfectiva = typeData.fechaBajaEfectiva || new Date().toISOString().split('T')[0];
+                }
+
                 typeRecord = await Renuncia.create({
                     solicitudId: solicitud.id,
                     ...typeData,
                 }, { transaction });
+
+                // Acciones si se crea ya procesada
+                if (typeData.estado === 'procesada') {
+                    await Contrato.update({
+                        fechaFin: typeData.fechaBajaEfectiva,
+                    }, {
+                        where: { id: contratoId },
+                        transaction,
+                        individualHooks: true,
+                    });
+
+                    try {
+                        await generarLiquidacionFinal(contratoId, typeData.fechaBajaEfectiva, transaction);
+                    } catch (liqError) {
+                        console.error('Error al generar liquidación automática por renuncia (create):', liqError);
+                    }
+                }
                 break;
             default:
                 await transaction.rollback();
@@ -454,19 +503,46 @@ const update = async (req, res) => {
         const typeRecord = solicitud.licencia || solicitud.vacaciones || solicitud.horasExtras || solicitud.renuncia;
         const currentState = typeRecord?.estado;
 
-        // Block editing if not pending (except for state change)
-        if (currentState !== 'pendiente') {
-            // Only allow state changes
+        // Bloquear edición si no está en un estado editable (pendiente para todos, o aceptada para renuncia)
+        const editableStates = (solicitud.tipoSolicitud === 'renuncia') ? ['pendiente', 'aceptada'] : ['pendiente'];
+
+        if (!editableStates.includes(currentState)) {
+            // Solo permitir cambio de estado
             const allowedFields = ['estado'];
-            const otherFields = Object.keys(typeData).filter(k => !allowedFields.includes(k));
-            if (otherFields.length > 0) {
+            const changes = Object.keys(typeData).filter(k => {
+                if (allowedFields.includes(k)) return false;
+
+                // Si el campo tiene un valor diferente al actual, es un cambio
+                let newVal = typeData[k];
+                let oldVal = typeRecord[k];
+
+                if (newVal === '' || newVal === undefined) newVal = null;
+                if (oldVal === '' || oldVal === undefined) oldVal = null;
+
+                if (newVal != oldVal) {
+                    // Verificación especial para fechas
+                    if (typeof newVal === 'string' && typeof oldVal === 'string' &&
+                        newVal.includes('-') && oldVal.includes('-')) {
+                        return newVal.split('T')[0] !== oldVal.split('T')[0];
+                    }
+                    return true;
+                }
+                return false;
+            });
+
+            if (changes.length > 0) {
                 await transaction.rollback();
-                return res.status(400).json({ error: 'No podés editar la solicitud porque no está pendiente. Solo podés cambiar su estado.' });
+                return res.status(400).json({ error: 'No podés editar los datos de la solicitud porque no está pendiente. Solo podés cambiar su estado.' });
             }
+
+            // Si no hay cambios en campos restringidos, los eliminamos para solo actualizar el estado y evitar efectos secundarios
+            Object.keys(typeData).forEach(k => {
+                if (!allowedFields.includes(k)) delete typeData[k];
+            });
         }
 
-        // Validate overlaps when editing dates (only if pending)
-        if (currentState === 'pendiente') {
+        // Validate overlaps when editing dates (only if in editable state)
+        if (editableStates.includes(currentState)) {
             if (solicitud.tipoSolicitud === 'vacaciones' && (typeData.fechaInicio || typeData.fechaFin)) {
                 const datosValidar = {
                     fechaInicio: typeData.fechaInicio || solicitud.vacaciones.fechaInicio,
@@ -598,7 +674,16 @@ const update = async (req, res) => {
                     }, {
                         where: { id: solicitud.contratoId },
                         transaction,
+                        individualHooks: true,
                     });
+
+                    // Generar liquidación automática hasta hoy
+                    try {
+                        await generarLiquidacionFinal(solicitud.contratoId, typeData.fechaBajaEfectiva, transaction);
+                    } catch (liqError) {
+                        console.error('Error al generar liquidación automática por renuncia:', liqError);
+                        // No fallamos la operación principal por esto
+                    }
                 }
                 break;
         }

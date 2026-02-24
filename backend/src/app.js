@@ -25,6 +25,7 @@ const usuarioRoutes = require('./routes/usuarioRoutes');
 require('./jobs/contrato.cron');
 require('./jobs/registroSalud.cron');
 require('./jobs/liquidacion.cron');
+require('./jobs/renuncia.cron');
 
 
 const app = express();

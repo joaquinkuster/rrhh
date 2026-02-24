@@ -615,7 +615,7 @@ const Solicitudes = () => {
                                                                     </svg>
                                                                     Ver
                                                                 </button>
-                                                                {canEdit && estado === 'pendiente' && (
+                                                                {canEdit && (estado === 'pendiente' || estado === 'aceptada') && (
                                                                     <button
                                                                         className="btn btn-warning btn-sm"
                                                                         onClick={() => handleEdit(item)}

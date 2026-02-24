@@ -1198,11 +1198,11 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
                         </p>
                     </div>
 
-                    {isReadOnly() && (
+                    {/* isReadOnly() && (
                         <div className="alert alert-warning" style={{ marginBottom: '1rem' }}>
-                            Esta solicitud no está en estado Pendiente. Solo puede modificar el estado.
+                            No podés editar los datos de la solicitud porque no está pendiente. Solo podés cambiar su estado.
                         </div>
-                    )}
+                    )*/}
 
                     {error && <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{error}</div>}
 

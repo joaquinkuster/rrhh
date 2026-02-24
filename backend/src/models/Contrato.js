@@ -154,7 +154,7 @@ const actualizarEstadoContrato = (contrato) => {
 
     fin?.setHours(0, 0, 0, 0);
 
-    if (fin && fin < hoy) {
+    if (fin && fin <= hoy) {
         contrato.estado = 'finalizado';
     } else if (inicio > hoy) {
         contrato.estado = 'pendiente';
@@ -164,6 +164,7 @@ const actualizarEstadoContrato = (contrato) => {
 };
 
 Contrato.addHook('beforeCreate', actualizarEstadoContrato);
+Contrato.addHook('beforeUpdate', actualizarEstadoContrato);
 Contrato.addHook('beforeSave', actualizarEstadoContrato);
 
 module.exports = Contrato;

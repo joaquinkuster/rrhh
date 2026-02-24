@@ -3,7 +3,74 @@ const { calcularLiquidacionContrato } = require('./liquidacionService');
 const { parseLocalDate } = require('../utils/fechas');
 const { Op } = require('sequelize');
 
-// services/liquidacion.service.js
+/**
+ * Genera una liquidación para un contrato específico en un rango de fechas.
+ * No verifica si ya existe una liquidación para ese periodo, eso debe hacerse antes si es necesario.
+ */
+async function generarLiquidacionContratoIndividual(contrato, fechaInicioStr, fechaFinStr, transaction = null) {
+    const datosLiquidacion = await calcularLiquidacionContrato(contrato, fechaInicioStr, fechaFinStr);
+
+    return await Liquidacion.create({
+        contratoId: contrato.id,
+        fechaInicio: fechaInicioStr,
+        fechaFin: fechaFinStr,
+        basico: datosLiquidacion.basico,
+        antiguedad: datosLiquidacion.antiguedad,
+        presentismo: datosLiquidacion.presentismo,
+        horasExtras: datosLiquidacion.horasExtras,
+        vacaciones: datosLiquidacion.vacaciones,
+        sac: datosLiquidacion.sac,
+        inasistencias: datosLiquidacion.inasistencias,
+        totalBruto: datosLiquidacion.totalBruto,
+        totalRetenciones: datosLiquidacion.totalRetenciones,
+        vacacionesNoGozadas: datosLiquidacion.vacacionesNoGozadas,
+        neto: datosLiquidacion.neto,
+        detalleRemunerativo: datosLiquidacion.detalleRemunerativo,
+        detalleRetenciones: datosLiquidacion.detalleRetenciones,
+        estaPagada: false,
+        activo: true,
+    }, { transaction });
+}
+
+/**
+ * Determina el inicio y fin para la liquidación final de un contrato y la genera.
+ */
+async function generarLiquidacionFinal(contratoId, fechaFinStr, transaction = null) {
+    const contrato = await Contrato.findByPk(contratoId, {
+        include: [{
+            model: Empleado,
+            as: 'empleado',
+            attributes: ['id', 'espacioTrabajoId']
+        }],
+        transaction
+    });
+    if (!contrato) throw new Error('Contrato no encontrado');
+
+    const ultimaLiquidacion = await Liquidacion.findOne({
+        where: { contratoId: contrato.id },
+        order: [['fechaFin', 'DESC']],
+        transaction
+    });
+
+    let fechaInicioLiquidacion;
+    if (ultimaLiquidacion) {
+        const fechaUltimaFin = parseLocalDate(ultimaLiquidacion.fechaFin);
+        fechaInicioLiquidacion = new Date(fechaUltimaFin);
+        fechaInicioLiquidacion.setDate(fechaInicioLiquidacion.getDate() + 1);
+    } else {
+        fechaInicioLiquidacion = parseLocalDate(contrato.fechaInicio);
+    }
+
+    const fechaInicioStr = fechaInicioLiquidacion.toISOString().split('T')[0];
+
+    // Evitar generar si la fecha inicio es posterior a la fecha fin (ya liquidado hasta el final)
+    if (fechaInicioStr > fechaFinStr) {
+        console.log(`Contrato ${contratoId} ya liquidado hasta ${fechaFinStr} o posterior.`);
+        return null;
+    }
+
+    return await generarLiquidacionContratoIndividual(contrato, fechaInicioStr, fechaFinStr, transaction);
+}
 async function liquidarSueldos() {
     try {
         console.log('Ejecutando cron de liquidaciones automáticas...');
@@ -81,29 +148,7 @@ async function liquidarSueldos() {
                 const fechaInicioStr = fechaInicioLiquidacion.toISOString().split('T')[0];
                 const fechaFinStr = fechaFinLiquidacion.toISOString().split('T')[0];
 
-                const datosLiquidacion = await calcularLiquidacionContrato(contrato, fechaInicioStr, fechaFinStr);
-
-                // Crear liquidación en la base de datos
-                await Liquidacion.create({
-                    contratoId: contrato.id,
-                    fechaInicio: fechaInicioStr,
-                    fechaFin: fechaFinStr,
-                    basico: datosLiquidacion.basico,
-                    antiguedad: datosLiquidacion.antiguedad,
-                    presentismo: datosLiquidacion.presentismo,
-                    horasExtras: datosLiquidacion.horasExtras,
-                    vacaciones: datosLiquidacion.vacaciones,
-                    sac: datosLiquidacion.sac,
-                    inasistencias: datosLiquidacion.inasistencias,
-                    totalBruto: datosLiquidacion.totalBruto,
-                    totalRetenciones: datosLiquidacion.totalRetenciones,
-                    vacacionesNoGozadas: datosLiquidacion.vacacionesNoGozadas,
-                    neto: datosLiquidacion.neto,
-                    detalleRemunerativo: datosLiquidacion.detalleRemunerativo,
-                    detalleRetenciones: datosLiquidacion.detalleRetenciones,
-                    estaPagada: false,
-                    activo: true,
-                });
+                await generarLiquidacionContratoIndividual(contrato, fechaInicioStr, fechaFinStr);
 
                 liquidacionesGeneradas++;
                 console.log(`Liquidación generada para contrato ${contrato.id}: ${fechaInicioStr} - ${fechaFinStr}`);
@@ -124,4 +169,6 @@ async function liquidarSueldos() {
 
 module.exports = {
     liquidarSueldos,
+    generarLiquidacionContratoIndividual,
+    generarLiquidacionFinal,
 };
