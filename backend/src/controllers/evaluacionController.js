@@ -300,21 +300,43 @@ const create = async (req, res) => {
             return res.status(400).json({ error: 'Un contrato no puede ser evaluador y evaluado simultáneamente' });
         }
 
-        // Validar existencia de evaluadores
-        const evaluadores = await Contrato.findAll({ where: { id: evaluadoresIds } });
+        // Validar existencia de evaluadores y consistencia de espacio
+        const evaluadores = await Contrato.findAll({
+            where: { id: evaluadoresIds },
+            include: [{ model: Empleado, as: 'empleado', attributes: ['espacioTrabajoId'] }]
+        });
+
         if (evaluadores.length !== evaluadoresIds.length) {
             await transaction.rollback();
             return res.status(400).json({ error: 'Uno o más evaluadores no existen' });
+        }
+
+        // Obtener el espacio de trabajo del primer evaluador como referencia
+        const espacioIdReferencia = evaluadores[0].empleado.espacioTrabajoId;
+
+        // Validar que todos los evaluadores sean del mismo espacio
+        for (const ev of evaluadores) {
+            if (ev.empleado.espacioTrabajoId !== espacioIdReferencia) {
+                await transaction.rollback();
+                return res.status(400).json({ error: 'Todos los evaluadores deben pertenecer al mismo espacio de trabajo' });
+            }
         }
 
         // Crear evaluaciones en lote
         const evaluacionesCreadas = [];
 
         for (const contratoEvaluadoId of contratosEvaluadosIds) {
-            // Validar existencia del contrato evaluado
-            const contratoEvaluado = await Contrato.findByPk(contratoEvaluadoId);
+            // Validar existencia del contrato evaluado y su espacio
+            const contratoEvaluado = await Contrato.findByPk(contratoEvaluadoId, {
+                include: [{ model: Empleado, as: 'empleado', attributes: ['espacioTrabajoId'] }]
+            });
+
             if (!contratoEvaluado) {
                 throw new Error(`Contrato a evaluar ID ${contratoEvaluadoId} no encontrado`);
+            }
+
+            if (contratoEvaluado.empleado.espacioTrabajoId !== espacioIdReferencia) {
+                throw new Error(`El contrato a evaluar ${contratoEvaluadoId} no pertenece al mismo espacio de trabajo que los evaluadores`);
             }
 
             const nuevaEvaluacion = await Evaluacion.create({
@@ -384,17 +406,33 @@ const update = async (req, res) => {
             return res.status(404).json({ error: 'Evaluación no encontrada' });
         }
 
-        // Validar contrato evaluado si cambia
-        if (contratoEvaluadoId && contratoEvaluadoId !== evaluacion.contratoEvaluadoId) {
-            const contrato = await Contrato.findByPk(contratoEvaluadoId);
-            if (!contrato) {
+        // Validar contrato evaluado si cambia y su consistencia con evaluadores actuales
+        const targetEvaluadoId = contratoEvaluadoId || evaluacion.contratoEvaluadoId;
+        const contratoEvaluado = await Contrato.findByPk(targetEvaluadoId, {
+            include: [{ model: Empleado, as: 'empleado', attributes: ['espacioTrabajoId'] }]
+        });
+        if (!contratoEvaluado) {
+            await transaction.rollback();
+            return res.status(404).json({ error: 'Contrato a evaluar no encontrado' });
+        }
+
+        const espacioId = contratoEvaluado.empleado.espacioTrabajoId;
+
+        // Validar evaluadores (si se proporcionan o los actuales)
+        const idsAValidar = evaluadoresIds || (await evaluacion.getEvaluadores()).map(e => e.id);
+        const evaluadores = await Contrato.findAll({
+            where: { id: idsAValidar },
+            include: [{ model: Empleado, as: 'empleado', attributes: ['espacioTrabajoId'] }]
+        });
+
+        for (const ev of evaluadores) {
+            if (ev.empleado.espacioTrabajoId !== espacioId) {
                 await transaction.rollback();
-                return res.status(404).json({ error: 'Contrato a evaluar no encontrado' });
+                return res.status(400).json({ error: 'Todos los participantes (evaluado y evaluadores) deben pertenecer al mismo espacio de trabajo' });
             }
         }
 
         // Si cambian evaluadores, validar intersección con el evaluado actual (o nuevo)
-        const targetEvaluadoId = contratoEvaluadoId || evaluacion.contratoEvaluadoId;
         if (evaluadoresIds && evaluadoresIds.includes(targetEvaluadoId)) {
             await transaction.rollback();
             return res.status(400).json({ error: 'El contrato evaluado no puede ser su propio evaluador' });

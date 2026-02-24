@@ -322,6 +322,18 @@ const ContratoWizard = ({ contrato: contratoToEdit, onClose, onSuccess, empleado
 
     const handleEmpleadoChange = async (options, skipPuestosReset = false) => {
         const selectedOptions = isEditMode ? (options ? [options] : []) : (options || []);
+
+        // Validar que todos los empleados seleccionados pertenezcan al mismo espacio de trabajo
+        if (selectedOptions.length > 1) {
+            const firstWs = selectedOptions[0].empleado?.espacioTrabajoId;
+            const diffWs = selectedOptions.some(opt => opt.empleado?.espacioTrabajoId !== firstWs);
+            if (diffWs) {
+                setError('Todos los empleados seleccionados deben pertenecer al mismo espacio de trabajo.');
+                return;
+            }
+        }
+        setError('');
+
         setSelectedEmpleados(selectedOptions);
 
         // Resetear puestos al cambiar selección, except when loading edit data
@@ -650,6 +662,10 @@ const ContratoWizard = ({ contrato: contratoToEdit, onClose, onSuccess, empleado
                     <Select
                         isDisabled={areFieldsLocked}
                         options={Object.values(empresas.reduce((acc, emp) => {
+                            // Filtrar por espacio si hay empleados seleccionados
+                            const currentWorkspaceId = selectedEmpleados[0]?.empleado?.espacioTrabajoId;
+                            if (currentWorkspaceId && emp.espacioTrabajoId !== currentWorkspaceId) return acc;
+
                             const wsName = emp.espacioTrabajo?.nombre || 'General';
                             if (!acc[wsName]) acc[wsName] = { label: wsName, options: [] };
                             acc[wsName].options.push({
@@ -840,6 +856,10 @@ const ContratoWizard = ({ contrato: contratoToEdit, onClose, onSuccess, empleado
                 <label className="form-label">Rol en la Empresa *</label>
                 <Select
                     options={Object.values(roles.reduce((acc, rol) => {
+                        // Filtrar por espacio si hay empleados seleccionados
+                        const currentWorkspaceId = selectedEmpleados[0]?.empleado?.espacioTrabajoId;
+                        if (currentWorkspaceId && rol.espacioTrabajoId !== currentWorkspaceId) return acc;
+
                         const wsName = rol.espacioTrabajo?.nombre || 'General';
                         if (!acc[wsName]) acc[wsName] = { label: wsName, options: [] };
                         acc[wsName].options.push({

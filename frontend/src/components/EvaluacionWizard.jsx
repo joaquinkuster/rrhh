@@ -190,7 +190,14 @@ const EvaluacionWizard = ({ evaluacion, onClose, onSuccess }) => {
         loadRequests();
     }, []);
 
+    const workspaceId = selectedEvaluadores[0]?.contrato?.empleado?.espacioTrabajoId ||
+        selectedContratosEvaluados[0]?.contrato?.empleado?.espacioTrabajoId ||
+        selectedSingleContratoEvaluado?.contrato?.empleado?.espacioTrabajoId;
+
     const contratoOptions = Object.values(contratos.reduce((acc, contrato) => {
+        // Filtrar por espacio de trabajo si hay alguno seleccionado
+        if (workspaceId && contrato.empleado?.espacioTrabajoId !== workspaceId) return acc;
+
         const wsName = contrato.empleado?.espacioTrabajo?.nombre || 'Sin Espacio';
         if (!acc[wsName]) acc[wsName] = { label: wsName, options: [] };
 

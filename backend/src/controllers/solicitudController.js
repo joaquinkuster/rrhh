@@ -384,6 +384,15 @@ const create = async (req, res) => {
         let typeRecord;
         switch (tipoSolicitud) {
             case 'licencia':
+                // Validar registro de salud si está presente
+                if (typeData.registroSaludId) {
+                    const rs = await RegistroSalud.findByPk(typeData.registroSaludId);
+                    if (!rs || rs.empleadoId !== contrato.empleadoId) {
+                        await transaction.rollback();
+                        return res.status(400).json({ error: 'El registro de salud seleccionado no pertenece al empleado del contrato.' });
+                    }
+                }
+
                 typeRecord = await Licencia.create({
                     solicitudId: solicitud.id,
                     ...typeData,
@@ -491,7 +500,7 @@ const update = async (req, res) => {
 
         const { tipoSolicitud, ...typeData } = req.body;
         const solicitud = await Solicitud.findByPk(req.params.id, {
-            include: includeTypes,
+            include: [includeContrato, ...includeTypes],
         });
 
         if (!solicitud) {
@@ -598,6 +607,15 @@ const update = async (req, res) => {
         // Update type-specific record
         switch (solicitud.tipoSolicitud) {
             case 'licencia':
+                // Validar registro de salud si cambia
+                if (typeData.registroSaludId && typeData.registroSaludId !== solicitud.licencia?.registroSaludId) {
+                    const rs = await RegistroSalud.findByPk(typeData.registroSaludId);
+                    if (!rs || rs.empleadoId !== solicitud.contrato?.empleadoId) {
+                        await transaction.rollback();
+                        return res.status(400).json({ error: 'El registro de salud seleccionado no pertenece al empleado del contrato.' });
+                    }
+                }
+
                 const prevEstadoLic = solicitud.licencia?.estado;
 
                 // Si cambia a 'justificada', sumar días a fechaBajaEfectiva de renuncia activa

@@ -210,6 +210,35 @@ const create = async (req, res) => {
             return res.status(400).json({ error: 'Uno o más puestos no existen' });
         }
 
+        // Validar que el empleado exista y obtener su espacio de trabajo
+        const empleado = await Empleado.findByPk(empleadoId);
+        if (!empleado) {
+            await transaction.rollback();
+            return res.status(400).json({ error: 'El empleado seleccionado no existe' });
+        }
+
+        const espacioId = empleado.espacioTrabajoId;
+
+        // Validar que todos los puestos pertenecen al mismo espacio de trabajo que el empleado
+        for (const puesto of puestos) {
+            const puestoEspacioId = puesto.departamento?.area?.empresa?.espacioTrabajoId;
+            if (puestoEspacioId !== espacioId) {
+                await transaction.rollback();
+                return res.status(400).json({
+                    error: `El puesto "${puesto.nombre}" pertenece a un espacio de trabajo diferente al del empleado.`
+                });
+            }
+        }
+
+        // Si hay rol, validar que sea del mismo espacio
+        if (contratoData.rolId) {
+            const rol = await Rol.findByPk(contratoData.rolId);
+            if (!rol || rol.espacioTrabajoId !== espacioId) {
+                await transaction.rollback();
+                return res.status(400).json({ error: 'El rol seleccionado no pertenece al mismo espacio de trabajo que el empleado.' });
+            }
+        }
+
         // Validar que todos los puestos pertenecen a la misma empresa
         const empresaIds = [...new Set(puestos.map(p => p.departamento?.area?.empresa?.id))];
         if (empresaIds.length > 1) {
@@ -303,12 +332,24 @@ const update = async (req, res) => {
             });
         }
 
+        // Si cambia el rol, validar espacio
+        if (contratoData.rolId && contratoData.rolId !== contrato.rolId) {
+            const contratoConEmpleado = await Contrato.findByPk(contrato.id, {
+                include: [{ model: Empleado, as: 'empleado' }]
+            });
+            const rol = await Rol.findByPk(contratoData.rolId);
+            if (!rol || rol.espacioTrabajoId !== contratoConEmpleado.empleado.espacioTrabajoId) {
+                await transaction.rollback();
+                return res.status(400).json({ error: 'El rol seleccionado no pertenece al mismo espacio de trabajo que el contrato.' });
+            }
+        }
+
         // Actualizar datos básicos del contrato
         await contrato.update(contratoData, { transaction });
 
         // Si se proporcionan puestos, actualizar la asociación (solo si hay al menos uno)
         if (puestoIds && Array.isArray(puestoIds) && puestoIds.length > 0) {
-            // Obtener puestos para validar empresa
+            // Obtener puestos para validar empresa y espacio
             const puestos = await Puesto.findAll({
                 where: { id: puestoIds },
                 include: [{
@@ -324,6 +365,22 @@ const update = async (req, res) => {
                     }]
                 }]
             });
+
+            // Validar espacio de trabajo (el empleado no cambia en el update, así que usamos el del contrato)
+            const contratoConEmpleado = await Contrato.findByPk(contrato.id, {
+                include: [{ model: Empleado, as: 'empleado' }]
+            });
+            const espacioId = contratoConEmpleado.empleado.espacioTrabajoId;
+
+            for (const puesto of puestos) {
+                const puestoEspacioId = puesto.departamento?.area?.empresa?.espacioTrabajoId;
+                if (puestoEspacioId !== espacioId) {
+                    await transaction.rollback();
+                    return res.status(400).json({
+                        error: `El puesto "${puesto.nombre}" pertenece a un espacio de trabajo diferente al del contrato.`
+                    });
+                }
+            }
 
             // Validar misma empresa
             const empresaIds = [...new Set(puestos.map(p => p.departamento?.area?.empresa?.id))];
