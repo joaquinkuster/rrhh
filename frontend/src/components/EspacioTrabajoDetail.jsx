@@ -1,8 +1,15 @@
+import { formatDateOnly, formatDateTime } from '../utils/formatters';
+
 // Icons SVG components
 const Icons = {
     calendar: (
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 18, height: 18 }}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+        </svg>
+    ),
+    shield: (
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 18, height: 18 }}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
         </svg>
     ),
     clock: (
@@ -136,7 +143,7 @@ const EspacioTrabajoDetail = ({ espacio, onClose, onEdit }) => {
                     </button>
                 </div>
 
-                <div className="modal-body" style={{ padding: '1.5rem 2rem 2rem' }}>
+                <div className="modal-body" style={{ padding: '1.5rem 2rem 2rem', overflowY: 'auto' }}>
                     {/* Top Section: Name + ID + Edit button */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -178,7 +185,6 @@ const EspacioTrabajoDetail = ({ espacio, onClose, onEdit }) => {
                             gridTemplateColumns: '1fr 1fr 1fr',
                             overflow: 'hidden'
                         }}>
-                            {/* Fecha de Creación */}
                             <div style={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -186,14 +192,16 @@ const EspacioTrabajoDetail = ({ espacio, onClose, onEdit }) => {
                                 padding: '0.75rem 1rem',
                                 borderRight: '1px solid var(--border-color)'
                             }}>
-                                <div style={{ color: primaryColor }}>{Icons.calendar}</div>
-                                <div>
-                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Creado</div>
-                                    <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>{formatDate(espacio.createdAt)}</div>
+                                <div style={{ color: 'var(--primary-color)', flexShrink: 0 }}>{Icons.calendar}</div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
+                                        Fecha de Creación
+                                    </div>
+                                    <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
+                                        {formatDateTime(espacio.createdAt)}
+                                    </div>
                                 </div>
                             </div>
-
-                            {/* Última Modificación */}
                             <div style={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -201,29 +209,39 @@ const EspacioTrabajoDetail = ({ espacio, onClose, onEdit }) => {
                                 padding: '0.75rem 1rem',
                                 borderRight: '1px solid var(--border-color)'
                             }}>
-                                <div style={{ color: primaryColor }}>{Icons.clock}</div>
-                                <div>
-                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Modificado</div>
-                                    <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>{formatDate(espacio.updatedAt)}</div>
+                                <div style={{ color: espacio.activo ? '#10b981' : '#ef4444' }}>{Icons.shield}</div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
+                                        Estado en Sistema
+                                    </div>
+                                    <span style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '0.4rem',
+                                        fontSize: '0.8rem',
+                                        padding: '0.3rem 0.7rem',
+                                        borderRadius: '9999px',
+                                        background: espacio.activo ? 'rgba(21, 128, 61, 0.2)' : 'rgba(239, 68, 68, 0.15)',
+                                        color: espacio.activo ? '#15803d' : '#ef4444',
+                                        fontWeight: 700
+                                    }}>
+                                        {espacio.activo ? 'Activo' : 'Inactivo'}
+                                    </span>
                                 </div>
                             </div>
-
-                            {/* Estado */}
                             <div style={{
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '0.75rem',
                                 padding: '0.75rem 1rem'
                             }}>
-                                <div style={{ color: espacio.activo ? '#10b981' : '#ef4444' }}>{Icons.briefcase}</div>
-                                <div>
-                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Estado</div>
-                                    <div style={{
-                                        fontSize: '0.875rem',
-                                        fontWeight: 600,
-                                        color: espacio.activo ? '#10b981' : '#ef4444'
-                                    }}>
-                                        {espacio.activo ? 'Activo' : 'Inactivo'}
+                                <div style={{ color: 'var(--primary-color)', flexShrink: 0 }}>{Icons.clock}</div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
+                                        Última Modificación
+                                    </div>
+                                    <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
+                                        {formatDateTime(espacio.updatedAt)}
                                     </div>
                                 </div>
                             </div>
@@ -231,21 +249,39 @@ const EspacioTrabajoDetail = ({ espacio, onClose, onEdit }) => {
                     </div>
 
                     {/* Information Section */}
-                    <div>
-                        <SectionHeader title="Información" />
-                        <div style={{
-                            background: 'var(--card-bg)',
-                            borderRadius: '0.5rem',
-                            border: '1px solid var(--border-color)',
-                            padding: '0.5rem 1rem'
-                        }}>
-                            <Field icon={Icons.briefcase} label="Nombre" value={espacio.nombre} />
-                            <Field icon={Icons.document} label="Descripción" value={espacio.descripcion} />
-                            <Field
-                                icon={Icons.user}
-                                label="Propietario"
-                                value={espacio.propietario ? `${espacio.propietario.nombre} ${espacio.propietario.apellido}` : '-'}
-                            />
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                        {/* Column 1: Resumen */}
+                        <div>
+                            <SectionHeader title="Resumen" subtitle={`Últimos cambios hace ${getRelativeTime(espacio.updatedAt)}`} />
+                            <div style={{
+                                background: 'var(--card-bg)',
+                                borderRadius: '0.5rem',
+                                border: '1px solid var(--border-color)',
+                                padding: '0.5rem 1rem'
+                            }}>
+                                <Field icon={Icons.briefcase} label="Nombre" value={espacio.nombre} />
+                                <Field
+                                    icon={Icons.user}
+                                    label="Propietario"
+                                    value={espacio.propietario ? `${espacio.propietario.nombre} ${espacio.propietario.apellido}` : '-'}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Column 2: Descripción */}
+                        <div>
+                            {/* Descripción Section */}
+                            <SectionHeader title="Descripción" subtitle={`Últimos cambios hace ${getRelativeTime(espacio.updatedAt)}`} />
+                            <div style={{
+                                background: 'var(--card-bg)',
+                                borderRadius: '0.5rem',
+                                border: '1px solid var(--border-color)',
+                                padding: '1rem'
+                            }}>
+                                <p style={{ margin: 0, color: 'var(--text-primary)', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+                                    {espacio.descripcion || 'Sin descripción'}
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>

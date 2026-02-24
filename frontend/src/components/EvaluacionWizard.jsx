@@ -3,7 +3,7 @@ import Select from 'react-select';
 import StepTracker from './StepTracker';
 import { getContratos, createEvaluacion, updateEvaluacion } from '../services/api';
 import { validarDiaHabil } from '../utils/diasHabiles';
-import { getTodayStr } from '../utils/formatters';
+import { getTodayStr, formatFullName } from '../utils/formatters';
 
 // Periods
 const PERIODOS = [
@@ -194,7 +194,7 @@ const EvaluacionWizard = ({ evaluacion, onClose, onSuccess }) => {
         const wsName = contrato.empleado?.espacioTrabajo?.nombre || 'Sin Espacio';
         if (!acc[wsName]) acc[wsName] = { label: wsName, options: [] };
 
-        const nombreEmpleado = contrato.empleado?.usuario ? `${contrato.empleado.usuario.apellido}, ${contrato.empleado.usuario.nombre}` : 'Sin nombre';
+        const nombreEmpleado = formatFullName(contrato.empleado);
         const puesto = contrato.puestos && contrato.puestos.length > 0 ? contrato.puestos[0].nombre : 'Sin puesto';
         const empresa = contrato.puestos && contrato.puestos.length > 0 && contrato.puestos[0].departamento?.area?.empresa?.nombre;
         const label = `${nombreEmpleado} - ${puesto}${empresa ? ` (${empresa})` : ''}`;
@@ -240,7 +240,7 @@ const EvaluacionWizard = ({ evaluacion, onClose, onSuccess }) => {
                 // or try to find in loaded groups
                 // Simple reconstruction for display if list not ready
                 const c = evaluacion.contratoEvaluado;
-                const nombre = c.empleado ? `${c.empleado.apellido}, ${c.empleado.nombre}` : 'Sin nombre';
+                const nombre = formatFullName(c.empleado);
                 const puesto = c.puestos?.[0]?.nombre || 'Sin puesto';
                 const empresa = c.puestos?.[0]?.departamento?.area?.empresa?.nombre;
                 setSelectedSingleContratoEvaluado({
@@ -253,7 +253,7 @@ const EvaluacionWizard = ({ evaluacion, onClose, onSuccess }) => {
             if (evaluacion.evaluadores && evaluacion.evaluadores.length > 0) {
                 // Similarly reconstruction
                 const evalOpts = evaluacion.evaluadores.map(c => {
-                    const nombre = c.empleado ? `${c.empleado.apellido}, ${c.empleado.nombre}` : 'Sin nombre';
+                    const nombre = formatFullName(c.empleado);
                     const puesto = c.puestos?.[0]?.nombre || 'Sin puesto';
                     const empresa = c.puestos?.[0]?.departamento?.area?.empresa?.nombre;
                     return {

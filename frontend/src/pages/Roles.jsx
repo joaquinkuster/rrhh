@@ -472,10 +472,10 @@ const Roles = () => {
                                     {items.map((item) => (
                                         <tr key={item.id} className={`${selectedIds.has(item.id) ? 'row-selected' : ''} ${!item.activo ? 'row-inactive' : ''}`}>
                                             <td><input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => handleSelectOne(item.id)} /></td>
-                                            <td><strong>{item.nombre}</strong></td>
+                                            <td><strong>{truncateText(item.nombre, 15)}</strong></td>
                                             {visibleColumns.espacio && <td>{truncateText(item.espacioTrabajo?.nombre || '-')}</td>}
                                             {visibleColumns.descripcion && (
-                                                <td style={{ maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.descripcion || '-'}</td>
+                                                <td style={{ maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{truncateText(item.descripcion || '-', 20)}</td>
                                             )}
                                             {visibleColumns.usuarios && (
                                                 <td>

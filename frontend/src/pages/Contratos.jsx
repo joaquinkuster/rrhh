@@ -49,6 +49,7 @@ const buildSelectStyles = (isDark) => ({
     singleValue: (b) => ({ ...b, color: isDark ? '#e2e8f0' : '#1e293b' }),
     placeholder: (b) => ({ ...b, color: '#94a3b8', fontSize: '0.875rem' }),
     valueContainer: (b) => ({ ...b, padding: '0 8px' }),
+    menuPortal: (b) => ({ ...b, zIndex: 9999 }),
 });
 
 const Contratos = () => {
@@ -226,7 +227,8 @@ const Contratos = () => {
         s.has(id) ? s.delete(id) : s.add(id);
         setSelectedIds(s);
     };
-    const allSelected = items.length > 0 && items.every(i => selectedIds.has(i.id));
+    const selectableItems = items.filter(i => i.estado !== 'finalizado');
+    const allSelected = selectableItems.length > 0 && selectableItems.every(i => selectedIds.has(i.id));
     const someSelected = items.some(i => selectedIds.has(i.id)) && !allSelected;
 
     const handleEdit = async (item) => {
@@ -267,6 +269,12 @@ const Contratos = () => {
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
     );
+
+    const formatDate = (dateString) => {
+        if (!dateString) return '-';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    };
 
     return (
         <div>
@@ -311,11 +319,12 @@ const Contratos = () => {
                                 isClearable={!currentUser?.esEmpleado}
                                 isDisabled={currentUser && currentUser.esEmpleado}
                                 styles={selectStyles}
+                                menuPortalTarget={document.body}
                                 noOptionsMessage={() => 'Sin resultados'}
                             />
                         </div>
                         <div className="filter-group" style={{ width: '200px' }}>
-                            <Select options={empleadoOptions} value={filterEmpleado} onChange={opt => { setFilterEmpleado(opt); setPage(1); }} placeholder="Empleado..." isClearable styles={selectStyles} noOptionsMessage={() => 'Sin resultados'} />
+                            <Select options={empleadoOptions} value={filterEmpleado} onChange={opt => { setFilterEmpleado(opt); setPage(1); }} placeholder="Empleado..." isClearable styles={selectStyles} menuPortalTarget={document.body} noOptionsMessage={() => 'Sin resultados'} />
                         </div>
                         <div className="filter-group">
                             <select className="filter-input" value={filterTipoContrato} onChange={(e) => { setFilterTipoContrato(e.target.value); setPage(1); }} style={{ width: '200px' }}>
@@ -397,14 +406,14 @@ const Contratos = () => {
                                             <tr key={item.id} className={`${selectedIds.has(item.id) ? 'row-selected' : ''} ${!item.activo ? 'row-inactive' : ''}`}>
                                                 <td><input type="checkbox" disabled={item.estado === 'finalizado'} checked={selectedIds.has(item.id)} onChange={() => handleSelectOne(item.id)} /></td>
                                                 <td>
-                                                    <strong>{ap}, {nm}</strong>
+                                                    <strong>{truncateText(ap + ', ' + nm, 15)}</strong>
                                                     <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{item.empleado?.numeroDocumento}</div>
                                                 </td>
                                                 {visibleColumns.espacio && <td>{truncateText(item.empleado?.espacioTrabajo?.nombre || '-')}</td>}
-                                                {visibleColumns.tipoContrato && <td>{TIPOS_CONTRATO_LABELS[item.tipoContrato] || item.tipoContrato}</td>}
+                                                {visibleColumns.tipoContrato && <td>{truncateText(TIPOS_CONTRATO_LABELS[item.tipoContrato] || item.tipoContrato, 15)}</td>}
                                                 {visibleColumns.estado && <td><span style={{ display: 'inline-flex', alignItems: 'center', fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '9999px', background: `${eColor}20`, color: eColor, fontWeight: 600 }}>{estado}</span></td>}
                                                 {visibleColumns.salario && <td><strong>{formatCurrency(item.salario)}</strong></td>}
-                                                <td>{formatDateOnly(item.fechaInicio)}</td>
+                                                <td>{formatDate(item.fechaInicio)}</td>
                                                 <td>
                                                     <div className="table-actions">
                                                         {showingInactive ? (

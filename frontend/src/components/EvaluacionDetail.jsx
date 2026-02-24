@@ -1,4 +1,4 @@
-import { formatDateOnly } from '../utils/formatters';
+import { formatDateOnly, formatDateTime, formatFullName } from '../utils/formatters';
 import { useAuth } from '../context/AuthContext';
 
 // Icons SVG components
@@ -33,9 +33,9 @@ const Icons = {
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
         </svg>
     ),
-    circle: (
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 20, height: 20 }}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    shield: (
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 18, height: 18 }}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
         </svg>
     ),
     edit: (
@@ -137,7 +137,7 @@ const EvaluacionDetail = ({ evaluacion, onClose, onEdit }) => {
 
     const formatContratoLabel = (contrato) => {
         if (!contrato) return '-';
-        const nombre = contrato.empleado ? `${contrato.empleado.nombre} ${contrato.empleado.apellido}` : 'Sin nombre';
+        const nombre = formatFullName(contrato.empleado);
         const puesto = contrato.puestos && contrato.puestos.length > 0 ? contrato.puestos[0].nombre : 'Sin puesto';
         const empresa = contrato.puestos && contrato.puestos.length > 0 && contrato.puestos[0].departamento?.area?.empresa?.nombre;
         return (
@@ -274,7 +274,7 @@ const EvaluacionDetail = ({ evaluacion, onClose, onEdit }) => {
                                         Fecha de Creación
                                     </div>
                                     <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
-                                        {formatDateOnly(evaluacion.createdAt)}
+                                        {formatDateTime(evaluacion.createdAt)}
                                     </div>
                                 </div>
                             </div>
@@ -285,7 +285,7 @@ const EvaluacionDetail = ({ evaluacion, onClose, onEdit }) => {
                                 padding: '0.75rem 1rem',
                                 borderRight: '1px solid var(--border-color)'
                             }}>
-                                <div style={{ color: 'var(--primary-color)', flexShrink: 0 }}>{Icons.circle}</div>
+                                <div style={{ color: evaluacion.activo ? '#10b981' : '#ef4444' }}>{Icons.shield}</div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
                                         Estado en Sistema
@@ -301,12 +301,6 @@ const EvaluacionDetail = ({ evaluacion, onClose, onEdit }) => {
                                         color: evaluacion.activo ? '#15803d' : '#ef4444',
                                         fontWeight: 700
                                     }}>
-                                        <span style={{
-                                            width: '7px',
-                                            height: '7px',
-                                            borderRadius: '50%',
-                                            background: evaluacion.activo ? '#15803d' : '#ef4444'
-                                        }} />
                                         {evaluacion.activo ? 'Activo' : 'Inactivo'}
                                     </span>
                                 </div>
@@ -323,7 +317,7 @@ const EvaluacionDetail = ({ evaluacion, onClose, onEdit }) => {
                                         Última Modificación
                                     </div>
                                     <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
-                                        {formatDateOnly(evaluacion.updatedAt)}
+                                        {formatDateTime(evaluacion.updatedAt)}
                                     </div>
                                 </div>
                             </div>
@@ -332,45 +326,31 @@ const EvaluacionDetail = ({ evaluacion, onClose, onEdit }) => {
 
                     {/* Main Content: 2 columns */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
-                        {/* Column 1: Resumen */}
+                        {/* Column 1: Resumen, Resultado y Feedback */}
                         <div>
-                            <SectionHeader title="Resumen de la Evaluación" />
+                            {/* Resumen */}
+                            <SectionHeader title="Resumen" subtitle={`Últimos cambios hace ${getRelativeTime(evaluacion.updatedAt)}`} />
                             <div style={{
                                 background: 'var(--card-bg)',
                                 borderRadius: '0.5rem',
                                 border: '1px solid var(--border-color)',
-                                padding: '0 1rem'
+                                padding: '0 1rem',
+                                marginBottom: '1.5rem'
                             }}>
                                 <Field icon={Icons.clipboard} label="Período" value={PERIODO_LABELS[evaluacion.periodo] || evaluacion.periodo} />
                                 <Field icon={Icons.document} label="Tipo de Evaluación" value={TIPO_EVALUACION_LABELS[evaluacion.tipoEvaluacion] || evaluacion.tipoEvaluacion} />
                                 <Field icon={Icons.calendar} label="Fecha" value={formatDateOnly(evaluacion.fecha)} />
-                                <div style={{
-                                    display: 'flex',
-                                    alignItems: 'flex-start',
-                                    gap: '0.75rem',
-                                    padding: '0.75rem 0',
-                                    borderBottom: '1px solid var(--border-color)'
-                                }}>
-                                    <div style={{ color: 'var(--primary-color)', flexShrink: 0, marginTop: '2px' }}>{Icons.check}</div>
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
-                                            Estado
-                                        </div>
-                                        <span style={{
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                            gap: '0.4rem',
-                                            fontSize: '0.85rem',
-                                            padding: '0.25rem 0.6rem',
-                                            borderRadius: '9999px',
-                                            background: `${ESTADO_COLORS[evaluacion.estado]}20`,
-                                            color: ESTADO_COLORS[evaluacion.estado],
-                                            fontWeight: 700
-                                        }}>
-                                            {ESTADO_LABELS[evaluacion.estado] || evaluacion.estado}
-                                        </span>
-                                    </div>
-                                </div>
+                            </div>
+
+                            {/* Resultado Final */}
+                            <SectionHeader title="Resultado" subtitle={`Últimos cambios hace ${getRelativeTime(evaluacion.updatedAt)}`} />
+                            <div style={{
+                                background: 'var(--card-bg)',
+                                borderRadius: '0.5rem',
+                                border: '1px solid var(--border-color)',
+                                padding: '0 1rem',
+                                marginBottom: '1.5rem'
+                            }}>
                                 <div style={{
                                     display: 'flex',
                                     alignItems: 'flex-start',
@@ -383,7 +363,7 @@ const EvaluacionDetail = ({ evaluacion, onClose, onEdit }) => {
                                         <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
                                             Puntaje
                                         </div>
-                                        <div style={{ fontWeight: 700, fontSize: '1.25rem', color: 'var(--text-primary)' }}>
+                                        <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>
                                             {evaluacion.puntaje}/100
                                         </div>
                                     </div>
@@ -415,6 +395,60 @@ const EvaluacionDetail = ({ evaluacion, onClose, onEdit }) => {
                                         </span>
                                     </div>
                                 </div>
+                            </div>
+
+                            {/* Feedback Section */}
+                            <SectionHeader title="Feedback" subtitle={`Últimos cambios hace ${getRelativeTime(evaluacion.updatedAt)}`} />
+                            <div style={{
+                                background: 'var(--card-bg)',
+                                borderRadius: '0.5rem',
+                                border: '1px solid var(--border-color)',
+                                padding: '1rem'
+                            }}>
+                                <p style={{ margin: 0, color: 'var(--text-primary)', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+                                    {evaluacion.feedback || 'Sin feedback'}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Column 2: Situación Actual, Participantes y Notas */}
+                        <div>
+                            {/* Situación Actual */}
+                            <SectionHeader title="Situación Actual" subtitle={`Últimos cambios hace ${getRelativeTime(evaluacion.updatedAt)}`} />
+                            <div style={{
+                                background: 'var(--card-bg)',
+                                borderRadius: '0.5rem',
+                                border: '1px solid var(--border-color)',
+                                padding: '0 1rem',
+                                marginBottom: '1.5rem'
+                            }}>
+                                <div style={{
+                                    display: 'flex',
+                                    alignItems: 'flex-start',
+                                    gap: '0.75rem',
+                                    padding: '0.75rem 0',
+                                    borderBottom: '1px solid var(--border-color)'
+                                }}>
+                                    <div style={{ color: 'var(--primary-color)', flexShrink: 0, marginTop: '2px' }}>{Icons.check}</div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
+                                            Estado
+                                        </div>
+                                        <span style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '0.4rem',
+                                            fontSize: '0.85rem',
+                                            padding: '0.25rem 0.6rem',
+                                            borderRadius: '9999px',
+                                            background: `${ESTADO_COLORS[evaluacion.estado]}20`,
+                                            color: ESTADO_COLORS[evaluacion.estado],
+                                            fontWeight: 700
+                                        }}>
+                                            {ESTADO_LABELS[evaluacion.estado] || evaluacion.estado}
+                                        </span>
+                                    </div>
+                                </div>
                                 <div style={{
                                     display: 'flex',
                                     alignItems: 'flex-start',
@@ -437,11 +471,9 @@ const EvaluacionDetail = ({ evaluacion, onClose, onEdit }) => {
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Column 2: Participantes */}
-                        <div>
-                            <SectionHeader title="Participantes" />
+                            {/* Participantes */}
+                            <SectionHeader title="Participantes" subtitle={`Total de Evaluador(es): ${evaluacion.evaluadores ? evaluacion.evaluadores.length : 0}`} />
                             <div style={{
                                 background: 'var(--card-bg)',
                                 borderRadius: '0.5rem',
@@ -497,24 +529,11 @@ const EvaluacionDetail = ({ evaluacion, onClose, onEdit }) => {
                                 </div>
                             </div>
 
-                            {/* Feedback Section */}
-                            <SectionHeader title="Feedback" />
-                            <div style={{
-                                background: 'var(--card-bg)',
-                                borderRadius: '0.5rem',
-                                border: '1px solid var(--border-color)',
-                                padding: '1rem'
-                            }}>
-                                <p style={{ margin: 0, color: 'var(--text-primary)', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
-                                    {evaluacion.feedback || 'Sin feedback'}
-                                </p>
-                            </div>
-
                             {/* Notas Section */}
                             {evaluacion.notas && (
                                 <>
                                     <div style={{ marginTop: '1.5rem' }}>
-                                        <SectionHeader title="Notas" />
+                                        <SectionHeader title="Notas" subtitle={`Últimos cambios hace ${getRelativeTime(evaluacion.updatedAt)}`} />
                                         <div style={{
                                             background: 'var(--card-bg)',
                                             borderRadius: '0.5rem',

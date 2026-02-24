@@ -1,4 +1,4 @@
-import { formatDateOnly, formatDateTime } from '../utils/formatters';
+import { formatDateOnly, formatDateTime, formatFullName } from '../utils/formatters';
 import { useAuth } from '../context/AuthContext';
 
 // Icons SVG components
@@ -33,9 +33,9 @@ const Icons = {
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
         </svg>
     ),
-    circle: (
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 20, height: 20 }}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    shield: (
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 18, height: 18 }}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
         </svg>
     ),
     edit: (
@@ -227,7 +227,7 @@ const RegistroSaludDetail = ({ registro, onClose, onEdit }) => {
                                 padding: '0.75rem 1rem',
                                 borderRight: '1px solid var(--border-color)'
                             }}>
-                                <div style={{ color: 'var(--primary-color)', flexShrink: 0 }}>{Icons.circle}</div>
+                                <div style={{ color: registro.activo ? '#10b981' : '#ef4444' }}>{Icons.shield}</div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
                                         Estado en Sistema
@@ -243,12 +243,6 @@ const RegistroSaludDetail = ({ registro, onClose, onEdit }) => {
                                         color: registro.activo ? '#15803d' : '#ef4444',
                                         fontWeight: 700
                                     }}>
-                                        <span style={{
-                                            width: '7px',
-                                            height: '7px',
-                                            borderRadius: '50%',
-                                            background: registro.activo ? '#15803d' : '#ef4444'
-                                        }} />
                                         {registro.activo ? 'Activo' : 'Inactivo'}
                                     </span>
                                 </div>
@@ -339,12 +333,6 @@ const RegistroSaludDetail = ({ registro, onClose, onEdit }) => {
                                                 color: vencimientoStatus.color,
                                                 fontWeight: 600
                                             }}>
-                                                <span style={{
-                                                    width: '6px',
-                                                    height: '6px',
-                                                    borderRadius: '50%',
-                                                    background: vencimientoStatus.color
-                                                }} />
                                                 {vencimientoStatus.label}
                                             </span>
                                         </div>
@@ -364,37 +352,36 @@ const RegistroSaludDetail = ({ registro, onClose, onEdit }) => {
                                     border: '1px solid var(--border-color)',
                                     padding: '0 1rem'
                                 }}>
-                                    <Field icon={Icons.user} label="Nombre Completo" value={`${registro.empleado?.nombre} ${registro.empleado?.apellido}`} />
+                                    <Field icon={Icons.user} label="Nombre Completo" value={formatFullName(registro.empleado)} />
                                     <Field icon={Icons.document} label="Documento" value={registro.empleado?.numeroDocumento} />
                                 </div>
                             </div>
 
-                            {/* Comprobantes Section */}
-                            <div>
-                                <SectionHeader title="Comprobantes Médicos" subtitle={`Últimos cambios hace ${getRelativeTime(registro.empleado?.updatedAt || registro.updatedAt)}`} />
-                                <div style={{
-                                    background: 'var(--card-bg)',
-                                    borderRadius: '0.5rem',
-                                    border: '1px solid var(--border-color)',
-                                    padding: '0 1rem'
-                                }}>
-                                    {(() => {
-                                        // Collect all comprobantes (legacy single + new array format)
-                                        const allComprobantes = [];
-                                        if (registro.comprobante) {
-                                            allComprobantes.push({
-                                                data: registro.comprobante,
-                                                nombre: registro.comprobanteNombre || 'Comprobante',
-                                                tipo: registro.comprobanteTipo || 'application/pdf',
-                                            });
-                                        }
-                                        if (registro.comprobantes && Array.isArray(registro.comprobantes)) {
-                                            allComprobantes.push(...registro.comprobantes);
-                                        }
+                            {(() => {
+                                // Collect all comprobantes (legacy single + new array format)
+                                const allComprobantes = [];
+                                if (registro.comprobante) {
+                                    allComprobantes.push({
+                                        data: registro.comprobante,
+                                        nombre: registro.comprobanteNombre || 'Comprobante',
+                                        tipo: registro.comprobanteTipo || 'application/pdf',
+                                    });
+                                }
+                                if (registro.comprobantes && Array.isArray(registro.comprobantes)) {
+                                    allComprobantes.push(...registro.comprobantes);
+                                }
 
-                                        if (allComprobantes.length === 0) return null;
+                                if (allComprobantes.length === 0) return null;
 
-                                        return (
+                                return (
+                                    <div>
+                                        <SectionHeader title="Comprobantes Médicos" subtitle={`Últimos cambios hace ${getRelativeTime(registro.empleado?.updatedAt || registro.updatedAt)}`} />
+                                        <div style={{
+                                            background: 'var(--card-bg)',
+                                            borderRadius: '0.5rem',
+                                            border: '1px solid var(--border-color)',
+                                            padding: '0 1rem'
+                                        }}>
                                             <div style={{
                                                 display: 'flex',
                                                 alignItems: 'flex-start',
@@ -436,10 +423,10 @@ const RegistroSaludDetail = ({ registro, onClose, onEdit }) => {
                                                     </div>
                                                 </div>
                                             </div>
-                                        );
-                                    })()}
-                                </div>
-                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
                         </div>
                     </div>
                 </div>

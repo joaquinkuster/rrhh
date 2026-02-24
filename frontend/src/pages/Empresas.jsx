@@ -514,11 +514,11 @@ const Empresas = () => {
                                     {items.map((item) => (
                                         <tr key={item.id} className={`${selectedIds.has(item.id) ? 'row-selected' : ''} ${!item.activo ? 'row-inactive' : ''}`}>
                                             <td><input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => handleSelectOne(item.id)} /></td>
-                                            <td><strong>{item.nombre}</strong></td>
+                                            <td><strong>{truncateText(item.nombre, 15)}</strong></td>
                                             {visibleColumns.espacio && <td>{truncateText(item.espacioTrabajo?.nombre || '-')}</td>}
-                                            {visibleColumns.email && <td>{item.email || '-'}</td>}
+                                            {visibleColumns.email && <td>{truncateText(item.email || '-', 20)}</td>}
                                             {visibleColumns.telefono && <td>{item.telefono || '-'}</td>}
-                                            {visibleColumns.industria && <td>{item.industria || '-'}</td>}
+                                            {visibleColumns.industria && <td>{truncateText(item.industria || '-', 15)}</td>}
                                             {visibleColumns.direccion && <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.direccion || '-'}</td>}
                                             <td>
                                                 <div className="table-actions">

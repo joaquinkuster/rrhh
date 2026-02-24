@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { formatDateOnly } from '../utils/formatters';
+import { formatDateOnly, formatDateTime } from '../utils/formatters';
 import { useAuth } from '../context/AuthContext';
 import { getEvaluaciones } from '../services/api';
 import ubicaciones from '../data/ubicaciones.json';
@@ -76,9 +76,9 @@ const Icons = {
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" />
         </svg>
     ),
-    circle: (
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 20, height: 20 }}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    shield: (
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 18, height: 18 }}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
         </svg>
     ),
     edit: (
@@ -370,7 +370,7 @@ const EmpleadoDetail = ({ empleado, onClose, onEdit, hideEditButton = false }) =
                                         Fecha de Creación
                                     </div>
                                     <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
-                                        {formatDateOnly(empleado.createdAt)}
+                                        {formatDateTime(empleado.createdAt)}
                                     </div>
                                 </div>
                             </div>
@@ -382,9 +382,7 @@ const EmpleadoDetail = ({ empleado, onClose, onEdit, hideEditButton = false }) =
                                 padding: '0.75rem 1rem',
                                 borderRight: '1px solid var(--border-color)'
                             }}>
-                                <div style={{ color: 'var(--primary-color)', flexShrink: 0 }}>
-                                    {Icons.circle}
-                                </div>
+                                <div style={{ color: empleado.activo ? '#10b981' : '#ef4444' }}>{Icons.shield}</div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
                                         Estado en Sistema
@@ -400,12 +398,6 @@ const EmpleadoDetail = ({ empleado, onClose, onEdit, hideEditButton = false }) =
                                         color: empleado.activo ? '#15803d' : '#ef4444',
                                         fontWeight: 700
                                     }}>
-                                        <span style={{
-                                            width: '7px',
-                                            height: '7px',
-                                            borderRadius: '50%',
-                                            background: empleado.activo ? '#15803d' : '#ef4444'
-                                        }} />
                                         {empleado.activo ? 'Activo' : 'Inactivo'}
                                     </span>
                                 </div>
@@ -425,7 +417,7 @@ const EmpleadoDetail = ({ empleado, onClose, onEdit, hideEditButton = false }) =
                                         Última Modificación
                                     </div>
                                     <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
-                                        {formatDateOnly(empleado.updatedAt)}
+                                        {formatDateTime(empleado.updatedAt)}
                                     </div>
                                 </div>
                             </div>

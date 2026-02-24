@@ -1,4 +1,4 @@
-const { Empresa, Area, Departamento, Puesto, Contrato, EspacioTrabajo, Empleado, ContratoPuesto } = require('../models');
+const { Empresa, Area, Departamento, Puesto, Contrato, EspacioTrabajo, Empleado, ContratoPuesto, Usuario } = require('../models');
 const { Op } = require('sequelize');
 
 const includeStructure = [{
@@ -15,7 +15,16 @@ const includeStructure = [{
                 as: 'contratos',
                 through: { attributes: [] },
                 where: { activo: true },
-                required: false
+                required: false,
+                include: [{
+                    model: Empleado,
+                    as: 'empleado',
+                    include: [{
+                        model: Usuario,
+                        as: 'usuario',
+                        attributes: ['activo']
+                    }]
+                }]
             }]
         }]
     }]

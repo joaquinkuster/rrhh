@@ -1,4 +1,4 @@
-import { formatDateOnly } from '../utils/formatters';
+import { formatDateOnly, formatDateTime, formatFullName } from '../utils/formatters';
 import { useAuth } from '../context/AuthContext';
 
 // Icons SVG components
@@ -44,9 +44,9 @@ const Icons = {
             <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
         </svg>
     ),
-    circle: (
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 20, height: 20 }}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    shield: (
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 18, height: 18 }}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
         </svg>
     ),
     edit: (
@@ -65,6 +65,12 @@ const Icons = {
         </svg>
     ),
 };
+
+const PARENTESCOS = [
+    'Cónyuge', 'Padre', 'Madre', 'Hijo/a', 'Hermano/a',
+    'Abuelo/a', 'Nieto/a', 'Tío/a', 'Sobrino/a', 'Primo/a',
+    'Suegro/a', 'Cuñado/a', 'Yerno', 'Nuera', 'Otro'
+];
 
 const ContactoDetail = ({ contacto, onClose, onEdit }) => {
     if (!contacto) return null;
@@ -285,7 +291,7 @@ const ContactoDetail = ({ contacto, onClose, onEdit }) => {
                                         Fecha de Creación
                                     </div>
                                     <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
-                                        {formatDateOnly(contacto.createdAt)}
+                                        {formatDateTime(contacto.createdAt)}
                                     </div>
                                 </div>
                             </div>
@@ -297,9 +303,7 @@ const ContactoDetail = ({ contacto, onClose, onEdit }) => {
                                 padding: '0.75rem 1rem',
                                 borderRight: '1px solid var(--border-color)'
                             }}>
-                                <div style={{ color: 'var(--primary-color)', flexShrink: 0 }}>
-                                    {Icons.circle}
-                                </div>
+                                <div style={{ color: contacto.activo ? '#10b981' : '#ef4444' }}>{Icons.shield}</div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
                                         Estado en Sistema
@@ -315,12 +319,6 @@ const ContactoDetail = ({ contacto, onClose, onEdit }) => {
                                         color: contacto.activo ? '#15803d' : '#ef4444',
                                         fontWeight: 700
                                     }}>
-                                        <span style={{
-                                            width: '7px',
-                                            height: '7px',
-                                            borderRadius: '50%',
-                                            background: contacto.activo ? '#15803d' : '#ef4444'
-                                        }} />
                                         {contacto.activo ? 'Activo' : 'Inactivo'}
                                     </span>
                                 </div>
@@ -340,7 +338,7 @@ const ContactoDetail = ({ contacto, onClose, onEdit }) => {
                                         Última Modificación
                                     </div>
                                     <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
-                                        {formatDateOnly(contacto.updatedAt)}
+                                        {formatDateTime(contacto.updatedAt)}
                                     </div>
                                 </div>
                             </div>
@@ -351,19 +349,56 @@ const ContactoDetail = ({ contacto, onClose, onEdit }) => {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
                         {/* Column 1: Datos del Contacto */}
                         <div>
-                            <SectionHeader title="Datos del Contacto" />
+                            <SectionHeader title="Resumen" subtitle={`Últimos cambios hace ${getRelativeTime(contacto.updatedAt)}`} />
+                            <div style={{
+                                background: 'var(--card-bg)',
+                                borderRadius: '0.5rem',
+                                border: '1px solid var(--border-color)',
+                                padding: '0 1rem',
+                                marginBottom: '1.5rem'
+                            }}>
+                                <Field icon={Icons.user} label="Nombre Completo" value={contacto.nombreCompleto} />
+                                <Field icon={Icons.document} label="DNI" value={contacto.dni} />
+                                <div style={{
+                                    display: 'flex',
+                                    alignItems: 'flex-start',
+                                    gap: '0.75rem',
+                                    padding: '0.75rem 0',
+                                    borderBottom: '1px solid var(--border-color)'
+                                }}>
+                                    <div style={{ color: 'var(--primary-color)', flexShrink: 0, marginTop: '2px' }}>{Icons.users}</div>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>Tipo de Contacto</div>
+                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                            {contacto.esFamiliar && <Badge label="Familiar" color="green" />}
+                                            {contacto.esContactoEmergencia && <Badge label="Emergencia" color="blue" />}
+                                        </div>
+                                    </div>
+                                </div>
+                                <Field icon={Icons.heart} label="Parentesco" value={contacto.parentesco} />
+                            </div>
+
+                            {/* Contacto */}
+                            <SectionHeader title="Contacto" subtitle={`Últimos cambios hace ${getRelativeTime(contacto.updatedAt)}`} />
+                            <div style={{
+                                background: 'var(--card-bg)',
+                                borderRadius: '0.5rem',
+                                border: '1px solid var(--border-color)',
+                                padding: '0 1rem',
+                                marginBottom: '1.5rem'
+                            }}>
+                                <Field icon={Icons.phone} label="Teléfono Principal" value={contacto.telefonoPrincipal} />
+                                <Field icon={Icons.phone} label="Teléfono Secundario" value={contacto.telefonoSecundario} />
+                            </div>
+
+                            {/* Ubicación */}
+                            <SectionHeader title="Ubicación" subtitle={`Últimos cambios hace ${getRelativeTime(contacto.updatedAt)}`} />
                             <div style={{
                                 background: 'var(--card-bg)',
                                 borderRadius: '0.5rem',
                                 border: '1px solid var(--border-color)',
                                 padding: '0 1rem'
                             }}>
-                                <Field icon={Icons.user} label="Nombre Completo" value={contacto.nombreCompleto} />
-                                <Field icon={Icons.document} label="DNI" value={contacto.dni} />
-                                <Field icon={Icons.calendar} label="Fecha de Nacimiento" value={formatDateOnly(contacto.fechaNacimiento)} />
-                                <Field icon={Icons.heart} label="Parentesco" value={contacto.parentesco} />
-                                <Field icon={Icons.phone} label="Teléfono Principal" value={contacto.telefonoPrincipal} />
-                                <Field icon={Icons.phone} label="Teléfono Secundario" value={contacto.telefonoSecundario} />
                                 <Field icon={Icons.location} label="Dirección" value={contacto.direccion} />
                             </div>
                         </div>
@@ -371,7 +406,7 @@ const ContactoDetail = ({ contacto, onClose, onEdit }) => {
                         {/* Column 2: Empleado + Información Adicional */}
                         <div>
                             {/* Empleado Asociado */}
-                            <SectionHeader title="Empleado Asociado" />
+                            <SectionHeader title="Datos del Empleado" subtitle={`Últimos cambios hace ${getRelativeTime(contacto.empleado?.updatedAt || contacto.updatedAt)}`} />
                             <div style={{
                                 background: 'var(--card-bg)',
                                 borderRadius: '0.5rem',
@@ -382,7 +417,7 @@ const ContactoDetail = ({ contacto, onClose, onEdit }) => {
                                 <Field
                                     icon={Icons.user}
                                     label="Empleado"
-                                    value={contacto.empleado ? `${contacto.empleado.nombre} ${contacto.empleado.apellido}` : '-'}
+                                    value={formatFullName(contacto.empleado)}
                                 />
                                 <Field
                                     icon={Icons.document}
@@ -392,13 +427,14 @@ const ContactoDetail = ({ contacto, onClose, onEdit }) => {
                             </div>
 
                             {/* Información Adicional */}
-                            <SectionHeader title="Información Adicional" />
+                            <SectionHeader title="Información Adicional" subtitle={`Últimos cambios hace ${getRelativeTime(contacto.updatedAt)}`} />
                             <div style={{
                                 background: 'var(--card-bg)',
                                 borderRadius: '0.5rem',
                                 border: '1px solid var(--border-color)',
                                 padding: '0 1rem'
                             }}>
+                                <Field icon={Icons.calendar} label="Fecha de Nacimiento" value={formatDateOnly(contacto.fechaNacimiento)} />
                                 <BooleanField icon={Icons.users} label="Discapacidad" value={contacto.discapacidad} />
                                 <BooleanField icon={Icons.users} label="Dependiente" value={contacto.dependiente} />
                                 <BooleanField icon={Icons.users} label="Escolaridad" value={contacto.escolaridad} />

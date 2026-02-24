@@ -238,7 +238,6 @@ const RolDetail = ({ rol, onClose, onEdit }) => {
                             gridTemplateColumns: '1fr 1fr 1fr',
                             overflow: 'hidden'
                         }}>
-                            {/* Fecha de Creación */}
                             <div style={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -246,14 +245,16 @@ const RolDetail = ({ rol, onClose, onEdit }) => {
                                 padding: '0.75rem 1rem',
                                 borderRight: '1px solid var(--border-color)'
                             }}>
-                                <div style={{ color: primaryColor }}>{Icons.calendar}</div>
-                                <div>
-                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Creado</div>
-                                    <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>{formatDate(rol.createdAt)}</div>
+                                <div style={{ color: 'var(--primary-color)', flexShrink: 0 }}>{Icons.calendar}</div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
+                                        Fecha de Creación
+                                    </div>
+                                    <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
+                                        {formatDateTime(rol.createdAt)}
+                                    </div>
                                 </div>
                             </div>
-
-                            {/* Última Modificación */}
                             <div style={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -261,29 +262,39 @@ const RolDetail = ({ rol, onClose, onEdit }) => {
                                 padding: '0.75rem 1rem',
                                 borderRight: '1px solid var(--border-color)'
                             }}>
-                                <div style={{ color: primaryColor }}>{Icons.clock}</div>
-                                <div>
-                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Modificado</div>
-                                    <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>{formatDate(rol.updatedAt)}</div>
+                                <div style={{ color: rol.activo ? '#10b981' : '#ef4444' }}>{Icons.shield}</div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
+                                        Estado en Sistema
+                                    </div>
+                                    <span style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '0.4rem',
+                                        fontSize: '0.8rem',
+                                        padding: '0.3rem 0.7rem',
+                                        borderRadius: '9999px',
+                                        background: rol.activo ? 'rgba(21, 128, 61, 0.2)' : 'rgba(239, 68, 68, 0.15)',
+                                        color: rol.activo ? '#15803d' : '#ef4444',
+                                        fontWeight: 700
+                                    }}>
+                                        {rol.activo ? 'Activo' : 'Inactivo'}
+                                    </span>
                                 </div>
                             </div>
-
-                            {/* Estado */}
                             <div style={{
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '0.75rem',
                                 padding: '0.75rem 1rem'
                             }}>
-                                <div style={{ color: rol.activo ? '#10b981' : '#ef4444' }}>{Icons.shield}</div>
-                                <div>
-                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Estado</div>
-                                    <div style={{
-                                        fontSize: '0.875rem',
-                                        fontWeight: 600,
-                                        color: rol.activo ? '#10b981' : '#ef4444'
-                                    }}>
-                                        {rol.activo ? 'Activo' : 'Inactivo'}
+                                <div style={{ color: 'var(--primary-color)', flexShrink: 0 }}>{Icons.clock}</div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
+                                        Última Modificación
+                                    </div>
+                                    <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
+                                        {formatDateTime(rol.updatedAt)}
                                     </div>
                                 </div>
                             </div>
@@ -294,21 +305,21 @@ const RolDetail = ({ rol, onClose, onEdit }) => {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                         {/* Left Column: Información Básica */}
                         <div>
-                            <SectionHeader title="Información Básica" />
+                            <SectionHeader title="Resumen" subtitle={`Últimos cambios hace ${getRelativeTime(rol.updatedAt)}`} />
                             <div style={{
                                 background: 'var(--card-bg)',
                                 borderRadius: '0.5rem',
                                 border: '1px solid var(--border-color)',
                                 padding: '0.5rem 1rem'
                             }}>
-                                <Field icon={Icons.shield} label="Nombre del Rol" value={rol.nombre} />
+                                <Field icon={Icons.shield} label="Nombre" value={rol.nombre} />
                                 <Field icon={Icons.document} label="Descripción" value={rol.descripcion} />
                             </div>
                         </div>
 
                         {/* Right Column: Permisos en Tabla */}
                         <div>
-                            <SectionHeader title="Permisos Asignados" subtitle={`${rol.permisos?.length || 0} permisos`} />
+                            <SectionHeader title="Permisos Asignados" subtitle={`Total de Accion(es) Permitida(s): ${rol.permisos?.length || 0}`} />
 
                             {Object.keys(permisosAgrupados).length === 0 ? (
                                 <div style={{

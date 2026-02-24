@@ -14,7 +14,7 @@ import {
 import ContactoWizard from '../components/ContactoWizard';
 import ContactoDetail from '../components/ContactoDetail';
 import ConfirmDialog from '../components/ConfirmDialog';
-import { truncateText } from '../utils/formatters';
+import { truncateText, formatFullName } from '../utils/formatters';
 
 const PARENTESCOS = [
     'Cónyuge', 'Padre', 'Madre', 'Hijo/a', 'Hermano/a',
@@ -31,6 +31,7 @@ const buildSelectStyles = (isDark) => ({
     singleValue: (b) => ({ ...b, color: isDark ? '#e2e8f0' : '#1e293b' }),
     placeholder: (b) => ({ ...b, color: '#94a3b8', fontSize: '0.875rem' }),
     valueContainer: (b) => ({ ...b, padding: '0 8px' }),
+    menuPortal: (b) => ({ ...b, zIndex: 9999 }),
 });
 
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50];
@@ -161,9 +162,7 @@ const Contactos = () => {
         (empleadosList).reduce((acc, emp) => {
             const ws = emp.espacioTrabajo?.nombre || 'Sin Espacio';
             if (!acc[ws]) acc[ws] = { label: ws, options: [] };
-            const ap = emp.usuario?.apellido || emp.apellido || '';
-            const nm = emp.usuario?.nombre || emp.nombre || '';
-            acc[ws].options.push({ value: emp.id, label: `${ap}, ${nm}` });
+            acc[ws].options.push({ value: emp.id, label: `${formatFullName(emp)}` });
             return acc;
         }, {})
     );
@@ -448,10 +447,10 @@ const Contactos = () => {
                 <div className="filters-bar">
                     <div className="filters-inputs">
                         <div className="filter-group" style={{ width: '200px' }}>
-                            <Select isDisabled={isSingleWorkspace} options={espacioOptions} value={filterEspacio} onChange={opt => { setFilterEspacio(opt); setPage(1); }} placeholder="Espacio..." isClearable={!isSingleWorkspace} styles={selectStyles} noOptionsMessage={() => 'Sin resultados'} />
+                            <Select isDisabled={isSingleWorkspace} options={espacioOptions} value={filterEspacio} onChange={opt => { setFilterEspacio(opt); setPage(1); }} placeholder="Espacio..." isClearable={!isSingleWorkspace} styles={selectStyles} menuPortalTarget={document.body} noOptionsMessage={() => 'Sin resultados'} />
                         </div>
                         <div className="filter-group" style={{ width: '200px' }}>
-                            <Select isDisabled={isSingleEmployee} options={empleadoOptions} value={filterEmpleado} onChange={opt => { setFilterEmpleado(opt); setPage(1); }} placeholder="Empleado..." isClearable={!isSingleEmployee} styles={selectStyles} noOptionsMessage={() => 'Sin resultados'} />
+                            <Select isDisabled={isSingleEmployee} options={empleadoOptions} value={filterEmpleado} onChange={opt => { setFilterEmpleado(opt); setPage(1); }} placeholder="Empleado..." isClearable={!isSingleEmployee} styles={selectStyles} menuPortalTarget={document.body} noOptionsMessage={() => 'Sin resultados'} />
                         </div>
                         <div className="filter-group">
                             <input type="text" className="filter-input" placeholder="Buscar por nombre..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} style={{ width: '200px' }} />
@@ -545,13 +544,24 @@ const Contactos = () => {
                                     {items.map((item) => (
                                         <tr key={item.id} className={`${selectedIds.has(item.id) ? 'row-selected' : ''} ${!item.activo ? 'row-inactive' : ''}`}>
                                             <td><input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => handleSelectOne(item.id)} /></td>
-                                            <td><strong>{item.nombreCompleto}</strong></td>
+                                            <td><strong>{truncateText(item.nombreCompleto, 15)}</strong></td>
                                             {visibleColumns.empleado && (
-                                                <td>{item.empleado ? `${item.empleado.usuario.nombre} ${item.empleado.usuario.apellido}` : '-'}</td>
+                                                <td>
+                                                    {item.empleado ? (
+                                                        <>
+                                                            <strong>{truncateText(formatFullName(item.empleado), 15)}</strong>
+                                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                                                {item.empleado?.numeroDocumento}
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>Sin empleado</span>
+                                                    )}
+                                                </td>
                                             )}
                                             {visibleColumns.espacio && <td>{truncateText(item.empleado?.espacioTrabajo?.nombre || '-')}</td>}
                                             {visibleColumns.dni && <td>{item.dni}</td>}
-                                            {visibleColumns.parentesco && <td>{item.parentesco}</td>}
+                                            {visibleColumns.parentesco && <td>{truncateText(item.parentesco, 15)}</td>}
                                             {visibleColumns.tipo && (
                                                 <td>
                                                     <TypeBadge esFamiliar={item.esFamiliar} esContactoEmergencia={item.esContactoEmergencia} />

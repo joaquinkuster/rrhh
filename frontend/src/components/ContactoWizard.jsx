@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Select from 'react-select';
 import StepTracker from './StepTracker';
 import { getEmpleados, createContacto, updateContacto } from '../services/api';
+import { formatFullName } from '../utils/formatters';
 
 const PARENTESCOS = [
     'Cónyuge', 'Padre', 'Madre', 'Hijo/a', 'Hermano/a',
@@ -115,7 +116,7 @@ const ContactoWizard = ({ contacto, onClose, onSuccess }) => {
             if (contacto.empleado) {
                 const empOption = {
                     value: contacto.empleado.id,
-                    label: `${contacto.empleado.nombre} ${contacto.empleado.apellido} (${contacto.empleado.numeroDocumento || 'Sin doc'})`,
+                    label: `${formatFullName(contacto.empleado)} (${contacto.empleado.numeroDocumento || 'Sin doc'})`,
                     empleado: contacto.empleado
                 };
                 setSelectedEmpleado(empOption);
@@ -144,7 +145,7 @@ const ContactoWizard = ({ contacto, onClose, onSuccess }) => {
         if (!acc[wsName]) acc[wsName] = { label: wsName, options: [] };
         acc[wsName].options.push({
             value: emp.id,
-            label: `${emp.apellido}, ${emp.nombre} - ${emp.numeroDocumento || 'Sin doc'}`,
+            label: `${formatFullName(emp)} - ${emp.numeroDocumento || 'Sin doc'}`,
             empleado: emp,
         });
         return acc;

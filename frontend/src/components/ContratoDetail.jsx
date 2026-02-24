@@ -1,4 +1,4 @@
-import { formatDateOnly, formatCurrency as formatCurrencyUtil, formatDateTime } from '../utils/formatters';
+import { formatDateOnly, formatCurrency as formatCurrencyUtil, formatDateTime, formatFullName } from '../utils/formatters';
 import { useAuth } from '../context/AuthContext';
 
 // Mapeo de tipos de contrato a labels legibles
@@ -80,11 +80,6 @@ const Icons = {
     checkCircle: (
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={{ width: 20, height: 20 }}>
             <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
-        </svg>
-    ),
-    circle: (
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 20, height: 20 }}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
     ),
     check: (
@@ -286,7 +281,7 @@ const ContratoDetail = ({ contrato, onClose, onEdit }) => {
                                 color: 'var(--text-primary)',
                                 margin: 0
                             }}>
-                                {contrato.empleado?.nombre} {contrato.empleado?.apellido}
+                                {formatFullName(contrato.empleado)}
                             </h2>
                             <span style={{
                                 fontSize: '0.85rem',
@@ -359,9 +354,7 @@ const ContratoDetail = ({ contrato, onClose, onEdit }) => {
                                 padding: '0.75rem 1rem',
                                 borderRight: '1px solid var(--border-color)'
                             }}>
-                                <div style={{ color: 'var(--primary-color)', flexShrink: 0 }}>
-                                    {Icons.circle}
-                                </div>
+                                <div style={{ color: contrato.activo ? '#10b981' : '#ef4444' }}>{Icons.shield}</div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
                                         Estado en Sistema
@@ -377,12 +370,6 @@ const ContratoDetail = ({ contrato, onClose, onEdit }) => {
                                         color: contrato.activo ? '#15803d' : '#ef4444',
                                         fontWeight: 700
                                     }}>
-                                        <span style={{
-                                            width: '7px',
-                                            height: '7px',
-                                            borderRadius: '50%',
-                                            background: contrato.activo ? '#15803d' : '#ef4444'
-                                        }} />
                                         {contrato.activo ? 'Activo' : 'Inactivo'}
                                     </span>
                                 </div>
@@ -447,12 +434,6 @@ const ContratoDetail = ({ contrato, onClose, onEdit }) => {
                                                 color: getContractStatusColor(),
                                                 fontWeight: 700
                                             }}>
-                                                <span style={{
-                                                    width: '7px',
-                                                    height: '7px',
-                                                    borderRadius: '50%',
-                                                    background: getContractStatusColor()
-                                                }} />
                                                 {getContractStatus()}
                                             </span>
                                         </div>
@@ -466,7 +447,7 @@ const ContratoDetail = ({ contrato, onClose, onEdit }) => {
 
                             {/* Puestos Asignados */}
                             <div>
-                                <SectionHeader title={`${contrato.puestos?.length || 0} Puesto(s) Asignado(s)`} subtitle={`Últimos cambios hace ${getRelativeTime(contrato.updatedAt)}`} />
+                                <SectionHeader title={`Distribución de Puestos`} subtitle={`Total de Puesto(s) Asignado(s): ${contrato.puestos?.length || 0}`} />
                                 <div style={{
                                     background: 'var(--card-bg)',
                                     borderRadius: '0.5rem',
@@ -515,7 +496,7 @@ const ContratoDetail = ({ contrato, onClose, onEdit }) => {
                                     border: '1px solid var(--border-color)',
                                     padding: '0 1rem'
                                 }}>
-                                    <Field icon={Icons.user} label="Nombre Completo" value={`${contrato.empleado?.usuario?.nombre || contrato.empleado?.nombre || ''} ${contrato.empleado?.usuario?.apellido || contrato.empleado?.apellido || ''}`} />
+                                    <Field icon={Icons.user} label="Nombre Completo" value={formatFullName(contrato.empleado)} />
                                     <Field icon={Icons.document} label="Documento" value={contrato.empleado?.numeroDocumento} />
                                     {/* Rol del contrato */}
                                     <div style={{
@@ -529,7 +510,7 @@ const ContratoDetail = ({ contrato, onClose, onEdit }) => {
                                         </div>
                                         <div style={{ flex: 1, minWidth: 0 }}>
                                             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
-                                                Rol en el Sistema
+                                                Rol en la Empresa
                                             </div>
                                             {contrato.rol ? (
                                                 <span style={{

@@ -14,7 +14,6 @@ import {
 import EmpleadoWizard from '../components/EmpleadoWizard';
 import EmpleadoDetail from '../components/EmpleadoDetail';
 import ConfirmDialog from '../components/ConfirmDialog';
-import Alert from '../components/Alert';
 import ubicaciones from '../data/ubicaciones.json';
 import { truncateText } from '../utils/formatters';
 
@@ -26,6 +25,7 @@ const buildSelectStyles = (isDark) => ({
     singleValue: (b) => ({ ...b, color: isDark ? '#e2e8f0' : '#1e293b' }),
     placeholder: (b) => ({ ...b, color: '#94a3b8', fontSize: '0.875rem' }),
     valueContainer: (b) => ({ ...b, padding: '0 8px' }),
+    menuPortal: (b) => ({ ...b, zIndex: 9999 }),
 });
 
 const NACIONALIDADES_COMUNES = [
@@ -444,6 +444,7 @@ const Empleados = () => {
                                     isClearable={!currentUser?.esEmpleado}
                                     isDisabled={currentUser && currentUser.esEmpleado}
                                     styles={selectStyles}
+                                    menuPortalTarget={document.body}
                                     noOptionsMessage={() => 'Sin resultados'}
                                 />
                             </div>
@@ -532,9 +533,9 @@ const Empleados = () => {
                                         {items.map((item) => (
                                             <tr key={item.id} className={`${selectedIds.has(item.id) ? 'row-selected' : ''} ${!item.activo ? 'row-inactive' : ''}`}>
                                                 <td><input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => handleSelectOne(item.id)} /></td>
-                                                <td><strong>{item.apellido}, {item.nombre}</strong></td>
-                                                {visibleColumns.espacio && <td>{truncateText(item.espacioTrabajo?.nombre || '-')}</td>}
-                                                {visibleColumns.email && <td>{item.email}</td>}
+                                                <td><strong>{truncateText(item.apellido + ', ' + item.nombre, 15)}</strong></td>
+                                                {visibleColumns.espacio && <td>{truncateText(item.espacioTrabajo?.nombre || '-', 20)}</td>}
+                                                {visibleColumns.email && <td>{truncateText(item.email, 20)}</td>}
                                                 {visibleColumns.documento && <td>{item.numeroDocumento}</td>}
                                                 {visibleColumns.nacionalidad && <td>{(() => {
                                                     const id = item.nacionalidadId || item.nacionalidad;

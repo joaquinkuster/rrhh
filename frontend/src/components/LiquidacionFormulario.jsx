@@ -74,20 +74,32 @@ const LiquidacionFormulario = ({ liquidacion, onClose, onSuccess }) => {
                             </div>
                         )}
 
-                        {/* Información de solo lectura */}
-                        <div style={{ marginBottom: '2rem', padding: '1rem', background: 'var(--bg-secondary)', borderRadius: '8px' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                <div>
-                                    <strong>Empleado:</strong> {liquidacion?.contrato?.empleado?.usuario?.apellido}, {liquidacion?.contrato?.empleado?.usuario?.nombre}
-                                </div>
-                                <div>
-                                    <strong>Período:</strong> {formatDateOnly(liquidacion?.fechaInicio)} - {formatDateOnly(liquidacion?.fechaFin)}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Campos editables */}
+                        {/* Campos editables y de lectura */}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                            <div className="form-group">
+                                <label className="form-label">Empleado</label>
+                                <input
+                                    type="text"
+                                    className="form-input"
+                                    value={`${liquidacion?.contrato?.empleado?.usuario?.apellido}, ${liquidacion?.contrato?.empleado?.usuario?.nombre}`}
+                                    readOnly
+                                    disabled
+                                    style={{ background: 'var(--bg-secondary)', cursor: 'not-allowed' }}
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label className="form-label">Período</label>
+                                <input
+                                    type="text"
+                                    className="form-input"
+                                    value={`${formatDateOnly(liquidacion?.fechaInicio)} - ${formatDateOnly(liquidacion?.fechaFin)}`}
+                                    readOnly
+                                    disabled
+                                    style={{ background: 'var(--bg-secondary)', cursor: 'not-allowed' }}
+                                />
+                            </div>
+
                             <div className="form-group">
                                 <label className="form-label">Básico *</label>
                                 <input

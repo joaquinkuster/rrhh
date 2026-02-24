@@ -72,3 +72,18 @@ export const getTodayStr = () => {
     const day = String(d.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
 };
+
+/**
+ * Formatea el nombre completo de un empleado o usuario, manejando estructuras anidadas (usuario) o planas.
+ * @param {Object} person - Objeto del empleado o usuario
+ * @returns {string} - "Apellido, Nombre"
+ */
+export const formatFullName = (person) => {
+    if (!person) return '-';
+    // Si viene de una relación anidada como contrato.empleado, person.usuario existirá.
+    // Si viene de una respuesta aplanada del backend, nombre/apellido estarán en la raíz.
+    const u = person.usuario || person;
+    const apellido = u.apellido || person.apellido || 'Desconocido';
+    const nombre = u.nombre || person.nombre || '';
+    return nombre ? `${apellido}, ${nombre}` : apellido;
+};

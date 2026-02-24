@@ -248,10 +248,8 @@ const runSeed = async () => {
             await RegistroSalud.create({ empleadoId: empDir.id, tipoExamen: 'pre_ocupacional', fechaRealizacion: '2023-01-15', fechaVencimiento: '2024-01-15', resultado: 'apto', activo: true, vigente: false }, { hooks: false, validate: false });
             await RegistroSalud.create({ empleadoId: empDir.id, tipoExamen: 'periodico', fechaRealizacion: '2024-03-10', fechaVencimiento: '2025-03-10', resultado: 'apto', activo: true, vigente: true }, { hooks: false, validate: false });
 
-            await Contacto.create({ empleadoId: empDir.id, nombreCompleto: 'Sofía Rodríguez', dni: '28111222', telefono: '376-4512345', email: 'sofia.rodriguez@gmail.com', parentesco: 'conyugue', esFamiliar: true, esContactoEmergencia: true }, { validate: false });
-            await Contacto.create({ empleadoId: empDir.id, nombreCompleto: 'Lucas Rodríguez', dni: '41222333', telefono: '376-4512346', email: 'lucas.rodriguez@gmail.com', parentesco: 'hijo', esFamiliar: true, esContactoEmergencia: false }, { validate: false });
-
-            await Evaluacion.create({ contratoEvaluadoId: cDir.id, periodo: 'anual', tipoEvaluacion: 'descendente_90', fecha: '2024-12-10', puntaje: 94, escala: 'supera_expectativas', feedback: 'El director demostró liderazgo excepcional. Superó los objetivos anuales en un 18% y consolidó alianzas estratégicas clave para el crecimiento a largo plazo de la empresa.', estado: 'firmada', activo: true }, { hooks: false, validate: false });
+            await Contacto.create({ empleadoId: empDir.id, nombreCompleto: 'Sofía Rodríguez', dni: '28111222', telefonoPrincipal: '376-4512345', telefonoSecundario: '376-4588990', direccion: 'Av. Tacuary 450, Iguazú', fechaNacimiento: '1982-03-15', parentesco: 'Cónyuge', esFamiliar: true, esContactoEmergencia: true }, { validate: false });
+            await Contacto.create({ empleadoId: empDir.id, nombreCompleto: 'Lucas Rodríguez', dni: '41222333', telefonoPrincipal: '376-4512346', telefonoSecundario: null, direccion: 'Av. Tacuary 450, Iguazú', fechaNacimiento: '2004-11-20', parentesco: 'Hijo/a', esFamiliar: true, esContactoEmergencia: false }, { validate: false });
 
             // Solicitud aprobada de vacaciones del Director
             const solVacDir = await Solicitud.create({ contratoId: cDir.id, tipoSolicitud: 'vacaciones', activo: true }, { validate: false });
@@ -271,9 +269,7 @@ const runSeed = async () => {
             await RegistroSalud.create({ empleadoId: empRRHH.id, tipoExamen: 'pre_ocupacional', fechaRealizacion: '2023-06-01', fechaVencimiento: '2024-06-01', resultado: 'apto', activo: true, vigente: false }, { hooks: false, validate: false });
             await RegistroSalud.create({ empleadoId: empRRHH.id, tipoExamen: 'periodico', fechaRealizacion: '2024-06-15', fechaVencimiento: '2025-06-15', resultado: 'apto', activo: true, vigente: true }, { hooks: false, validate: false });
 
-            await Contacto.create({ empleadoId: empRRHH.id, nombreCompleto: 'Roberto Gómez', dni: '24333444', telefono: '376-4567890', email: 'roberto.gomez@gmail.com', parentesco: 'conyugue', esFamiliar: true, esContactoEmergencia: true }, { validate: false });
-
-            await Evaluacion.create({ contratoEvaluadoId: cRRHH.id, periodo: 'semestre_1', tipoEvaluacion: 'descendente_90', fecha: '2024-07-01', puntaje: 88, escala: 'supera_expectativas', feedback: 'Valeria gestionó el área de personal con gran eficiencia. Implementó mejoras en los procesos de liquidación y redujo los tiempos de respuesta a consultas de empleados.', estado: 'firmada', activo: true }, { hooks: false, validate: false });
+            await Contacto.create({ empleadoId: empRRHH.id, nombreCompleto: 'Roberto Gómez', dni: '24333444', telefonoPrincipal: '376-4567890', telefonoSecundario: '376-4555112', direccion: 'Calle Belgrano 120, Iguazú', fechaNacimiento: '1985-06-10', parentesco: 'Cónyuge', esFamiliar: true, esContactoEmergencia: true }, { validate: false });
 
             // Solicitud pendiente de licencia del RRHH
             const solLicRRHH = await Solicitud.create({ contratoId: cRRHH.id, tipoSolicitud: 'licencia', activo: true }, { validate: false });
@@ -293,9 +289,7 @@ const runSeed = async () => {
             await RegistroSalud.create({ empleadoId: empJefe.id, tipoExamen: 'pre_ocupacional', fechaRealizacion: '2023-03-01', fechaVencimiento: '2024-03-01', resultado: 'apto', activo: true, vigente: false }, { hooks: false, validate: false });
             await RegistroSalud.create({ empleadoId: empJefe.id, tipoExamen: 'periodico', fechaRealizacion: '2024-09-05', fechaVencimiento: '2025-09-05', resultado: 'apto', activo: true, vigente: true }, { hooks: false, validate: false });
 
-            await Contacto.create({ empleadoId: empJefe.id, nombreCompleto: 'María Aguirre', dni: '33444555', telefono: '376-4598765', email: 'maria.aguirre@gmail.com', parentesco: 'madre', esFamiliar: true, esContactoEmergencia: true }, { validate: false });
-
-            await Evaluacion.create({ contratoEvaluadoId: cJefe.id, periodo: 'anual', tipoEvaluacion: 'descendente_90', fecha: '2024-12-15', puntaje: 83, escala: 'cumple', feedback: 'Hernán coordina el equipo de obras con solvencia técnica. Se recomienda mejorar la comunicación de avances y la gestión de incidentes en tiempo real.', estado: 'firmada', activo: true }, { hooks: false, validate: false });
+            await Contacto.create({ empleadoId: empJefe.id, nombreCompleto: 'María Aguirre', dni: '33444555', telefonoPrincipal: '376-4598765', telefonoSecundario: null, direccion: 'Av. Victoria Aguirre 430, Iguazú', fechaNacimiento: '1960-01-05', parentesco: 'Madre', esFamiliar: true, esContactoEmergencia: true }, { validate: false });
 
             // Solicitud pendiente de horas extras del Jefe
             const solHEJefe = await Solicitud.create({ contratoId: cJefe.id, tipoSolicitud: 'horas_extras', activo: true }, { validate: false });
@@ -319,10 +313,8 @@ const runSeed = async () => {
             await RegistroSalud.create({ empleadoId: empTec.id, tipoExamen: 'pre_ocupacional', fechaRealizacion: '2024-03-01', fechaVencimiento: '2025-03-01', resultado: 'apto', activo: true, vigente: true }, { hooks: false, validate: false });
             await RegistroSalud.create({ empleadoId: empTec.id, tipoExamen: 'periodico', fechaRealizacion: '2024-09-01', fechaVencimiento: '2025-09-01', resultado: 'apto_preexistencias', activo: true, vigente: true }, { hooks: false, validate: false });
 
-            await Contacto.create({ empleadoId: empTec.id, nombreCompleto: 'Ana Pereyra', dni: '35999888', telefono: '376-4511111', email: 'ana.pereyra@gmail.com', parentesco: 'madre', esFamiliar: true, esContactoEmergencia: true }, { validate: false });
-            await Contacto.create({ empleadoId: empTec.id, nombreCompleto: 'Carlos Pereyra', dni: '29888777', telefono: '376-4511112', email: 'carlos.pereyra@gmail.com', parentesco: 'padre', esFamiliar: true, esContactoEmergencia: false }, { validate: false });
-
-            await Evaluacion.create({ contratoEvaluadoId: cTec.id, periodo: 'semestre_2', tipoEvaluacion: 'descendente_90', fecha: '2024-12-05', puntaje: 76, escala: 'cumple', feedback: 'Diego cumple con sus obligaciones. Se destaca por la puntualidad y disposición para tareas de campo. Se sugiere mayor autonomía en resolución de problemas técnicos.', estado: 'finalizada', activo: true }, { hooks: false, validate: false });
+            await Contacto.create({ empleadoId: empTec.id, nombreCompleto: 'Ana Pereyra', dni: '35999888', telefonoPrincipal: '376-4511111', telefonoSecundario: '376-4522233', direccion: 'Barrio Libertador Casa 12, Iguazú', fechaNacimiento: '1970-12-12', parentesco: 'Madre', esFamiliar: true, esContactoEmergencia: true }, { validate: false });
+            await Contacto.create({ empleadoId: empTec.id, nombreCompleto: 'Carlos Pereyra', dni: '29888777', telefonoPrincipal: '376-4511112', telefonoSecundario: null, direccion: 'Barrio Libertador Casa 12, Iguazú', fechaNacimiento: '1968-08-20', parentesco: 'Padre', esFamiliar: true, esContactoEmergencia: false }, { validate: false });
 
             // Solicitud pendiente de vacaciones del Técnico
             const solVacTec = await Solicitud.create({ contratoId: cTec.id, tipoSolicitud: 'vacaciones', activo: true }, { validate: false });
@@ -341,9 +333,7 @@ const runSeed = async () => {
 
             await RegistroSalud.create({ empleadoId: empIT.id, tipoExamen: 'pre_ocupacional', fechaRealizacion: '2024-06-01', fechaVencimiento: '2025-06-01', resultado: 'apto', activo: true, vigente: true }, { hooks: false, validate: false });
 
-            await Contacto.create({ empleadoId: empIT.id, nombreCompleto: 'Jorge Ferreyra', dni: '26777666', telefono: '376-4522222', email: 'jorge.ferreyra@gmail.com', parentesco: 'padre', esFamiliar: true, esContactoEmergencia: true }, { validate: false });
-
-            await Evaluacion.create({ contratoEvaluadoId: cIT.id, periodo: 'semestre_2', tipoEvaluacion: 'descendente_90', fecha: '2024-12-20', puntaje: 91, escala: 'supera_expectativas', feedback: 'Luciana demostró gran capacidad técnica y proactividad. Implementó mejoras en la infraestructura que redujeron los tiempos de respuesta del sistema en un 30%.', estado: 'firmada', activo: true }, { hooks: false, validate: false });
+            await Contacto.create({ empleadoId: empIT.id, nombreCompleto: 'Jorge Ferreyra', dni: '26777666', telefonoPrincipal: '376-4522222', telefonoSecundario: '376-4533344', direccion: 'Rivadavia 1200, Iguazú', fechaNacimiento: '1965-04-30', parentesco: 'Padre', esFamiliar: true, esContactoEmergencia: true }, { validate: false });
 
             // Solicitud pendiente de licencia de la analista IT
             const solLicIT = await Solicitud.create({ contratoId: cIT.id, tipoSolicitud: 'licencia', activo: true }, { validate: false });
@@ -352,6 +342,22 @@ const runSeed = async () => {
             // Solicitud rechazada de licencia
             const solLicRec = await Solicitud.create({ contratoId: cIT.id, tipoSolicitud: 'licencia', activo: true }, { validate: false });
             await Licencia.create({ solicitudId: solLicRec.id, esLicencia: false, motivoLegal: 'tramites_personales', fechaInicio: '2025-01-10', fechaFin: '2025-01-10', diasSolicitud: 1, descripcion: 'Trámites banco', documentos: [], estado: 'rechazada' }, { hooks: false, validate: false });
+
+            // ── Evaluaciones (Creadas al final para tener todos los contratos disponibles) ──
+            const evDir = await Evaluacion.create({ contratoEvaluadoId: cDir.id, periodo: 'anual', tipoEvaluacion: 'descendente_90', fecha: '2024-12-10', puntaje: 94, escala: 'supera_expectativas', feedback: 'El director demostró liderazgo excepcional. Superó los objetivos anuales en un 18% y consolidó alianzas estratégicas clave para el crecimiento a largo plazo de la empresa.', estado: 'firmada', activo: true }, { hooks: false, validate: false });
+            await evDir.setEvaluadores([cRRHH.id]);
+
+            const evRRHH = await Evaluacion.create({ contratoEvaluadoId: cRRHH.id, periodo: 'semestre_1', tipoEvaluacion: 'descendente_90', fecha: '2024-07-01', puntaje: 88, escala: 'supera_expectativas', feedback: 'Valeria gestionó el área de personal con gran eficiencia. Implementó mejoras en los procesos de liquidación y redujo los tiempos de respuesta a consultas de empleados.', estado: 'firmada', activo: true }, { hooks: false, validate: false });
+            await evRRHH.setEvaluadores([cDir.id]);
+
+            const evJefe = await Evaluacion.create({ contratoEvaluadoId: cJefe.id, periodo: 'anual', tipoEvaluacion: 'descendente_90', fecha: '2024-12-15', puntaje: 83, escala: 'cumple', feedback: 'Hernán coordina el equipo de obras con solvencia técnica. Se recomienda mejorar la comunicación de avances y la gestión de incidentes en tiempo real.', estado: 'firmada', activo: true }, { hooks: false, validate: false });
+            await evJefe.setEvaluadores([cDir.id]);
+
+            const evTec = await Evaluacion.create({ contratoEvaluadoId: cTec.id, periodo: 'semestre_2', tipoEvaluacion: 'descendente_90', fecha: '2024-12-05', puntaje: 76, escala: 'cumple', feedback: 'Diego cumple con sus obligaciones. Se destaca por la puntualidad y disposición para tareas de campo. Se sugiere mayor autonomía en resolución de problemas técnicos.', estado: 'finalizada', activo: true }, { hooks: false, validate: false });
+            await evTec.setEvaluadores([cJefe.id]);
+
+            const evIT = await Evaluacion.create({ contratoEvaluadoId: cIT.id, periodo: 'semestre_2', tipoEvaluacion: 'descendente_90', fecha: '2024-12-20', puntaje: 91, escala: 'supera_expectativas', feedback: 'Luciana demostró gran capacidad técnica y proactividad. Implementó mejoras en la infraestructura que redujeron los tiempos de respuesta del sistema en un 30%.', estado: 'firmada', activo: true }, { hooks: false, validate: false });
+            await evIT.setEvaluadores([cDir.id]);
         };
 
         // ─── 5. Espacio CEO - Casa Central ────────────────────────────────────────

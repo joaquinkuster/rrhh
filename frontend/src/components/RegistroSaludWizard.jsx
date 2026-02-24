@@ -3,7 +3,7 @@ import Select from 'react-select';
 import StepTracker from './StepTracker';
 import { getEmpleados, createRegistroSalud, updateRegistroSalud } from '../services/api';
 import { validarDiaHabil } from '../utils/diasHabiles';
-import { getTodayStr } from '../utils/formatters';
+import { getTodayStr, formatFullName } from '../utils/formatters';
 
 const TIPOS_EXAMEN = [
     { value: 'pre_ocupacional', label: 'Pre-Ocupacional' },
@@ -137,7 +137,7 @@ const RegistroSaludWizard = ({ registro, onClose, onSuccess }) => {
             if (registro.empleado) {
                 const empOption = {
                     value: registro.empleado.id,
-                    label: `${registro.empleado.nombre} ${registro.empleado.apellido} (${registro.empleado.numeroDocumento || 'Sin doc'})`,
+                    label: `${formatFullName(registro.empleado)} (${registro.empleado.numeroDocumento || 'Sin doc'})`,
                     empleado: registro.empleado
                 };
                 setSelectedEmpleado(empOption);
@@ -172,7 +172,7 @@ const RegistroSaludWizard = ({ registro, onClose, onSuccess }) => {
         if (!acc[wsName]) acc[wsName] = { label: wsName, options: [] };
         acc[wsName].options.push({
             value: emp.id,
-            label: `${emp.apellido}, ${emp.nombre} - ${emp.numeroDocumento || 'Sin doc'}`,
+            label: `${formatFullName(emp)} - ${emp.numeroDocumento || 'Sin doc'}`,
             empleado: emp,
         });
         return acc;

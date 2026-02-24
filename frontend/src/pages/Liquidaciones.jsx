@@ -13,7 +13,7 @@ import {
     getEspaciosTrabajo,
     ejecutarLiquidacion,
 } from '../services/api';
-import { formatDateOnly, formatCurrency, truncateText } from '../utils/formatters';
+import { formatDateOnly, formatCurrency, truncateText, formatFullName } from '../utils/formatters';
 import LiquidacionFormulario from '../components/LiquidacionFormulario';
 import LiquidacionDetail from '../components/LiquidacionDetail';
 import ConceptosSalarialesModal from '../components/ConceptosSalarialesModal';
@@ -28,6 +28,7 @@ const buildSelectStyles = (isDark) => ({
     singleValue: (b) => ({ ...b, color: isDark ? '#e2e8f0' : '#1e293b' }),
     placeholder: (b) => ({ ...b, color: '#94a3b8', fontSize: '0.875rem' }),
     valueContainer: (b) => ({ ...b, padding: '0 8px' }),
+    menuPortal: (b) => ({ ...b, zIndex: 9999 }),
 });
 
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50];
@@ -81,7 +82,7 @@ const Liquidaciones = () => {
     const [visibleColumns, setVisibleColumns] = useState({
         espacio: false,
         periodo: true,
-        totalBruto: true,
+        totalBruto: false,
         retenciones: true,
         neto: true,
         estado: true,
@@ -232,7 +233,8 @@ const Liquidaciones = () => {
         setSelectedIds(newSelected);
     };
 
-    const allSelected = items.length > 0 && items.every(item => selectedIds.has(item.id));
+    const selectableItems = items.filter(item => !item.estaPagada);
+    const allSelected = selectableItems.length > 0 && selectableItems.every(item => selectedIds.has(item.id));
     const someSelected = items.some(item => selectedIds.has(item.id)) && !allSelected;
 
     // Column Toggle
@@ -362,10 +364,10 @@ const Liquidaciones = () => {
                 <div className="filters-bar">
                     <div className="filters-inputs">
                         <div className="filter-group" style={{ minWidth: '160px' }}>
-                            <Select isDisabled={isSingleWorkspace} options={espacioOptions} value={filterEspacio} onChange={opt => { setFilterEspacio(opt); setPage(1); }} placeholder="Espacio..." isClearable={!isSingleWorkspace} styles={selectStyles} noOptionsMessage={() => 'Sin resultados'} />
+                            <Select isDisabled={isSingleWorkspace} options={espacioOptions} value={filterEspacio} onChange={opt => { setFilterEspacio(opt); setPage(1); }} placeholder="Espacio..." isClearable={!isSingleWorkspace} styles={selectStyles} menuPortalTarget={document.body} noOptionsMessage={() => 'Sin resultados'} />
                         </div>
                         <div className="filter-group" style={{ minWidth: '200px' }}>
-                            <Select isDisabled={isSingleEmployee} options={empleadoOptions} value={filterEmpleado} onChange={opt => { setFilterEmpleado(opt); setPage(1); }} placeholder="Empleado..." isClearable={!isSingleEmployee} styles={selectStyles} noOptionsMessage={() => 'Sin resultados'} />
+                            <Select isDisabled={isSingleEmployee} options={empleadoOptions} value={filterEmpleado} onChange={opt => { setFilterEmpleado(opt); setPage(1); }} placeholder="Empleado..." isClearable={!isSingleEmployee} styles={selectStyles} menuPortalTarget={document.body} noOptionsMessage={() => 'Sin resultados'} />
                         </div>
                         <div className="filter-group">
                             <input
@@ -460,15 +462,21 @@ const Liquidaciones = () => {
                                         <tr key={item.id} className={`${selectedIds.has(item.id) ? 'row-selected' : ''} ${!item.activo ? 'row-inactive' : ''}`}>
                                             <td><input type="checkbox" disabled={item.estaPagada} checked={selectedIds.has(item.id)} onChange={() => handleSelectOne(item.id)} /></td>
                                             <td>
-                                                <strong>{item.contrato?.empleado?.usuario?.apellido}, {item.contrato?.empleado?.usuario?.nombre}</strong>
-                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                                                    {item.contrato?.empleado?.usuario?.numeroDocumento}
-                                                </div>
+                                                {item.contrato?.empleado ? (
+                                                    <>
+                                                        <strong>{truncateText(formatFullName(item.contrato.empleado), 15)}</strong>
+                                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                                            {truncateText(item.contrato.puestos?.[0]?.nombre || 'Sin puesto', 15)}
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>Sin empleado</span>
+                                                )}
                                             </td>
                                             {visibleColumns.espacio && <td>{truncateText(item.contrato?.empleado?.espacioTrabajo?.nombre || '-')}</td>}
                                             {visibleColumns.periodo && (
                                                 <td>
-                                                    {formatDateOnly(item.fechaInicio)} - {formatDateOnly(item.fechaFin)}
+                                                    {truncateText(formatDateOnly(item.fechaInicio) + ' - ' + formatDateOnly(item.fechaFin), 15)}
                                                 </td>
                                             )}
                                             {visibleColumns.totalBruto && <td>{formatCurrency(item.totalBruto)}</td>}

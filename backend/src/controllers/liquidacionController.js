@@ -1,4 +1,4 @@
-const { Liquidacion, Contrato, Empleado, Usuario, EspacioTrabajo, Rol, Permiso } = require('../models');
+const { Liquidacion, Contrato, Empleado, Usuario, EspacioTrabajo, Rol, Permiso, Puesto } = require('../models');
 const { Op } = require('sequelize');
 const { liquidarSueldos } = require('../services/prueba_liq');
 
@@ -29,14 +29,17 @@ const tienePermiso = async (session, accion) => {
 const includeContrato = [{
     model: Contrato,
     as: 'contrato',
-    include: [{
-        model: Empleado,
-        as: 'empleado',
-        include: [
-            { model: Usuario, as: 'usuario', attributes: ['nombre', 'apellido'] },
-            { model: EspacioTrabajo, as: 'espacioTrabajo', attributes: ['id', 'nombre'] }
-        ]
-    }],
+    include: [
+        {
+            model: Empleado,
+            as: 'empleado',
+            include: [
+                { model: Usuario, as: 'usuario', attributes: ['nombre', 'apellido'] },
+                { model: EspacioTrabajo, as: 'espacioTrabajo', attributes: ['id', 'nombre'] }
+            ]
+        },
+        { model: Puesto, as: 'puestos', through: { attributes: [] } }
+    ],
     attributes: ['id', 'tipoContrato', 'fechaInicio', 'fechaFin', 'estado'],
 }];
 

@@ -25,6 +25,7 @@ const buildSelectStyles = (isDark) => ({
     singleValue: (b) => ({ ...b, color: isDark ? '#e2e8f0' : '#1e293b' }),
     placeholder: (b) => ({ ...b, color: '#94a3b8', fontSize: '0.875rem' }),
     valueContainer: (b) => ({ ...b, padding: '0 8px' }),
+    menuPortal: (b) => ({ ...b, zIndex: 9999 }),
 });
 
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50];
@@ -51,6 +52,26 @@ const ESTADO_STYLES = {
     aprobada: { bg: '#d1fae5', color: '#065f46', label: 'Aprobada' },
     aceptada: { bg: '#dbeafe', color: '#1e40af', label: 'Aceptada' },
     procesada: { bg: '#f3e8ff', color: '#6b21a8', label: 'Procesada' },
+};
+
+const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+};
+
+const getEstado = (sol) => {
+    const typeData = sol.licencia || sol.vacaciones || sol.horasExtras || sol.renuncia;
+    return typeData?.estado || 'pendiente';
+};
+
+const getEmpleadoNombre = (sol) => {
+    const emp = sol.contrato?.empleado;
+    return emp ? `${emp.usuario.apellido}, ${emp.usuario.nombre}` : '-';
+};
+
+const getEmpleadoDoc = (sol) => {
+    return sol.contrato?.empleado?.numeroDocumento || '';
 };
 
 const Solicitudes = () => {
@@ -279,7 +300,8 @@ const Solicitudes = () => {
         setSelectedIds(newSelected);
     };
 
-    const allSelected = items.length > 0 && items.every(item => selectedIds.has(item.id));
+    const selectableItems = items.filter(item => getEstado(item) === 'pendiente');
+    const allSelected = selectableItems.length > 0 && selectableItems.every(item => selectedIds.has(item.id));
     const someSelected = items.some(item => selectedIds.has(item.id)) && !allSelected;
 
     // Column Toggle
@@ -386,25 +408,6 @@ const Solicitudes = () => {
 
     const showingInactive = filterActivo === 'false';
 
-    const formatDate = (dateString) => {
-        if (!dateString) return '-';
-        const date = new Date(dateString);
-        return date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    };
-
-    const getEstado = (sol) => {
-        const typeData = sol.licencia || sol.vacaciones || sol.horasExtras || sol.renuncia;
-        return typeData?.estado || 'pendiente';
-    };
-
-    const getEmpleadoNombre = (sol) => {
-        const emp = sol.contrato?.empleado;
-        return emp ? `${emp.usuario.apellido}, ${emp.usuario.nombre}` : '-';
-    };
-
-    const getEmpleadoDoc = (sol) => {
-        return sol.contrato?.empleado?.numeroDocumento || '';
-    };
 
     return (
         <div>
@@ -463,10 +466,10 @@ const Solicitudes = () => {
                 <div className="filters-bar">
                     <div className="filters-inputs">
                         <div className="filter-group" style={{ minWidth: '160px' }}>
-                            <Select isDisabled={isSingleWorkspace} options={espacioOptions} value={filterEspacio} onChange={opt => { setFilterEspacio(opt); setPage(1); }} placeholder="Espacio..." isClearable={!isSingleWorkspace} styles={selectStyles} noOptionsMessage={() => 'Sin resultados'} />
+                            <Select isDisabled={isSingleWorkspace} options={espacioOptions} value={filterEspacio} onChange={opt => { setFilterEspacio(opt); setPage(1); }} placeholder="Espacio..." isClearable={!isSingleWorkspace} styles={selectStyles} menuPortalTarget={document.body} noOptionsMessage={() => 'Sin resultados'} />
                         </div>
                         <div className="filter-group" style={{ minWidth: '200px' }}>
-                            <Select isDisabled={isSingleEmployee} options={empleadoOptions} value={filterEmpleado} onChange={opt => { setFilterEmpleado(opt); setPage(1); }} placeholder="Empleado..." isClearable={!isSingleEmployee} styles={selectStyles} noOptionsMessage={() => 'Sin resultados'} />
+                            <Select isDisabled={isSingleEmployee} options={empleadoOptions} value={filterEmpleado} onChange={opt => { setFilterEmpleado(opt); setPage(1); }} placeholder="Empleado..." isClearable={!isSingleEmployee} styles={selectStyles} menuPortalTarget={document.body} noOptionsMessage={() => 'Sin resultados'} />
                         </div>
                         <div className="filter-group">
                             <select className="filter-input" value={filterTipo} onChange={(e) => { setFilterTipo(e.target.value); setPage(1); }}>

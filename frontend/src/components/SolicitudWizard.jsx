@@ -3,7 +3,7 @@ import Select from 'react-select';
 import StepTracker from './StepTracker';
 import { getContratos, getRegistrosSalud, createSolicitud, updateSolicitud, getDiasDisponiblesVacaciones, getDiasSolicitadosVacaciones } from '../services/api';
 import { validarDiaHabil } from '../utils/diasHabiles';
-import { getTodayStr } from '../utils/formatters';
+import { getTodayStr, formatFullName } from '../utils/formatters';
 
 // Constants
 const TIPOS_SOLICITUD = [
@@ -186,7 +186,7 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
         const wsName = contrato.empleado?.espacioTrabajo?.nombre || 'Sin Espacio';
         if (!acc[wsName]) acc[wsName] = { label: wsName, options: [] };
 
-        const nombreEmpleado = contrato.empleado?.usuario ? `${contrato.empleado.usuario.apellido}, ${contrato.empleado.usuario.nombre}` : 'Sin nombre';
+        const nombreEmpleado = formatFullName(contrato.empleado);
         const puesto = contrato.puestos && contrato.puestos.length > 0 ? contrato.puestos[0].nombre : 'Sin puesto';
         const empresa = contrato.puestos && contrato.puestos.length > 0 && contrato.puestos[0].departamento?.area?.empresa?.nombre;
         const label = `${nombreEmpleado} - ${puesto}${empresa ? ` (${empresa})` : ''}`;
@@ -228,7 +228,7 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
 
             if (solicitud.contrato) {
                 const c = solicitud.contrato;
-                const nombre = c.empleado?.usuario ? `${c.empleado.usuario.apellido}, ${c.empleado.usuario.nombre}` : 'Sin nombre';
+                const nombre = formatFullName(c.empleado);
                 const puesto = c.puestos?.[0]?.nombre || 'Sin puesto';
                 const empresa = c.puestos?.[0]?.departamento?.area?.empresa?.nombre;
                 setSelectedContrato({

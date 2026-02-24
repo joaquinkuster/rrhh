@@ -25,6 +25,7 @@ const buildSelectStyles = (isDark) => ({
     singleValue: (b) => ({ ...b, color: isDark ? '#e2e8f0' : '#1e293b' }),
     placeholder: (b) => ({ ...b, color: '#94a3b8', fontSize: '0.875rem' }),
     valueContainer: (b) => ({ ...b, padding: '0 8px' }),
+    menuPortal: (b) => ({ ...b, zIndex: 9999 }),
 });
 
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50];
@@ -297,7 +298,8 @@ const Evaluaciones = () => {
         setSelectedIds(newSelected);
     };
 
-    const allSelected = items.length > 0 && items.every(item => selectedIds.has(item.id));
+    const selectableItems = items.filter(item => item.estado !== 'firmada');
+    const allSelected = selectableItems.length > 0 && selectableItems.every(item => selectedIds.has(item.id));
     const someSelected = items.some(item => selectedIds.has(item.id)) && !allSelected;
 
     // Column Toggle
@@ -467,10 +469,10 @@ const Evaluaciones = () => {
                 <div className="filters-bar">
                     <div className="filters-inputs">
                         <div className="filter-group" style={{ minWidth: '160px' }}>
-                            <Select isDisabled={isSingleWorkspace} options={espacioOptions} value={filterEspacio} onChange={opt => { setFilterEspacio(opt); setPage(1); }} placeholder="Espacio..." isClearable={!isSingleWorkspace} styles={selectStyles} noOptionsMessage={() => 'Sin resultados'} />
+                            <Select isDisabled={isSingleWorkspace} options={espacioOptions} value={filterEspacio} onChange={opt => { setFilterEspacio(opt); setPage(1); }} placeholder="Espacio..." isClearable={!isSingleWorkspace} styles={selectStyles} menuPortalTarget={document.body} noOptionsMessage={() => 'Sin resultados'} />
                         </div>
                         <div className="filter-group" style={{ minWidth: '200px' }}>
-                            <Select isDisabled={isSingleEmployee} options={empleadoOptions} value={filterEvaluado} onChange={opt => { setFilterEvaluado(opt); setPage(1); }} placeholder="Evaluado..." isClearable={!isSingleEmployee} styles={selectStyles} noOptionsMessage={() => 'Sin resultados'} />
+                            <Select isDisabled={isSingleEmployee} options={empleadoOptions} value={filterEvaluado} onChange={opt => { setFilterEvaluado(opt); setPage(1); }} placeholder="Evaluado..." isClearable={!isSingleEmployee} styles={selectStyles} menuPortalTarget={document.body} noOptionsMessage={() => 'Sin resultados'} />
                         </div>
                         <div className="filter-group">
                             <select className="filter-input" value={filterPeriodo} onChange={(e) => { setFilterPeriodo(e.target.value); setPage(1); }}>
@@ -575,19 +577,19 @@ const Evaluaciones = () => {
                                         <tr key={item.id} className={`${selectedIds.has(item.id) ? 'row-selected' : ''} ${!item.activo ? 'row-inactive' : ''}`}>
                                             <td><input type="checkbox" disabled={item.estado === 'firmada'} checked={selectedIds.has(item.id)} onChange={() => handleSelectOne(item.id)} /></td>
                                             <td>
-                                                <strong>{PERIODO_LABELS[item.periodo] || item.periodo}</strong>
+                                                <strong>{truncateText(PERIODO_LABELS[item.periodo] || item.periodo, 15)}</strong>
                                                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                                                     {formatDate(item.fecha)}
                                                 </div>
                                             </td>
-                                            <td>{TIPO_EVALUACION_LABELS[item.tipoEvaluacion] || item.tipoEvaluacion}</td>
+                                            <td>{truncateText(TIPO_EVALUACION_LABELS[item.tipoEvaluacion] || item.tipoEvaluacion, 15)}</td>
                                             {visibleColumns.empleadoEvaluado && (
                                                 <td>
                                                     {item.contratoEvaluado?.empleado ? (
                                                         <>
-                                                            <strong>{item.contratoEvaluado.empleado.usuario.apellido}, {item.contratoEvaluado.empleado.usuario.nombre}</strong>
+                                                            <strong>{truncateText(item.contratoEvaluado.empleado.usuario.apellido + ', ' + item.contratoEvaluado.empleado.usuario.nombre, 15)}</strong>
                                                             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                                                                {item.contratoEvaluado.puestos?.[0]?.nombre || 'Sin puesto'}
+                                                                {truncateText(item.contratoEvaluado.puestos?.[0]?.nombre || 'Sin puesto', 15)}
                                                             </div>
                                                         </>
                                                     ) : (

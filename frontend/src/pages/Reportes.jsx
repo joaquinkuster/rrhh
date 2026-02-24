@@ -3,6 +3,19 @@ import Select from 'react-select';
 import { getEmpresas, getEmpresaById, getContratos } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { formatFullName, formatDateOnly, truncateText } from '../utils/formatters';
+
+const buildSelectStyles = (isDark) => ({
+    control: (b, s) => ({ ...b, backgroundColor: isDark ? '#1e293b' : 'white', borderColor: s.isFocused ? '#0d9488' : (isDark ? '#334155' : '#e2e8f0'), boxShadow: 'none', '&:hover': { borderColor: '#0d9488' }, minHeight: '36px', fontSize: '0.875rem', borderRadius: '0.5rem' }),
+    menu: (b) => ({ ...b, backgroundColor: isDark ? '#1e293b' : 'white', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`, borderRadius: '0.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 9999 }),
+    option: (b, s) => ({ ...b, backgroundColor: s.isSelected ? '#0d9488' : s.isFocused ? (isDark ? '#334155' : '#f1f5f9') : 'transparent', color: s.isSelected ? 'white' : (isDark ? '#e2e8f0' : '#1e293b'), fontSize: '0.875rem', cursor: 'pointer' }),
+    groupHeading: (b) => ({ ...b, fontWeight: 'bold', textTransform: 'uppercase', fontSize: '0.7rem', color: '#64748b' }),
+    input: (b) => ({ ...b, color: isDark ? '#e2e8f0' : '#1e293b', fontSize: '0.875rem' }),
+    singleValue: (b) => ({ ...b, color: isDark ? '#e2e8f0' : '#1e293b' }),
+    placeholder: (b) => ({ ...b, color: '#94a3b8', fontSize: '0.875rem' }),
+    valueContainer: (b) => ({ ...b, padding: '0 8px' }),
+    menuPortal: (b) => ({ ...b, zIndex: 9999 }),
+});
 
 // Reusable CounterCard component
 const CounterCard = ({ value, label, color }) => {
@@ -116,6 +129,16 @@ const Reportes = () => {
     const [contratos, setContratos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
+
+    // Theme observer
+    useEffect(() => {
+        const obs = new MutationObserver(() => setIsDark(document.documentElement.classList.contains('dark')));
+        obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+        return () => obs.disconnect();
+    }, []);
+
+    const selectStyles = buildSelectStyles(isDark);
 
     const primaryColor = '#0d9488';
 
@@ -237,11 +260,7 @@ const Reportes = () => {
         .sort((a, b) => new Date(b.fechaInicio) - new Date(a.fechaInicio))
         .slice(0, 10);
 
-    const formatDate = (dateString) => {
-        if (!dateString) return '-';
-        const date = new Date(dateString);
-        return date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    };
+
 
     // Helper functions for employee counts - only en_curso contracts
     const getAreaEmployeeCount = (area) => {
@@ -290,10 +309,9 @@ const Reportes = () => {
                             options={empresas.map(empresa => ({ value: empresa.id.toString(), label: empresa.nombre }))}
                             placeholder="Seleccione una empresa..."
                             isClearable={false}
-                            className="react-select-container"
-                            classNamePrefix="react-select"
+                            styles={selectStyles}
                             menuPortalTarget={document.body}
-                            styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
+                            noOptionsMessage={() => 'Sin resultados'}
                         />
                     </div>
                 </div>
@@ -541,14 +559,14 @@ const Reportes = () => {
                                             contratosRecientes.map((contrato) => (
                                                 <tr key={contrato.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                                                     <td style={{ padding: '0.75rem 1rem', fontSize: '0.85rem' }}>
-                                                        <strong>{contrato.empleado.usuario ? `${contrato.empleado.usuario.apellido}, ${contrato.empleado.usuario.nombre}` : '-'}</strong>
+                                                        <strong>{truncateText(formatFullName(contrato.empleado), 15)}</strong>
                                                     </td>
                                                     <td style={{ padding: '0.75rem 1rem', fontSize: '0.85rem' }}>
                                                         <span style={{ fontSize: '0.7rem', padding: '0.25rem 0.5rem', background: 'var(--bg-color)', border: '1px solid var(--border-color)', borderRadius: '1rem', whiteSpace: 'nowrap' }}>
                                                             {formatContractType(contrato.tipoContrato) || '-'}
                                                         </span>
                                                     </td>
-                                                    <td style={{ padding: '0.75rem 1rem', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>{formatDate(contrato.fechaInicio)}</td>
+                                                    <td style={{ padding: '0.75rem 1rem', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>{formatDateOnly(contrato.fechaInicio)}</td>
                                                     <td style={{ padding: '0.75rem 1rem', fontSize: '0.85rem' }}>
                                                         <span style={{ fontWeight: 600 }}>${contrato.salario?.toLocaleString('es-AR') || '-'}</span>
                                                     </td>

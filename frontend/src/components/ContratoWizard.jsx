@@ -12,7 +12,7 @@ import {
     getRoles
 } from '../services/api';
 import { validarDiaHabil } from '../utils/diasHabiles';
-import { getTodayStr } from '../utils/formatters';
+import { getTodayStr, formatFullName } from '../utils/formatters';
 
 // Tipos de contrato agrupados por categoría
 const TIPOS_CONTRATO = {
@@ -181,7 +181,7 @@ const ContratoWizard = ({ contrato: contratoToEdit, onClose, onSuccess, empleado
         if (empleadoPreseleccionado && !isEditMode) {
             const option = {
                 value: empleadoPreseleccionado.id,
-                label: `${empleadoPreseleccionado.apellido}, ${empleadoPreseleccionado.nombre} - ${empleadoPreseleccionado.numeroDocumento}`,
+                label: `${formatFullName(empleadoPreseleccionado)} - ${empleadoPreseleccionado.numeroDocumento}`,
                 empleado: empleadoPreseleccionado,
             };
             setSelectedEmpleados([option]);
@@ -197,7 +197,7 @@ const ContratoWizard = ({ contrato: contratoToEdit, onClose, onSuccess, empleado
             if (contratoToEdit.empleado) {
                 setSelectedEmpleados([{
                     value: contratoToEdit.empleado.id,
-                    label: `${contratoToEdit.empleado.apellido}, ${contratoToEdit.empleado.nombre} - ${contratoToEdit.empleado.numeroDocumento}`,
+                    label: `${formatFullName(contratoToEdit.empleado)} - ${contratoToEdit.empleado.numeroDocumento}`,
                     empleado: contratoToEdit.empleado,
                 }]);
             }
@@ -584,7 +584,7 @@ const ContratoWizard = ({ contrato: contratoToEdit, onClose, onSuccess, empleado
             if (!acc[ws]) acc[ws] = { label: ws, options: [] };
             acc[ws].options.push({
                 value: emp.id,
-                label: `${emp.apellido}, ${emp.nombre} - ${emp.numeroDocumento}`,
+                label: `${formatFullName(emp)} - ${emp.numeroDocumento}`,
                 empleado: emp,
             });
             return acc;
@@ -621,7 +621,7 @@ const ContratoWizard = ({ contrato: contratoToEdit, onClose, onSuccess, empleado
                         if (!acc[wsName]) acc[wsName] = { label: wsName, options: [] };
                         acc[wsName].options.push({
                             value: emp.id,
-                            label: `${emp.apellido}, ${emp.nombre} - ${emp.numeroDocumento}`,
+                            label: `${formatFullName(emp)} - ${emp.numeroDocumento}`,
                             empleado: emp,
                         });
                         return acc;

@@ -1117,6 +1117,10 @@ textarea {
   background: #334155;
 }
 
+:root.dark .table tr.row-selected td {
+  background: var(--primary-bg);
+}
+
 :root.dark .form-input,
 :root.dark .form-select,
 :root.dark .filter-input {
