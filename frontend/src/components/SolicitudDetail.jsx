@@ -1,4 +1,4 @@
-import { formatDateOnly } from '../utils/formatters';
+import { formatDateOnly, formatDateTime, formatFullName } from '../utils/formatters';
 import { useAuth } from '../context/AuthContext';
 
 const TIPO_LABELS = {
@@ -69,9 +69,14 @@ const Icons = {
             <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0112 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 01-.673-.38m0 0A2.18 2.18 0 013 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 013.413-.387m7.5 0V5.25A2.25 2.25 0 0013.5 3h-3a2.25 2.25 0 00-2.25 2.25v.894m7.5 0a48.667 48.667 0 00-7.5 0M12 12.75h.008v.008H12v-.008z" />
         </svg>
     ),
-    circle: (
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 20, height: 20 }}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    shield: (
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 18, height: 18 }}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+        </svg>
+    ),
+    check: (
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 18, height: 18 }}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
     ),
     edit: (
@@ -82,13 +87,13 @@ const Icons = {
 };
 
 // Field component with icon
-const Field = ({ icon, label, value }) => (
+const Field = ({ icon, label, value, noBorder }) => (
     <div style={{
         display: 'flex',
         alignItems: 'flex-start',
         gap: '0.75rem',
         padding: '0.75rem 0',
-        borderBottom: '1px solid var(--border-color)'
+        borderBottom: noBorder ? 'none' : '1px solid var(--border-color)'
     }}>
         <div style={{
             color: 'var(--primary-color)',
@@ -177,88 +182,335 @@ const SolicitudDetail = ({ solicitud, onEdit, onClose }) => {
         return `${diffDays} día${diffDays !== 1 ? 's' : ''}`;
     };
 
-    const renderLicenciaDetails = () => {
-        const data = solicitud.licencia;
-        if (!data) return null;
+    const Section = ({ title, children, subtitle }) => (
+        <div style={{ marginBottom: '1.5rem' }}>
+            <SectionHeader title={title} subtitle={subtitle} />
+            <div style={{
+                background: 'var(--card-bg)',
+                borderRadius: '0.5rem',
+                border: '1px solid var(--border-color)',
+                padding: '0 1rem'
+            }}>
+                {children}
+            </div>
+        </div>
+    );
+
+    const formatDecimalToTime = (decimalValue) => {
+        if (!decimalValue || isNaN(decimalValue)) return '0:00 hs';
+        const totalMinutes = Math.round(parseFloat(decimalValue) * 60);
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        return `${hours}:${minutes.toString().padStart(2, '0')} hs`;
+    };
+
+    const DetalleGrupo = ({ title, children, noBorder }) => {
+        if (!children) return null;
         return (
-            <>
-                <Field icon={Icons.document} label="Tipo" value={data.esLicencia ? 'Licencia' : 'Inasistencia'} />
-                <Field icon={Icons.document} label="Motivo Legal" value={MOTIVO_LABELS[data.motivoLegal] || data.motivoLegal} />
-                <Field icon={Icons.calendar} label="Fecha Inicio" value={formatDateOnly(data.fechaInicio)} />
-                <Field icon={Icons.calendar} label="Fecha Fin" value={formatDateOnly(data.fechaFin)} />
-                <Field icon={Icons.calendar} label="Días Solicitados" value={data.diasSolicitud} />
-                {data.urlJustificativo && <Field icon={Icons.document} label="Justificativo" value={<a href={data.urlJustificativo} target="_blank" rel="noreferrer" style={{ color: 'var(--primary-color)' }}>Ver documento</a>} />}
-                {data.descripcion && <Field icon={Icons.document} label="Descripción" value={data.descripcion} />}
-                {data.registroSalud && (
-                    <Field
-                        icon={Icons.document}
-                        label="Registro de Salud Asociado"
-                        value={`${data.registroSalud.tipoExamen} - ${data.registroSalud.nombreExamen}`}
-                    />
-                )}
-            </>
+            <div style={{
+                padding: '0.75rem 0',
+                borderBottom: noBorder ? 'none' : '1px solid var(--border-color)'
+            }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>
+                    {title}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    {children}
+                </div>
+            </div>
         );
     };
 
-    const renderVacacionesDetails = () => {
-        const data = solicitud.vacaciones;
+    const renderPeriodoFields = () => {
+        const type = solicitud.tipoSolicitud;
+        const data = typeData;
         if (!data) return null;
+
+        if (type === 'vacaciones' || type === 'licencia') {
+            return (
+                <DetalleGrupo title="Período Solicitado">
+                    <Field icon={Icons.calendar} label="Fecha de Inicio" value={formatDateOnly(data.fechaInicio)} />
+                    {type === 'vacaciones' ? (
+                        <>
+                            <Field icon={Icons.calendar} label="Fecha de Fin" value={formatDateOnly(data.fechaFin)} />
+                            <Field icon={Icons.calendar} label="Fecha de Regreso" value={formatDateOnly(data.fechaRegreso)} noBorder={true} />
+                        </>
+                    ) : (
+                        <Field icon={Icons.calendar} label="Fecha de Fin" value={formatDateOnly(data.fechaFin)} noBorder={true} />
+                    )}
+                </DetalleGrupo>
+            );
+        } else if (type === 'horas_extras') {
+            return (
+                <DetalleGrupo title="Período Solicitado">
+                    <Field icon={Icons.calendar} label="Fecha" value={formatDateOnly(data.fecha)} />
+                    <Field icon={Icons.clock} label="Hora de Inicio" value={data.horaInicio} />
+                    <Field icon={Icons.clock} label="Hora de Fin" value={data.horaFin} noBorder={true} />
+                </DetalleGrupo>
+            );
+        } else if (type === 'renuncia') {
+            return (
+                <DetalleGrupo title="Período Solicitado">
+                    <Field icon={Icons.calendar} label="Fecha de Notificación" value={formatDateOnly(data.fechaNotificacion)} noBorder={true} />
+                </DetalleGrupo>
+            );
+        }
+        return null;
+    };
+
+    const renderAlcanceFields = () => {
+        const type = solicitud.tipoSolicitud;
+        const data = typeData;
+        if (!data) return null;
+
+        if (type === 'vacaciones') {
+            return (
+                <DetalleGrupo title="Alcance">
+                    <Field icon={Icons.calendar} label="Período (Año)" value={data.periodo} />
+                    <Field icon={Icons.calendar} label="Días Solicitados" value={data.diasSolicitud} noBorder={true} />
+                </DetalleGrupo>
+            );
+        } else if (type === 'licencia') {
+            return (
+                <DetalleGrupo title="Alcance">
+                    <Field icon={Icons.document} label="Tipo" value={data.esLicencia ? 'Licencia' : 'Inasistencia'} />
+                    <Field icon={Icons.document} label="Motivo Legal" value={MOTIVO_LABELS[data.motivoLegal] || data.motivoLegal} />
+                    <Field icon={Icons.calendar} label="Días Solicitados" value={data.diasSolicitud} noBorder={true} />
+                </DetalleGrupo>
+            );
+        } else if (type === 'horas_extras') {
+            return (
+                <DetalleGrupo title="Alcance">
+                    <Field icon={Icons.clock} label="Cantidad de Horas" value={formatDecimalToTime(data.cantidadHoras)} />
+                    <Field icon={Icons.document} label="Tipo de Horas Extra" value={data.tipoHorasExtra === '100' ? '100% (Fines de semana/Feriados)' : '50% (Días hábiles)'} noBorder={true} />
+                </DetalleGrupo>
+            );
+        } else if (type === 'renuncia') {
+            return (
+                <DetalleGrupo title="Alcance">
+                    <Field icon={Icons.calendar} label="Fecha Baja Efectiva" value={formatDateOnly(data.fechaBajaEfectiva)} />
+                    <Field icon={Icons.document} label="Preaviso" value={'15 días (Según LCT)'} noBorder={true} />
+                </DetalleGrupo>
+            );
+        }
+        return null;
+    };
+
+    const renderEnlacesFields = () => {
+        const type = solicitud.tipoSolicitud;
+        const data = typeData;
+        if (!data) return null;
+
+        const url = data.urlJustificativo || data.urlComprobante;
+        if (!url) return null;
+
         return (
-            <>
-                <Field icon={Icons.calendar} label="Período" value={data.periodo} />
+            <DetalleGrupo title="Enlaces Adjuntos">
+                <div style={{ padding: '0.75rem 0' }}>
+                    <a
+                        href={url}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            color: 'var(--primary-color)',
+                            textDecoration: 'none',
+                            fontWeight: 500,
+                            padding: '0.5rem 0.75rem',
+                            background: 'var(--bg-secondary)',
+                            borderRadius: '0.375rem',
+                            fontSize: '0.875rem',
+                        }}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+                        </svg>
+                        Ver Documento Adjunto
+                    </a>
+                </div>
+            </DetalleGrupo>
+        );
+    };
+
+    const renderExtraFields = () => {
+        const type = solicitud.tipoSolicitud;
+        const data = typeData;
+        if (!data) return null;
+
+        const info = data.descripcion || data.motivo;
+        const hasNotificado = type === 'vacaciones' && data.notificadoEl;
+
+        if (!info && !hasNotificado) return null;
+
+        return (
+            <DetalleGrupo title="Información Adicional">
+                {hasNotificado && <Field icon={Icons.calendar} label="Notificado el" value={formatDateOnly(data.notificadoEl)} />}
+                {info && <Field icon={Icons.document} label={type === 'horas_extras' || type === 'renuncia' ? "Motivo" : "Descripción"} value={info} />}
+            </DetalleGrupo>
+        );
+    };
+
+    const renderRegistroSaludSection = () => {
+        if (solicitud.tipoSolicitud !== 'licencia') return null;
+        const rs = solicitud.licencia?.registroSalud;
+        if (!rs) return null;
+
+        const TIPOS_EXAMEN_LABELS = {
+            pre_ocupacional: 'Pre-Ocupacional',
+            periodico: 'Periódico',
+            post_ocupacional: 'Post-Ocupacional',
+            retorno_trabajo: 'Retorno al Trabajo',
+        };
+
+        const RESULTADO_LABELS = {
+            apto: 'Apto',
+            apto_preexistencias: 'Apto con Preexistencias',
+            no_apto: 'No Apto',
+        };
+
+        const RESULTADO_COLORS = {
+            apto: '#22c55e',
+            apto_preexistencias: '#f59e0b',
+            no_apto: '#ef4444',
+        };
+
+        const isExpired = new Date(rs.fechaVencimiento) < new Date();
+        const allComprobantes = rs.comprobantes || [];
+
+        return (
+            <Section title="Registro de Salud" subtitle={`Últimos cambios hace ${getRelativeTime(rs.updatedAt)}`}>
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '0.75rem',
+                    padding: '0.75rem 0',
+                    borderBottom: allComprobantes.length === 0 ? 'none' : '1px solid var(--border-color)',
+                }}>
+                    <div style={{ color: 'var(--primary-color)', flexShrink: 0, marginTop: '2px' }}>{Icons.document}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
+                            Tipo de Examen
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
+                                {TIPOS_EXAMEN_LABELS[rs.tipoExamen] || rs.tipoExamen}
+                            </span>
+                            <span style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.4rem',
+                                fontSize: '0.75rem',
+                                padding: '0.2rem 0.5rem',
+                                borderRadius: '9999px',
+                                background: `${RESULTADO_COLORS[rs.resultado]}20`,
+                                color: RESULTADO_COLORS[rs.resultado],
+                                fontWeight: 600
+                            }}>
+                                {RESULTADO_LABELS[rs.resultado] || rs.resultado}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '0.75rem',
+                    padding: '0.75rem 0',
+                    borderBottom: allComprobantes.length === 0 ? 'none' : '1px solid var(--border-color)',
+                }}>
+                    <div style={{ color: 'var(--primary-color)', flexShrink: 0, marginTop: '2px' }}>{Icons.calendar}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
+                            Fecha de Vencimiento
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
+                                {formatDateOnly(rs.fechaVencimiento)}
+                            </span>
+                            <span style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.4rem',
+                                fontSize: '0.75rem',
+                                padding: '0.2rem 0.5rem',
+                                borderRadius: '9999px',
+                                background: isExpired ? '#ef444420' : '#22c55e20',
+                                color: isExpired ? '#ef4444' : '#22c55e',
+                                fontWeight: 600
+                            }}>
+                                {isExpired ? 'Vencido' : 'Vigente'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {allComprobantes.length > 0 && (
+                    <div style={{ padding: '0.75rem 0', borderTop: '1px solid var(--border-color)' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                            Comprobantes Médicos ({allComprobantes.length})
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            {allComprobantes.map((file, index) => (
+                                <a
+                                    key={index}
+                                    href={file.data}
+                                    download={file.nombre}
+                                    style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem',
+                                        color: 'var(--primary-color)',
+                                        textDecoration: 'none',
+                                        fontWeight: 500,
+                                        padding: '0.5rem 0.75rem',
+                                        background: 'var(--bg-secondary)',
+                                        borderRadius: '0.375rem',
+                                        fontSize: '0.875rem',
+                                    }}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                                    </svg>
+                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '250px' }} title={file.nombre}>
+                                        {file.nombre}
+                                    </span>
+                                </a>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </Section>
+        );
+    };
+
+    const renderInformacionAdicionalSection = () => {
+        const type = solicitud.tipoSolicitud;
+        const data = typeData;
+        const isVacaciones = type === 'vacaciones';
+
+        const diasDisponibles = (isVacaciones && data) ? (
+            <DetalleGrupo title="Días disponibles">
                 <Field icon={Icons.calendar} label="Días Correspondientes" value={data.diasCorrespondientes} />
                 <Field icon={Icons.calendar} label="Días Tomados" value={data.diasTomados} />
                 <Field icon={Icons.calendar} label="Días Disponibles" value={data.diasDisponibles} />
-                <Field icon={Icons.calendar} label="Fecha Inicio" value={formatDateOnly(data.fechaInicio)} />
-                <Field icon={Icons.calendar} label="Fecha Fin" value={formatDateOnly(data.fechaFin)} />
-                <Field icon={Icons.calendar} label="Fecha Regreso" value={formatDateOnly(data.fechaRegreso)} />
-                <Field icon={Icons.calendar} label="Días Solicitados" value={data.diasSolicitud} />
-                {data.notificadoEl && <Field icon={Icons.calendar} label="Notificado el" value={formatDateOnly(data.notificadoEl)} />}
-                {data.descripcion && <Field icon={Icons.document} label="Descripción" value={data.descripcion} />}
-            </>
-        );
-    };
+            </DetalleGrupo>
+        ) : null;
 
-    const renderHorasExtrasDetails = () => {
-        const data = solicitud.horasExtras;
-        if (!data) return null;
+        const enlaces = renderEnlacesFields();
+        const extra = renderExtraFields();
 
-        const formatDecimalToTime = (decimalValue) => {
-            if (!decimalValue || isNaN(decimalValue)) return '0:00 hs';
-            const totalMinutes = Math.round(parseFloat(decimalValue) * 60);
-            const hours = Math.floor(totalMinutes / 60);
-            const minutes = totalMinutes % 60;
-            return `${hours}:${minutes.toString().padStart(2, '0')} hs`;
-        };
+        if (!diasDisponibles && !enlaces && !extra) return null;
 
         return (
-            <>
-                <Field icon={Icons.calendar} label="Fecha" value={formatDateOnly(data.fecha)} />
-                <Field icon={Icons.clock} label="Hora Inicio" value={data.horaInicio} />
-                <Field icon={Icons.clock} label="Hora Fin" value={data.horaFin} />
-                <Field
-                    icon={Icons.clock}
-                    label="Cantidad de Horas"
-                    value={`${formatDecimalToTime(data.cantidadHoras)}`}
-                />
-                <Field icon={Icons.document} label="Tipo" value={data.tipoHorasExtra === '50' ? '50% (hábiles)' : '100% (fines de semana/feriados)'} />
-                {data.urlJustificativo && <Field icon={Icons.document} label="Justificativo" value={<a href={data.urlJustificativo} target="_blank" rel="noreferrer" style={{ color: 'var(--primary-color)' }}>Ver documento</a>} />}
-                {data.motivo && <Field icon={Icons.document} label="Motivo" value={data.motivo} />}
-            </>
-        );
-    };
-
-    const renderRenunciaDetails = () => {
-        const data = solicitud.renuncia;
-        if (!data) return null;
-        return (
-            <>
-                <Field icon={Icons.calendar} label="Fecha Notificación" value={formatDateOnly(data.fechaNotificacion)} />
-                <Field icon={Icons.calendar} label="Fecha Baja Efectiva" value={formatDateOnly(data.fechaBajaEfectiva)} />
-                <Field icon={Icons.document} label="Preaviso" value={data.preaviso === true ? 'Sí' : data.preaviso === false ? 'No' : '-'} />
-                {data.urlComprobante && <Field icon={Icons.document} label="Comprobante" value={<a href={data.urlComprobante} target="_blank" rel="noreferrer" style={{ color: 'var(--primary-color)' }}>Ver documento</a>} />}
-                {data.motivo && <Field icon={Icons.document} label="Motivo" value={data.motivo} />}
-            </>
+            <Section title="Información de Respaldo" subtitle={`Últimos cambios hace ${getRelativeTime(solicitud.updatedAt)}`}>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    {diasDisponibles}
+                    {enlaces}
+                    {extra}
+                </div>
+            </Section>
         );
     };
 
@@ -276,27 +528,35 @@ const SolicitudDetail = ({ solicitud, onEdit, onClose }) => {
                 </div>
 
                 <div className="modal-body" style={{ padding: '1.5rem 2rem 2rem' }}>
-                    {/* Top Section: Type + ID + Edit button */}
+                    {/* Top Section: Type + ID + Status + Edit button */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                            <span style={{ fontSize: '2rem' }}>{tipoInfo.icon}</span>
-                            <div>
-                                <h2 style={{
-                                    fontSize: '1.5rem',
-                                    fontWeight: 700,
-                                    color: 'var(--text-primary)',
-                                    margin: 0
-                                }}>
-                                    {tipoInfo.label}
-                                </h2>
-                                <span style={{
-                                    fontSize: '0.85rem',
-                                    color: 'var(--text-secondary)',
-                                    fontWeight: 500
-                                }}>
-                                    #{solicitud.id}
-                                </span>
-                            </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                            <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+                                {tipoInfo.label}
+                            </h2>
+                            <span style={{
+                                fontSize: '0.85rem',
+                                color: 'var(--text-secondary)',
+                                fontWeight: 500,
+                                background: 'var(--bg-secondary)',
+                                padding: '0.25rem 0.6rem',
+                                borderRadius: '0.25rem'
+                            }}>
+                                #{solicitud.id}
+                            </span>
+                            <span style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.4rem',
+                                fontSize: '0.85rem',
+                                padding: '0.3rem 0.7rem',
+                                borderRadius: '9999px',
+                                background: estadoStyle.bg,
+                                color: estadoStyle.color,
+                                fontWeight: 700
+                            }}>
+                                {estadoStyle.label}
+                            </span>
                         </div>
                         {typeData.estado === 'pendiente' && onEdit && canEdit && (
                             <button className="btn btn-warning btn-sm" onClick={() => onEdit(solicitud)} title="Editar">
@@ -333,11 +593,11 @@ const SolicitudDetail = ({ solicitud, onEdit, onClose }) => {
                                         Fecha de Creación
                                     </div>
                                     <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
-                                        {formatDateOnly(solicitud.createdAt)}
+                                        {formatDateTime(solicitud.createdAt)}
                                     </div>
                                 </div>
                             </div>
-                            {/* Estado */}
+                            {/* Estado en Sistema */}
                             <div style={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -345,12 +605,10 @@ const SolicitudDetail = ({ solicitud, onEdit, onClose }) => {
                                 padding: '0.75rem 1rem',
                                 borderRight: '1px solid var(--border-color)'
                             }}>
-                                <div style={{ color: 'var(--primary-color)', flexShrink: 0 }}>
-                                    {Icons.circle}
-                                </div>
+                                <div style={{ color: solicitud.activo ? '#10b981' : '#ef4444' }}>{Icons.shield}</div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
-                                        Estado
+                                        Estado en Sistema
                                     </div>
                                     <span style={{
                                         display: 'inline-flex',
@@ -359,17 +617,11 @@ const SolicitudDetail = ({ solicitud, onEdit, onClose }) => {
                                         fontSize: '0.8rem',
                                         padding: '0.3rem 0.7rem',
                                         borderRadius: '9999px',
-                                        background: estadoStyle.bg,
-                                        color: estadoStyle.color,
+                                        background: solicitud.activo ? 'rgba(21, 128, 61, 0.2)' : 'rgba(239, 68, 68, 0.15)',
+                                        color: solicitud.activo ? '#15803d' : '#ef4444',
                                         fontWeight: 700
                                     }}>
-                                        <span style={{
-                                            width: '7px',
-                                            height: '7px',
-                                            borderRadius: '50%',
-                                            background: estadoStyle.color
-                                        }} />
-                                        {estadoStyle.label}
+                                        {solicitud.activo ? 'Activo' : 'Inactivo'}
                                     </span>
                                 </div>
                             </div>
@@ -388,7 +640,7 @@ const SolicitudDetail = ({ solicitud, onEdit, onClose }) => {
                                         Última Modificación
                                     </div>
                                     <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
-                                        {formatDateOnly(solicitud.updatedAt)}
+                                        {formatDateTime(solicitud.updatedAt)}
                                     </div>
                                 </div>
                             </div>
@@ -397,19 +649,61 @@ const SolicitudDetail = ({ solicitud, onEdit, onClose }) => {
 
                     {/* Main Content: 2 columns */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
-                        {/* Column 1: Información del Empleado */}
+                        {/* Column 1: Resumen de la Solicitud */}
                         <div>
-                            <SectionHeader title="Información del Empleado" subtitle={`Últimos cambios hace ${getRelativeTime(solicitud.updatedAt)}`} />
-                            <div style={{
-                                background: 'var(--card-bg)',
-                                borderRadius: '0.5rem',
-                                border: '1px solid var(--border-color)',
-                                padding: '0 1rem'
-                            }}>
+                            <Section
+                                title="Resumen"
+                                subtitle={`Últimos cambios hace ${getRelativeTime(solicitud.updatedAt)}`}
+                            >
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                    {/* Estado Badge inside Resumen */}
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'flex-start',
+                                        gap: '0.75rem',
+                                        padding: '0.75rem 0',
+                                        borderBottom: '1px solid var(--border-color)'
+                                    }}>
+                                        <div style={{ color: 'var(--primary-color)', flexShrink: 0, marginTop: '2px' }}>{Icons.check}</div>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
+                                                Estado
+                                            </div>
+                                            <span style={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: '0.4rem',
+                                                fontSize: '0.8rem',
+                                                padding: '0.3rem 0.7rem',
+                                                borderRadius: '9999px',
+                                                background: estadoStyle.bg,
+                                                color: estadoStyle.color,
+                                                fontWeight: 700
+                                            }}>
+                                                {estadoStyle.label}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    {renderPeriodoFields()}
+                                    {renderAlcanceFields()}
+                                </div>
+                            </Section>
+
+                            {/* Registro de Salud si aplica */}
+                            {renderRegistroSaludSection()}
+                        </div>
+
+                        {/* Column 2: Datos de Referencia y Adicionales */}
+                        <div>
+                            {/* Datos del Empleado */}
+                            <Section
+                                title="Datos del Empleado"
+                                subtitle={`Últimos cambios hace ${getRelativeTime(solicitud.contrato?.empleado?.updatedAt)}`}
+                            >
                                 <Field
                                     icon={Icons.user}
                                     label="Empleado"
-                                    value={empleado ? `${empleado.apellido}, ${empleado.nombre}` : 'Sin empleado'}
+                                    value={formatFullName(empleado)}
                                 />
                                 <Field
                                     icon={Icons.briefcase}
@@ -421,23 +715,10 @@ const SolicitudDetail = ({ solicitud, onEdit, onClose }) => {
                                     label="Empresa"
                                     value={empresa?.nombre || 'Sin empresa'}
                                 />
-                            </div>
-                        </div>
+                            </Section>
 
-                        {/* Column 2: Detalles de la Solicitud */}
-                        <div>
-                            <SectionHeader title="Detalles de la Solicitud" subtitle={`Últimos cambios hace ${getRelativeTime(solicitud.updatedAt)}`} />
-                            <div style={{
-                                background: 'var(--card-bg)',
-                                borderRadius: '0.5rem',
-                                border: '1px solid var(--border-color)',
-                                padding: '0 1rem'
-                            }}>
-                                {solicitud.tipoSolicitud === 'licencia' && renderLicenciaDetails()}
-                                {solicitud.tipoSolicitud === 'vacaciones' && renderVacacionesDetails()}
-                                {solicitud.tipoSolicitud === 'horas_extras' && renderHorasExtrasDetails()}
-                                {solicitud.tipoSolicitud === 'renuncia' && renderRenunciaDetails()}
-                            </div>
+                            {/* Enlaces e Información Adicional */}
+                            {renderInformacionAdicionalSection()}
                         </div>
                     </div>
                 </div>

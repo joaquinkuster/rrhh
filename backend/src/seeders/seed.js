@@ -273,7 +273,18 @@ const runSeed = async () => {
 
             // Solicitud pendiente de licencia del RRHH
             const solLicRRHH = await Solicitud.create({ contratoId: cRRHH.id, tipoSolicitud: 'licencia', activo: true }, { validate: false });
-            await Licencia.create({ solicitudId: solLicRRHH.id, esLicencia: true, motivoLegal: 'tramites_personales', fechaInicio: '2025-02-17', fechaFin: '2025-02-17', diasSolicitud: 1, descripcion: 'Trámites en registro civil', documentos: [], estado: 'pendiente' }, { hooks: false, validate: false });
+            await Licencia.create({
+                solicitudId: solLicRRHH.id,
+                esLicencia: true,
+                motivoLegal: 'tramites_personales',
+                fechaInicio: '2025-02-17',
+                fechaFin: '2025-02-17',
+                diasSolicitud: 1,
+                descripcion: 'Trámites urgentes en el Registro Civil de Puerto Iguazú para renovación de documentación familiar.',
+                urlJustificativo: 'https://www.google.com/search?q=comprobante+tramite+ejemplo',
+                documentos: [],
+                estado: 'pendiente'
+            }, { hooks: false, validate: false });
 
             // ── Empleado 3: Jefe de Obra ──────────────────────────────────────────
             const { empleado: empJefe, contrato: cJefe } = await crearEmpleado({
@@ -293,7 +304,18 @@ const runSeed = async () => {
 
             // Solicitud pendiente de horas extras del Jefe
             const solHEJefe = await Solicitud.create({ contratoId: cJefe.id, tipoSolicitud: 'horas_extras', activo: true }, { validate: false });
-            await HorasExtras.create({ solicitudId: solHEJefe.id, fecha: '2025-01-31', horaInicio: '18:00', horaFin: '21:00', cantidadHoras: 3, tipoHorasExtra: '50', motivo: 'Cierre de etapa de obra por fecha contractual', documentos: [], estado: 'pendiente' }, { hooks: false, validate: false });
+            await HorasExtras.create({
+                solicitudId: solHEJefe.id,
+                fecha: '2025-01-31',
+                horaInicio: '18:00',
+                horaFin: '21:00',
+                cantidadHoras: 3,
+                tipoHorasExtra: '50',
+                motivo: 'Cierre de etapa de obra por fecha contractual. Se requirió supervisión adicional de los equipos de hormigonado.',
+                urlJustificativo: 'https://www.google.com/search?q=planilla+asistencia+obra',
+                documentos: [],
+                estado: 'pendiente'
+            }, { hooks: false, validate: false });
 
             // Solicitud aprobada de horas extras
             const solHEJefe2 = await Solicitud.create({ contratoId: cJefe.id, tipoSolicitud: 'horas_extras', activo: true }, { validate: false });
@@ -318,7 +340,19 @@ const runSeed = async () => {
 
             // Solicitud pendiente de vacaciones del Técnico
             const solVacTec = await Solicitud.create({ contratoId: cTec.id, tipoSolicitud: 'vacaciones', activo: true }, { validate: false });
-            await Vacaciones.create({ solicitudId: solVacTec.id, periodo: 2025, diasCorrespondientes: 14, diasTomados: 0, diasDisponibles: 14, fechaInicio: '2025-02-24', fechaFin: '2025-03-07', fechaRegreso: '2025-03-10', diasSolicitud: 10, descripcion: 'Vacaciones de verano 2025', documentos: [], estado: 'pendiente' }, { hooks: false, validate: false });
+            await Vacaciones.create({ solicitudId: solVacTec.id, periodo: 2025, diasCorrespondientes: 14, diasTomados: 0, diasDisponibles: 14, fechaInicio: '2025-02-24', fechaFin: '2025-03-07', fechaRegreso: '2025-03-10', diasSolicitud: 10, descripcion: 'Vacaciones de verano 2025 - Viaje familiar planificado.', documentos: [], estado: 'pendiente' }, { hooks: false, validate: false });
+
+            // Solicitud de renuncia del Técnico (Diego tiene contrato a plazo fijo)
+            const solRenTec = await Solicitud.create({ contratoId: cTec.id, tipoSolicitud: 'renuncia', activo: true }, { validate: false });
+            await Renuncia.create({
+                solicitudId: solRenTec.id,
+                fechaNotificacion: '2025-02-15',
+                fechaBajaEfectiva: '2025-03-02',
+                preaviso: true,
+                motivo: 'Mejora en la oferta laboral y cambio de residencia a otra provincia.',
+                urlComprobante: 'https://www.google.com/search?q=telegrama+ley+23789',
+                estado: 'pendiente'
+            }, { hooks: false, validate: false });
 
             // ── Empleado 5: Analista IT ───────────────────────────────────────────
             const { empleado: empIT, contrato: cIT } = await crearEmpleado({
@@ -337,11 +371,45 @@ const runSeed = async () => {
 
             // Solicitud pendiente de licencia de la analista IT
             const solLicIT = await Solicitud.create({ contratoId: cIT.id, tipoSolicitud: 'licencia', activo: true }, { validate: false });
-            await Licencia.create({ solicitudId: solLicIT.id, esLicencia: true, motivoLegal: 'examen_estudio', fechaInicio: '2025-02-21', fechaFin: '2025-02-21', diasSolicitud: 1, descripcion: 'Examen final Universidad Tecnológica Nacional', documentos: [], estado: 'pendiente' }, { hooks: false, validate: false });
+            // Agregamos un registro de salud específico para complementar el detalle
+            const rsIT = await RegistroSalud.create({
+                empleadoId: empIT.id,
+                tipoExamen: 'retorno_trabajo',
+                fechaRealizacion: '2025-02-10',
+                fechaVencimiento: '2026-02-10',
+                resultado: 'apto',
+                comprobantes: [{ data: 'data:application/pdf;base64,JVBERi0xLjcK...', nombre: 'alta_medica.pdf' }],
+                activo: true,
+                vigente: true
+            }, { hooks: false, validate: false });
+
+            await Licencia.create({
+                solicitudId: solLicIT.id,
+                esLicencia: true,
+                motivoLegal: 'examen_estudio',
+                fechaInicio: '2025-02-21',
+                fechaFin: '2025-02-21',
+                diasSolicitud: 1,
+                descripcion: 'Examen final de Ingeniería en Sistemas de Información en la Universidad Tecnológica Nacional (UTN).',
+                urlJustificativo: 'https://www.google.com/search?q=certificado+examen+universidad',
+                registroSaludId: rsIT.id,
+                documentos: [],
+                estado: 'pendiente'
+            }, { hooks: false, validate: false });
 
             // Solicitud rechazada de licencia
             const solLicRec = await Solicitud.create({ contratoId: cIT.id, tipoSolicitud: 'licencia', activo: true }, { validate: false });
-            await Licencia.create({ solicitudId: solLicRec.id, esLicencia: false, motivoLegal: 'tramites_personales', fechaInicio: '2025-01-10', fechaFin: '2025-01-10', diasSolicitud: 1, descripcion: 'Trámites banco', documentos: [], estado: 'rechazada' }, { hooks: false, validate: false });
+            await Licencia.create({
+                solicitudId: solLicRec.id,
+                esLicencia: false,
+                motivoLegal: 'tramites_personales',
+                fechaInicio: '2025-01-10',
+                fechaFin: '2025-01-10',
+                diasSolicitud: 1,
+                descripcion: 'Trámites bancarios para solicitud de préstamo hipotecario. Se requiere presencialidad en horario laboral.',
+                documentos: [],
+                estado: 'rechazada'
+            }, { hooks: false, validate: false });
 
             // ── Evaluaciones (Creadas al final para tener todos los contratos disponibles) ──
             const evDir = await Evaluacion.create({ contratoEvaluadoId: cDir.id, periodo: 'anual', tipoEvaluacion: 'descendente_90', fecha: '2024-12-10', puntaje: 94, escala: 'supera_expectativas', feedback: 'El director demostró liderazgo excepcional. Superó los objetivos anuales en un 18% y consolidó alianzas estratégicas clave para el crecimiento a largo plazo de la empresa.', estado: 'firmada', activo: true }, { hooks: false, validate: false });
