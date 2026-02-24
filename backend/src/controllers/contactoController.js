@@ -212,7 +212,7 @@ const create = async (req, res) => {
 
         const isDuplicate = await checkDuplicateDNI(empleadoId, dni);
         if (isDuplicate) {
-            return res.status(400).json({ error: 'Ya existe un contacto con el mismo DNI para este empleado' });
+            return res.status(400).json({ error: `Ya existe un contacto con el DNI ( ${dni} ) para el empleado` });
         }
 
         const contacto = await Contacto.create(req.body);
@@ -249,7 +249,7 @@ const update = async (req, res) => {
             contacto.id
         );
         if (isDuplicate) {
-            return res.status(400).json({ error: 'Ya existe un contacto con el mismo DNI para este empleado' });
+            return res.status(400).json({ error: `Ya existe un contacto con el DNI ( ${dni} ) para el empleado` });
         }
 
         await contacto.update(req.body);

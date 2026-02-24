@@ -1,7 +1,8 @@
+import { useState, useEffect } from 'react';
 import { formatDateOnly } from '../utils/formatters';
 import { useAuth } from '../context/AuthContext';
+import { getEvaluaciones } from '../services/api';
 import ubicaciones from '../data/ubicaciones.json';
-
 // Icons SVG components
 const Icons = {
     calendar: (
@@ -85,6 +86,11 @@ const Icons = {
             <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
         </svg>
     ),
+    star: (
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 18, height: 18 }}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+        </svg>
+    ),
 };
 
 const EmpleadoDetail = ({ empleado, onClose, onEdit, hideEditButton = false }) => {
@@ -95,6 +101,43 @@ const EmpleadoDetail = ({ empleado, onClose, onEdit, hideEditButton = false }) =
     const isEmpleadoUser = user?.esEmpleado && !user?.esAdministrador;
     const userPermisos = user?.rol?.permisos || [];
     const canEdit = !isEmpleadoUser || user?.esAdministrador || userPermisos.some(p => p.modulo === 'empleados' && p.accion === 'actualizar');
+
+    // Identificar el ID de empleado real (en el objeto user de AuthContext es .empleadoId, en el objeto de la lista es .id)
+    const targetEmpleadoId = empleado.empleadoId || empleado.id;
+
+    const [promedioPuntaje, setPromedioPuntaje] = useState(null);
+    const [loadingPromedio, setLoadingPromedio] = useState(false);
+
+    useEffect(() => {
+        if (empleado.esEmpleado) {
+            const fetchPromedio = async () => {
+                setLoadingPromedio(true);
+                try {
+                    const result = await getEvaluaciones({
+                        evaluadoId: targetEmpleadoId,
+                        estado: 'firmada',
+                        activo: 'true',
+                        limit: 1000
+                    });
+
+                    const evals = result.data || result.evaluaciones || [];
+
+                    if (evals.length > 0) {
+                        const total = evals.reduce((sum, ev) => sum + (ev.puntaje || 0), 0);
+                        setPromedioPuntaje((total / evals.length).toFixed(1));
+                    } else {
+                        setPromedioPuntaje('Sin evaluaciones registradas y/o firmadas');
+                    }
+                } catch (error) {
+                    console.error('Error fetching evaluaciones', error);
+                    setPromedioPuntaje('Error al obtener datos');
+                } finally {
+                    setLoadingPromedio(false);
+                }
+            };
+            fetchPromedio();
+        }
+    }, [empleado.id, empleado.esEmpleado]);
 
     // Calculate relative time (hace X minutos/horas/días)
     const getRelativeTime = (dateString) => {
@@ -210,6 +253,51 @@ const EmpleadoDetail = ({ empleado, onClose, onEdit, hideEditButton = false }) =
             </div>
         </div>
     );
+
+    const renderPromedioBadge = () => {
+        if (loadingPromedio) return <span style={{ color: 'var(--text-secondary)' }}>Cargando...</span>;
+        if (promedioPuntaje === 'Sin evaluaciones registradas y/o firmadas') {
+            return <span style={{ color: 'var(--text-primary)', fontSize: '0.85rem' }}> (Sin evaluaciones registradas y/o firmadas)</span>;
+        }
+        if (promedioPuntaje === 'Error al obtener datos' || promedioPuntaje === null) {
+            return <span style={{ color: '#ef4444', fontSize: '0.85rem' }}> {promedioPuntaje ? '(Error al obtener datos)' : ''}</span>;
+        }
+
+        const score = parseFloat(promedioPuntaje);
+        let badgeText = '';
+        let bgColor = '';
+        let color = '';
+
+        if (score < 60) {
+            badgeText = 'Necesita mejora';
+            bgColor = 'rgba(239, 68, 68, 0.15)';
+            color = '#ef4444';
+        } else if (score < 85) {
+            badgeText = 'Cumple';
+            bgColor = 'rgba(245, 158, 11, 0.15)';
+            color = '#f59e0b';
+        } else {
+            badgeText = 'Supera expectativas';
+            bgColor = 'rgba(21, 128, 61, 0.15)';
+            color = '#15803d';
+        }
+
+        return (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '-0.1rem' }}>
+                <span style={{ fontSize: '0.95rem', fontWeight: 600 }}>{score}</span>
+                <span style={{
+                    background: bgColor,
+                    color: color,
+                    padding: '0.2rem 0.6rem',
+                    borderRadius: '9999px',
+                    fontSize: '0.75rem',
+                    fontWeight: 700
+                }}>
+                    {badgeText}
+                </span>
+            </div>
+        );
+    };
 
     return (
         <div className="modal-overlay" onClick={onClose}>
@@ -357,6 +445,9 @@ const EmpleadoDetail = ({ empleado, onClose, onEdit, hideEditButton = false }) =
                             }}>
                                 <Field icon={Icons.user} label="Nombre Completo" value={`${empleado.apellido}, ${empleado.nombre}`} />
                                 <Field icon={Icons.mail} label="Email" value={empleado.email} />
+                                {empleado.esEmpleado && (
+                                    <Field icon={Icons.star} label="Promedio de Desempeño Laboral" value={renderPromedioBadge()} />
+                                )}
                             </div>
 
                             {empleado.esEmpleado && (

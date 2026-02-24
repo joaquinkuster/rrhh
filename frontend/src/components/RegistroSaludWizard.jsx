@@ -3,6 +3,7 @@ import Select from 'react-select';
 import StepTracker from './StepTracker';
 import { getEmpleados, createRegistroSalud, updateRegistroSalud } from '../services/api';
 import { validarDiaHabil } from '../utils/diasHabiles';
+import { getTodayStr } from '../utils/formatters';
 
 const TIPOS_EXAMEN = [
     { value: 'pre_ocupacional', label: 'Pre-Ocupacional' },
@@ -85,7 +86,7 @@ const RegistroSaludWizard = ({ registro, onClose, onSuccess }) => {
         empleadoId: null,
         tipoExamen: '',
         resultado: '',
-        fechaRealizacion: '',
+        fechaRealizacion: getTodayStr(),
         fechaVencimiento: '',
         comprobantes: [],
     });

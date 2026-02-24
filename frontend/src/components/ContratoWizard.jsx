@@ -12,6 +12,7 @@ import {
     getRoles
 } from '../services/api';
 import { validarDiaHabil } from '../utils/diasHabiles';
+import { getTodayStr } from '../utils/formatters';
 
 // Tipos de contrato agrupados por categoría
 const TIPOS_CONTRATO = {
@@ -154,7 +155,7 @@ const ContratoWizard = ({ contrato: contratoToEdit, onClose, onSuccess, empleado
 
     // Step 3: Datos del Contrato
     const [formData, setFormData] = useState({
-        fechaInicio: '',
+        fechaInicio: getTodayStr(),
         fechaFin: '',
         horario: '',
         salario: '',

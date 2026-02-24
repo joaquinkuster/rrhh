@@ -73,7 +73,7 @@ const getAll = async (req, res) => {
                     as: 'usuario',
                     where: whereUsuario,
                     // Traer atributos de usuario
-                    attributes: ['id', 'nombre', 'apellido', 'email', 'activo']
+                    attributes: ['id', 'nombre', 'apellido', 'email', 'activo', 'esEmpleado']
                 },
                 {
                     model: EspacioTrabajo,

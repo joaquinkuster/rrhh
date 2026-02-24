@@ -3,6 +3,7 @@ import Select from 'react-select';
 import StepTracker from './StepTracker';
 import { getContratos, getRegistrosSalud, createSolicitud, updateSolicitud, getDiasDisponiblesVacaciones, getDiasSolicitadosVacaciones } from '../services/api';
 import { validarDiaHabil } from '../utils/diasHabiles';
+import { getTodayStr } from '../utils/formatters';
 
 // Constants
 const TIPOS_SOLICITUD = [
@@ -125,14 +126,7 @@ const calcularHoras = (horaInicio, horaFin) => {
     return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
 };
 
-// Get today's date in YYYY-MM-DD format (local time)
-const getTodayStr = () => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-};
+
 
 const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
     const isEditing = !!solicitud;
@@ -144,7 +138,11 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
     const [selectedContrato, setSelectedContrato] = useState(null);
     const [selectedTipo, setSelectedTipo] = useState('');
 
-    const [formData, setFormData] = useState({});
+    const [formData, setFormData] = useState({
+        fecha: getTodayStr(),
+        fechaInicio: getTodayStr(),
+        fechaNotificacion: getTodayStr()
+    });
     const [touched, setTouched] = useState({});
     const [fieldErrors, setFieldErrors] = useState({});
     const [error, setError] = useState('');
@@ -223,7 +221,7 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
                 descripcion: solicitud.descripcion || '',
                 documentos: solicitud.documentos || [],
                 estado: solicitud.estado || 'pendiente',
-                fechaSolicitud: solicitud.fechaSolicitud || new Date().toISOString().split('T')[0],
+                fechaSolicitud: solicitud.fechaSolicitud || getTodayStr(),
                 diasHabiles: solicitud.diasHabiles || 0,
             }));
             setSelectedTipo(solicitud.tipoSolicitud);
@@ -898,7 +896,7 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
                     <input
                         type="date"
                         className={`form-input ${touched.fechaNotificacion && fieldErrors.fechaNotificacion ? 'input-error' : ''}`}
-                        value={formData.fechaNotificacion || new Date().toISOString().split('T')[0]}
+                        value={formData.fechaNotificacion || getTodayStr()}
                         onChange={e => handleChange('fechaNotificacion', e.target.value)}
                         onBlur={() => handleBlur('fechaNotificacion')}
                         max={getTodayStr()}

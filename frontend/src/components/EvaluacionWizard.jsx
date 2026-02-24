@@ -3,6 +3,7 @@ import Select from 'react-select';
 import StepTracker from './StepTracker';
 import { getContratos, createEvaluacion, updateEvaluacion } from '../services/api';
 import { validarDiaHabil } from '../utils/diasHabiles';
+import { getTodayStr } from '../utils/formatters';
 
 // Periods
 const PERIODOS = [
@@ -132,11 +133,11 @@ const EvaluacionWizard = ({ evaluacion, onClose, onSuccess }) => {
     const [formData, setFormData] = useState({
         periodo: '',
         tipoEvaluacion: '',
-        fecha: new Date().toISOString().split('T')[0],
+        fecha: getTodayStr(),
         evaluadoresIds: [],
         contratosEvaluadosIds: [],
         contratoEvaluadoId: null,
-        estado: '',
+        estado: 'pendiente',
         puntaje: '',
         escala: '',
         feedback: '',
@@ -223,7 +224,7 @@ const EvaluacionWizard = ({ evaluacion, onClose, onSuccess }) => {
                 ...prev,
                 periodo: evaluacion.periodo || '',
                 tipoEvaluacion: evaluacion.tipoEvaluacion || '',
-                fecha: evaluacion.fecha || new Date().toISOString().split('T')[0],
+                fecha: evaluacion.fecha || getTodayStr(),
                 contratoEvaluadoId: evaluacion.contratoEvaluadoId,
                 estado: evaluacion.estado || 'pendiente',
                 puntaje: evaluacion.puntaje?.toString() || '',
@@ -458,7 +459,7 @@ const EvaluacionWizard = ({ evaluacion, onClose, onSuccess }) => {
                         value={formData.fecha}
                         onChange={(e) => handleChange('fecha', e.target.value)}
                         onBlur={() => handleBlur('fecha')}
-                        max={new Date().toISOString().split('T')[0]}
+                        max={getTodayStr()}
                     />
                     <FieldError message={touched.fecha && fieldErrors.fecha} />
                 </div>

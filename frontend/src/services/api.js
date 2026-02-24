@@ -452,7 +452,7 @@ export const getEvaluaciones = async (filters = {}) => {
         if (value !== undefined && value !== '') params.append(key, value);
     });
     const query = params.toString() ? `?${params.toString()}` : '';
-    const response = await fetch(`${API_URL}/evaluaciones${query}`);
+    const response = await fetchWithCredentials(`${API_URL}/evaluaciones${query}`);
     if (!response.ok) throw new Error('Error al obtener evaluaciones');
     return response.json();
 };
