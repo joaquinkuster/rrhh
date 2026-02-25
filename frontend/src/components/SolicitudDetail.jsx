@@ -386,7 +386,7 @@ const SolicitudDetail = ({ solicitud, onEdit, onClose }) => {
                     alignItems: 'flex-start',
                     gap: '0.75rem',
                     padding: '0.75rem 0',
-                    borderBottom: allComprobantes.length === 0 ? 'none' : '1px solid var(--border-color)',
+                    borderBottom: '1px solid var(--border-color)',
                 }}>
                     <div style={{ color: 'var(--primary-color)', flexShrink: 0, marginTop: '2px' }}>{Icons.document}</div>
                     <div style={{ flex: 1, minWidth: 0 }}>

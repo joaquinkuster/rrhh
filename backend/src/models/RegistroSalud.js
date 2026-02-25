@@ -103,7 +103,12 @@ const RegistroSalud = sequelize.define('RegistroSalud', {
 
 // Hook para validar que fechaVencimiento no sea anterior a fechaRealizacion
 RegistroSalud.addHook('beforeValidate', (registro) => {
-    if (registro.fechaRealizacion) {
+    // Solo validar si es un registro nuevo o si cambiaron las fechas
+    const isNew = registro.isNewRecord;
+    const fechaRealizacionChanged = registro.changed('fechaRealizacion');
+    const fechaVencimientoChanged = registro.changed('fechaVencimiento');
+
+    if (registro.fechaRealizacion && (isNew || fechaRealizacionChanged)) {
         const fechaRealizacion = parseLocalDate(registro.fechaRealizacion);
         fechaRealizacion.setHours(0, 0, 0, 0);
         const hoy = new Date();
@@ -112,19 +117,26 @@ RegistroSalud.addHook('beforeValidate', (registro) => {
             throw new Error('La fecha de realización debe ser menor o igual a la fecha actual');
         }
 
-        if (registro.fechaVencimiento) {
+        // Validar día hábil solo si cambió o es nuevo
+        if (!esDiaHabil(registro.fechaRealizacion)) {
+            throw new Error('La fecha de realización debe ser un día hábil (lunes a viernes, excluyendo feriados)');
+        }
+    }
+
+    if (registro.fechaVencimiento && (isNew || fechaVencimientoChanged)) {
+        // Validar día hábil
+        if (!esDiaHabil(registro.fechaVencimiento)) {
+            throw new Error('La fecha de vencimiento debe ser un día hábil (lunes a viernes, excluyendo feriados)');
+        }
+
+        if (registro.fechaRealizacion) {
+            const fechaRealizacion = parseLocalDate(registro.fechaRealizacion);
             const fechaVencimiento = parseLocalDate(registro.fechaVencimiento);
+            fechaRealizacion.setHours(0, 0, 0, 0);
             fechaVencimiento.setHours(0, 0, 0, 0);
+
             if (fechaVencimiento < fechaRealizacion) {
                 throw new Error('La fecha de vencimiento debe ser mayor o igual a la fecha de realización');
-            }
-
-            // Validar días hábiles
-            if (!esDiaHabil(registro.fechaRealizacion)) {
-                throw new Error('La fecha de realización debe ser un día hábil (lunes a viernes, excluyendo feriados)');
-            }
-            if (!esDiaHabil(registro.fechaVencimiento)) {
-                throw new Error('La fecha de vencimiento debe ser un día hábil (lunes a viernes, excluyendo feriados)');
             }
         }
     }

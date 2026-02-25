@@ -132,7 +132,7 @@ const Liquidaciones = () => {
 
     // Permisos y restricciones
     const isRestricted = user?.esEmpleado && !user?.esAdministrador;
-    const hasFullAccess = user?.esAdministrador || (user?.rol?.permisos?.some(p => p.modulo === 'liquidaciones' && ['crear', 'editar', 'eliminar'].includes(p.accion)));
+    const hasFullAccess = user?.esAdministrador || (user?.rol?.permisos?.some(p => p.modulo === 'liquidaciones' && ['actualizar'].includes(p.accion)));
     const isSingleEmployee = (empleadosList.length === 1 && isRestricted) || (isRestricted && !hasFullAccess);
     const isSingleWorkspace = espaciosList.length === 1 && isRestricted;
 

@@ -166,10 +166,10 @@ const Solicitudes = () => {
     }, []);
 
     // Permisos y restricciones
-    const isRestricted = user?.esEmpleado && !user?.esAdministrador;
     const hasFullAccess = user?.esAdministrador || (user?.rol?.permisos?.some(p => p.modulo === 'solicitudes' && ['crear', 'actualizar', 'eliminar'].includes(p.accion)));
-    const isSingleEmployee = (empleadosList.length === 1 && isRestricted) || (isRestricted && !hasFullAccess);
-    const isSingleWorkspace = espaciosList.length === 1 && isRestricted;
+    const isRestricted = user?.esEmpleado && !user?.esAdministrador && !hasFullAccess;
+    const isSingleEmployee = isRestricted;
+    const isSingleWorkspace = isRestricted && espaciosList.length === 1;
 
     // Auto-select espacio y empleado para usuarios restringidos
     useEffect(() => {
