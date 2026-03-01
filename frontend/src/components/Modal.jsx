@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import './Modal.css';
 
 const Modal = ({ isOpen, onClose, title, children, maxWidth = '500px' }) => {
     if (!isOpen) return null;

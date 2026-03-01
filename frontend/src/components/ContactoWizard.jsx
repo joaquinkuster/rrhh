@@ -344,7 +344,7 @@ const ContactoWizard = ({ contacto, onClose, onSuccess }) => {
             </div>
 
             {/* Nombre completo y DNI */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="form-grid-stacked">
                 <div className="form-group">
                     <label className="form-label">Nombre Completo *</label>
                     <input
@@ -372,7 +372,7 @@ const ContactoWizard = ({ contacto, onClose, onSuccess }) => {
             </div>
 
             {/* Fecha de nacimiento y Parentesco */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="form-grid-stacked">
                 <div className="form-group">
                     <label className="form-label">Fecha de Nacimiento</label>
                     <input
@@ -440,7 +440,7 @@ const ContactoWizard = ({ contacto, onClose, onSuccess }) => {
             </div>
 
             {/* Teléfonos */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="form-grid-stacked">
                 <div className="form-group">
                     <label className="form-label">Teléfono Principal *</label>
                     <input

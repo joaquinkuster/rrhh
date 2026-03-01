@@ -413,8 +413,9 @@ const RolWizard = ({ rol, onClose, onSuccess }) => {
                                                         color: 'var(--text-primary)',
                                                         position: 'sticky',
                                                         left: 0,
-                                                        background: 'inherit',
-                                                        zIndex: 1
+                                                        background: 'var(--card-bg, white)',
+                                                        zIndex: 1,
+                                                        boxShadow: '2px 0 4px rgba(0,0,0,0.04)'
                                                     }}>
                                                         {getModuloLabel(modulo)}
                                                     </td>

@@ -419,7 +419,7 @@ const EvaluacionWizard = ({ evaluacion, onClose, onSuccess }) => {
     const renderStep1 = () => (
         <div style={{ display: 'grid', gap: '1.5rem' }}>
             {/* Período y Tipo */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="form-grid-stacked">
                 <div className="form-group">
                     <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         Período *
@@ -457,7 +457,7 @@ const EvaluacionWizard = ({ evaluacion, onClose, onSuccess }) => {
             </div>
 
             {/* Fecha y Estado */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="form-grid-stacked">
                 <div className="form-group">
                     <label className="form-label">Fecha *</label>
                     <input
@@ -558,7 +558,7 @@ const EvaluacionWizard = ({ evaluacion, onClose, onSuccess }) => {
     const renderStep3 = () => (
         <div style={{ display: 'grid', gap: '1.5rem' }}>
             {/* Puntaje y Escala */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+            <div className="form-grid-stacked">
                 <div className="form-group">
                     <label className="form-label">Puntaje *</label>
                     <input

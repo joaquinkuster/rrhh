@@ -214,7 +214,7 @@ const Dashboard = () => {
             )}
 
             {/* Dashboard Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+            <div className="dashboard-main-grid">
                 {/* Próximos Eventos */}
                 <div className="card">
                     <div className="card-header" style={{ borderBottom: '1px solid var(--border-color)' }}>

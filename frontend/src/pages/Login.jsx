@@ -4,7 +4,6 @@ import { useAuth } from '../context/AuthContext';
 import BackgroundCarousel from '../components/BackgroundCarousel';
 import Modal from '../components/Modal';
 import Alert from '../components/Alert';
-import './Login.css';
 
 const Login = () => {
     const navigate = useNavigate();
@@ -142,6 +141,27 @@ const Login = () => {
                                 {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
                             </button>
                         </form>
+
+                        {/* Mobile-only: link to register (auth-right is hidden on mobile) */}
+                        <div className="auth-mobile-link">
+                            <p style={{ fontSize: '0.875rem', color: 'var(--neutral-500)', marginBottom: '0.5rem' }}>
+                                ¿Primera vez aquí?
+                            </p>
+                            <Link to="/register" style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.4rem',
+                                padding: '0.75rem 1.5rem',
+                                background: 'var(--neutral-100)',
+                                color: 'var(--neutral-700)',
+                                borderRadius: '0.5rem',
+                                fontSize: '0.9rem',
+                                fontWeight: 600,
+                                textDecoration: 'none'
+                            }}>
+                                Crear nueva cuenta
+                            </Link>
+                        </div>
                     </div>
 
                     {/* Right side - Register prompt */}

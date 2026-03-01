@@ -75,7 +75,7 @@ const LiquidacionFormulario = ({ liquidacion, onClose, onSuccess }) => {
                         )}
 
                         {/* Campos editables y de lectura */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                        <div className="form-grid-stacked">
                             <div className="form-group">
                                 <label className="form-label">Empleado</label>
                                 <input

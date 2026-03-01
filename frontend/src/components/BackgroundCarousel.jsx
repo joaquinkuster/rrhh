@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import './BackgroundCarousel.css';
 
 const BackgroundCarousel = () => {
     const [currentSlide, setCurrentSlide] = useState(0);

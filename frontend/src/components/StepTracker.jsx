@@ -26,7 +26,7 @@ const StepTracker = ({ currentStep, steps = [], totalSteps }) => {
                 ></div>
             </div>
 
-            <div className="steps-indicators" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem', position: 'relative' }}>
+            <div className="steps-indicators" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem', position: 'relative', padding: '0.5rem 0.5rem' }}>
                 {Array.from({ length: total }).map((_, index) => {
                     const stepNum = index + 1;
                     const isCompleted = stepNum < currentStep;

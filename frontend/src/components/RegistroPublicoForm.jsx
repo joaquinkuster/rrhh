@@ -105,7 +105,7 @@ const RegistroPublicoForm = ({ onSuccess }) => {
                 </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="form-grid-stacked">
                 <div className="form-group">
                     <label className="form-label">Nombre *</label>
                     <input
@@ -148,7 +148,7 @@ const RegistroPublicoForm = ({ onSuccess }) => {
                 <FieldError msg={errors.email} />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="form-grid-stacked">
                 <div className="form-group">
                     <label className="form-label">Contraseña *</label>
                     <div style={{ position: 'relative', display: 'flex' }}>

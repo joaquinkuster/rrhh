@@ -396,7 +396,7 @@ const EmpresaWizard = ({ empresa: empresaToEdit, onClose, onSuccess }) => {
 
             {(errors.submit || errors.general) && (<div className="alert alert-error" style={{ marginBottom: '1.5rem', }}>{errors.submit || errors.general}</div>)}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+            <div className="form-grid-stacked" style={{ marginBottom: '1rem' }}>
                 <div className="form-group">
                     <label className="form-label">Nombre de la Empresa *</label>
                     <input type="text" name="nombre" className={`form-input ${errors.nombre ? 'input-error' : ''}`}
@@ -411,7 +411,7 @@ const EmpresaWizard = ({ empresa: empresaToEdit, onClose, onSuccess }) => {
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+            <div className="form-grid-stacked" style={{ marginBottom: '1rem' }}>
                 <div className="form-group">
                     <label className="form-label">Teléfono</label>
                     <input type="tel" name="telefono" className={`form-input ${errors.telefono ? 'input-error' : ''}`} value={empresa.telefono} onChange={handleInfoChange} placeholder="Ej: +54 11 1234-5678" />
@@ -458,7 +458,7 @@ const EmpresaWizard = ({ empresa: empresaToEdit, onClose, onSuccess }) => {
                 </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+            <div className="form-grid-stacked" style={{ gap: '2rem' }}>
                 <div>
                     <h4 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '1rem' }}>Áreas Agregadas ({empresa.areas.length})</h4>
                     <div style={listContainerStyle}>
@@ -519,7 +519,7 @@ const EmpresaWizard = ({ empresa: empresaToEdit, onClose, onSuccess }) => {
                     </div>
                 )}
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                <div className="form-grid-stacked" style={{ gap: '2rem' }}>
                     <div>
                         <h4 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '1rem' }}>Selecciona un Área</h4>
                         <div style={listContainerStyle}>
@@ -599,7 +599,7 @@ const EmpresaWizard = ({ empresa: empresaToEdit, onClose, onSuccess }) => {
                     </div>
                 )}
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                <div className="form-grid-stacked" style={{ gap: '2rem' }}>
                     <div>
                         <h4 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '1rem' }}>Selecciona un Departamento</h4>
                         <div style={listContainerStyle}>
@@ -680,7 +680,7 @@ const EmpresaWizard = ({ empresa: empresaToEdit, onClose, onSuccess }) => {
                 <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Revisa la estructura completa antes de crear la empresa</p>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
+            <div className="empresa-resumen-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
                 <div style={{ padding: '1.25rem', background: 'var(--card-bg)', border: `1px solid ${borderColor}`, borderRadius: '0.5rem', textAlign: 'center' }}>
                     <div style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--text-primary)' }}>{empresa.nombre}</div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Empresa</div>

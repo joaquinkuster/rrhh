@@ -346,14 +346,7 @@ const EmpleadoDetail = ({ empleado, onClose, onEdit, hideEditButton = false }) =
                     {/* Registro de Actividad Section */}
                     <div style={{ marginBottom: '1.5rem' }}>
                         <SectionHeader title="Registro de Actividad" subtitle={`Últimos cambios hace ${getRelativeTime(empleado.updatedAt)}`} />
-                        <div style={{
-                            background: 'var(--card-bg)',
-                            borderRadius: '0.5rem',
-                            border: '1px solid var(--border-color)',
-                            display: 'grid',
-                            gridTemplateColumns: '1fr 1fr 1fr',
-                            overflow: 'hidden'
-                        }}>
+                        <div className="activity-log-grid">
                             {/* Fecha de Creación */}
                             <div style={{
                                 display: 'flex',
@@ -425,7 +418,7 @@ const EmpleadoDetail = ({ empleado, onClose, onEdit, hideEditButton = false }) =
                     </div>
 
                     {/* Main Content: 2 columns */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                    <div className="detail-grid-2col">
                         {/* Column 1: Resumen */}
                         <div>
                             <SectionHeader title="Resumen" subtitle={`Últimos cambios hace ${getRelativeTime(empleado.updatedAt)}`} />

@@ -230,14 +230,7 @@ const RolDetail = ({ rol, onClose, onEdit }) => {
                     {/* Registro de Actividad Section */}
                     <div style={{ marginBottom: '1.5rem' }}>
                         <SectionHeader title="Registro de Actividad" subtitle={`Últimos cambios hace ${getRelativeTime(rol.updatedAt)}`} />
-                        <div style={{
-                            background: 'var(--card-bg)',
-                            borderRadius: '0.5rem',
-                            border: '1px solid var(--border-color)',
-                            display: 'grid',
-                            gridTemplateColumns: '1fr 1fr 1fr',
-                            overflow: 'hidden'
-                        }}>
+                        <div className="activity-log-grid">
                             <div style={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -302,7 +295,7 @@ const RolDetail = ({ rol, onClose, onEdit }) => {
                     </div>
 
                     {/* Two-column layout */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                    <div className="detail-grid-2col">
                         {/* Left Column: Información Básica */}
                         <div>
                             <SectionHeader title="Resumen" subtitle={`Últimos cambios hace ${getRelativeTime(rol.updatedAt)}`} />

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -25,11 +25,34 @@ import EspaciosTrabajo from './pages/EspaciosTrabajo';
 
 // Component wrapper para rutas protegidas con sidebar
 function ProtectedLayout({ sidebarCollapsed, setSidebarCollapsed, children }) {
+    const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
+
+    // Listen for the hamburger toggle event dispatched by Navbar
+    useEffect(() => {
+        const handler = () => setSidebarMobileOpen(prev => !prev);
+        window.addEventListener('toggle-sidebar', handler);
+        return () => window.removeEventListener('toggle-sidebar', handler);
+    }, []);
+
+    // Close sidebar on route change (via resize detection as proxy)
+    useEffect(() => {
+        setSidebarMobileOpen(false);
+    }, [children]);
+
     return (
         <div className={`app-layout ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+            {/* Mobile overlay */}
+            {sidebarMobileOpen && (
+                <div
+                    className="sidebar-overlay active"
+                    onClick={() => setSidebarMobileOpen(false)}
+                />
+            )}
             <Sidebar
                 isCollapsed={sidebarCollapsed}
                 onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+                isMobileOpen={sidebarMobileOpen}
+                onMobileClose={() => setSidebarMobileOpen(false)}
             />
             <main className="main-content">
                 <Navbar />

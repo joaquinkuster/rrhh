@@ -203,14 +203,7 @@ const LiquidacionDetail = ({ liquidacion, onClose, onEdit }) => {
                     {/* Registro de Actividad Section */}
                     <div style={{ marginBottom: '1.5rem' }}>
                         <SectionHeader title="Registro de Actividad" subtitle={`Últimos cambios hace ${getRelativeTime(liquidacion.updatedAt)}`} />
-                        <div style={{
-                            background: 'var(--card-bg)',
-                            borderRadius: '0.5rem',
-                            border: '1px solid var(--border-color)',
-                            display: 'grid',
-                            gridTemplateColumns: '1fr 1fr 1fr',
-                            overflow: 'hidden'
-                        }}>
+                        <div className="activity-log-grid">
                             <div style={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -275,7 +268,7 @@ const LiquidacionDetail = ({ liquidacion, onClose, onEdit }) => {
                     </div>
 
                     {/* Main Content: 2 columns */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                    <div className="detail-grid-2col">
 
                         {/* Column 1: Resumen y Conceptos Remunerativos */}
                         <div>
@@ -325,7 +318,7 @@ const LiquidacionDetail = ({ liquidacion, onClose, onEdit }) => {
                                 overflow: 'hidden',
                                 marginBottom: '1.5rem'
                             }}>
-                                <table className="table" style={{ margin: 0, border: 'none' }}>
+                                <table className="table" style={{ margin: 0, border: 'none', minWidth: '100%' }}>
                                     <tbody>
                                         <tr>
                                             <td style={{ textAlign: 'left', padding: '0.75rem 1rem' }}>Básico</td>
@@ -458,7 +451,7 @@ const LiquidacionDetail = ({ liquidacion, onClose, onEdit }) => {
                                 flexDirection: 'column'
                             }}>
                                 {totalDeducciones > 0 || (liquidacion?.detalleRetenciones && liquidacion.detalleRetenciones.length > 0) ? (
-                                    <table className="table" style={{ margin: 0, border: 'none' }}>
+                                    <table className="table" style={{ margin: 0, border: 'none', minWidth: '100%' }}>
                                         <tbody>
                                             {amountInasistencias > 0 && <tr><td style={{ textAlign: 'left', padding: '0.75rem 1rem', color: '#ef4444' }}>Inasistencias Injustificadas</td><td style={{ textAlign: 'right', padding: '0.75rem 1rem', color: '#ef4444', fontWeight: 600 }}>- {formatCurrency(amountInasistencias)}</td></tr>}
 

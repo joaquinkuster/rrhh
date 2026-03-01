@@ -366,7 +366,7 @@ const RegistroSaludWizard = ({ registro, onClose, onSuccess }) => {
             </div>
 
             {/* Tipo de Examen y Resultado - 2 columns */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="form-grid-stacked">
                 <div className="form-group">
                     <label className="form-label">Tipo de Examen *</label>
                     <select
@@ -400,7 +400,7 @@ const RegistroSaludWizard = ({ registro, onClose, onSuccess }) => {
             </div>
 
             {/* Fechas - 2 columns */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="form-grid-stacked">
                 <div className="form-group">
                     <label className="form-label">Fecha de Realización *</label>
                     <input

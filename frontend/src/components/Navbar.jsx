@@ -7,7 +7,6 @@ import EmpleadoWizard from './EmpleadoWizard';
 import PerfilUsuarioModal from './PerfilUsuarioModal';
 import ConfirmDialog from './ConfirmDialog';
 import Alert from './Alert';
-import './Navbar.css';
 
 // ─── Custom Contract Select ───────────────────────────────────────────────────
 const ContractSelect = ({ contratos, selectedId, onChange }) => {
@@ -254,6 +253,11 @@ const Navbar = () => {
         catch (error) { console.error('Error al cerrar sesión:', error); }
     };
 
+    const toggleSidebar = () => {
+        // Dispatch custom event for sidebar toggle on mobile
+        window.dispatchEvent(new CustomEvent('toggle-sidebar'));
+    };
+
     return (
         <>
             {globalSuccessAlert && (
@@ -266,7 +270,17 @@ const Navbar = () => {
             )}
             <nav className="navbar">
                 <div className="navbar-content">
-                    <div className="navbar-left" />
+                    <div className="navbar-left">
+                        <button
+                            className="navbar-menu-btn"
+                            onClick={toggleSidebar}
+                            aria-label="Abrir menú"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                            </svg>
+                        </button>
+                    </div>
 
                     <div className="navbar-right">
                         <div className="user-menu-wrapper" ref={menuRef}>

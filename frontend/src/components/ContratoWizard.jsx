@@ -776,7 +776,7 @@ const ContratoWizard = ({ contrato: contratoToEdit, onClose, onSuccess, empleado
     const renderStep3 = () => (
         <div style={{ display: 'grid', gap: '1rem' }}>
             {/* Fechas */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="form-grid-stacked">
                 <div className="form-group">
                     <label className="form-label">Fecha de Inicio *</label>
                     <input
@@ -820,7 +820,7 @@ const ContratoWizard = ({ contrato: contratoToEdit, onClose, onSuccess, empleado
             </div>
 
             {/* Salario y Compensación */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="form-grid-stacked">
                 <div className="form-group">
                     <label className="form-label">Salario *</label>
                     <input

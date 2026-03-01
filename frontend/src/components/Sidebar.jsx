@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 
-const Sidebar = ({ isCollapsed, onToggle }) => {
+const Sidebar = ({ isCollapsed, onToggle, isMobileOpen = false, onMobileClose }) => {
     const { isDark, toggleTheme } = useTheme();
     const { user } = useAuth();
 
@@ -20,8 +20,13 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
     const canReadRoles = !isEmpleadoUser || user?.esAdministrador || userPermisos.some(p => p.modulo === 'roles' && p.accion === 'leer');
     const canReadReportes = !isEmpleadoUser || user?.esAdministrador || userPermisos.some(p => p.modulo === 'reportes' && p.accion === 'leer');
 
+    const handleNavClick = () => {
+        if (onMobileClose) onMobileClose();
+    };
+
     return (
-        <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
+        <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''} ${isMobileOpen ? 'open' : ''}`}>
+
             <div className="sidebar-header">
                 <div className="sidebar-logo">
                     <img src="/logo.png" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
@@ -38,7 +43,7 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
                 </button>
             </div>
 
-            <nav className="sidebar-nav" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+            <nav className="sidebar-nav" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }} onClick={handleNavClick}>
                 <NavLink
                     to="/dashboard"
                     className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}

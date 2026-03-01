@@ -694,7 +694,7 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
 
         return (
             <div style={{ display: 'grid', gap: '1rem' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-grid-stacked">
                     <div className="form-group">
                         <label className="form-label">Tipo *</label>
                         <select
@@ -746,7 +746,7 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
                     </div>
                 )}
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                <div className="form-grid-stacked">
                     <div className="form-group">
                         <label className="form-label">Fecha Inicio *</label>
                         <input
@@ -783,7 +783,7 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
                     </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-grid-stacked">
                     <div className="form-group">
                         <label className="form-label">URL Justificativo</label>
                         <input
@@ -836,7 +836,7 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
         return (
             <div style={{ display: 'grid', gap: '1rem' }}>
                 {/* Row 1: Period and days info */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-grid-stacked">
                     <div className="form-group">
                         <label className="form-label">Período *</label>
                         <select
@@ -872,7 +872,7 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
                         )}
                     </div>
                 )}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-grid-stacked">
                     <div className="form-group">
                         <label className="form-label">Días Tomados</label>
                         <input type="number" className="form-input" value={formData.diasTomados || 0} disabled />
@@ -883,7 +883,7 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
                     </div>
                 </div>
                 {/* Row 2: Dates */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-grid-stacked">
                     <div className="form-group">
                         <label className="form-label">Fecha Inicio *</label>
                         <input
@@ -920,7 +920,7 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
                 </div>
 
                 {/* Row 3: Notificado and Estado */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-grid-stacked">
                     <div className="form-group">
                         <label className="form-label">Notificado el</label>
                         <input
@@ -967,7 +967,7 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
 
     const renderHorasExtrasForm = () => (
         <div style={{ display: 'grid', gap: '1rem' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1rem' }}>
+            <div className="form-grid-stacked">
                 <div className="form-group">
                     <label className="form-label">Fecha *</label>
                     <input
@@ -1019,7 +1019,7 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="form-grid-stacked">
                 <div className="form-group">
                     <label className="form-label">Tipo de Horas Extra *</label>
                     <select
@@ -1078,7 +1078,7 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
 
     const renderRenunciaForm = () => (
         <div style={{ display: 'grid', gap: '1rem' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="form-grid-stacked">
                 <div className="form-group">
                     <label className="form-label">Fecha Notificación *</label>
                     <input
@@ -1121,7 +1121,7 @@ const SolicitudWizard = ({ solicitud, onClose, onSuccess }) => {
                 </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="form-grid-stacked">
                 <div className="form-group">
                     <label className="form-label">Estado *</label>
                     <select

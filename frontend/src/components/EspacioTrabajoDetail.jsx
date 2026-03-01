@@ -177,14 +177,7 @@ const EspacioTrabajoDetail = ({ espacio, onClose, onEdit }) => {
                     {/* Registro de Actividad Section */}
                     <div style={{ marginBottom: '1.5rem' }}>
                         <SectionHeader title="Registro de Actividad" subtitle={`Últimos cambios hace ${getRelativeTime(espacio.updatedAt)}`} />
-                        <div style={{
-                            background: 'var(--card-bg)',
-                            borderRadius: '0.5rem',
-                            border: '1px solid var(--border-color)',
-                            display: 'grid',
-                            gridTemplateColumns: '1fr 1fr 1fr',
-                            overflow: 'hidden'
-                        }}>
+                        <div className="activity-log-grid">
                             <div style={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -249,7 +242,7 @@ const EspacioTrabajoDetail = ({ espacio, onClose, onEdit }) => {
                     </div>
 
                     {/* Information Section */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                    <div className="detail-grid-2col">
                         {/* Column 1: Resumen */}
                         <div>
                             <SectionHeader title="Resumen" subtitle={`Últimos cambios hace ${getRelativeTime(espacio.updatedAt)}`} />

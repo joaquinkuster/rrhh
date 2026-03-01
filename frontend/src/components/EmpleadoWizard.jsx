@@ -444,7 +444,7 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess }) => {
 
     const renderStep1 = () => (
         <div style={{ display: 'grid', gap: '1rem' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="form-grid-stacked">
                 <div className="form-group">
                     <label className="form-label">Nombre *</label>
                     <input
@@ -473,7 +473,7 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess }) => {
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="form-grid-stacked">
                 <div className="form-group">
                     <label className="form-label">Email *</label>
                     <input
@@ -500,7 +500,7 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess }) => {
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+            <div className="form-grid-stacked">
                 <div className="form-group">
                     <label className="form-label">Tipo de Documento *</label>
                     <select
@@ -542,7 +542,7 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess }) => {
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="form-grid-stacked">
                 <div className="form-group">
                     <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         Fecha de Nacimiento *
@@ -588,7 +588,7 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess }) => {
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="form-grid-stacked">
                 <div className="form-group">
                     <label className="form-label">Género *</label>
                     <select
@@ -623,7 +623,7 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess }) => {
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="form-grid-stacked">
                 <div className="form-group">
                     <label className="form-label">Contraseña *</label>
                     <div style={{ position: 'relative', display: 'flex' }}>
@@ -741,7 +741,7 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess }) => {
 
     const renderStep2 = () => (
         <div style={{ display: 'grid', gap: '1rem' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
+            <div className="form-grid-stacked">
                 <div className="form-group">
                     <label className="form-label">Calle *</label>
                     <input
@@ -770,7 +770,7 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess }) => {
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+            <div className="form-grid-stacked">
                 <div className="form-group">
                     <label className="form-label">Piso</label>
                     <input
@@ -806,7 +806,7 @@ const EmpleadoWizard = ({ empleado: empleadoToEdit, onClose, onSuccess }) => {
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="form-grid-stacked">
                 <div className="form-group">
                     <label className="form-label">Provincia *</label>
                     <select

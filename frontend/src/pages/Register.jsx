@@ -4,7 +4,6 @@ import { useAuth } from '../context/AuthContext';
 import RegistroPublicoForm from '../components/RegistroPublicoForm';
 import BackgroundCarousel from '../components/BackgroundCarousel';
 import Alert from '../components/Alert';
-import './Register.css';
 
 const Register = () => {
     const navigate = useNavigate();
@@ -37,6 +36,27 @@ const Register = () => {
                     {/* Right side - Form (70%) */}
                     <div className="auth-left register-right-side">
                         <RegistroPublicoForm onSuccess={handleSuccess} />
+
+                        {/* Mobile-only: link back to login (left sidebar is hidden on mobile) */}
+                        <div className="auth-mobile-link">
+                            <p style={{ fontSize: '0.875rem', color: 'var(--neutral-500)', marginBottom: '0.5rem' }}>
+                                ¿Ya tenés cuenta?
+                            </p>
+                            <Link to="/login" style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.4rem',
+                                padding: '0.75rem 1.5rem',
+                                background: 'var(--neutral-100)',
+                                color: 'var(--neutral-700)',
+                                borderRadius: '0.5rem',
+                                fontSize: '0.9rem',
+                                fontWeight: 600,
+                                textDecoration: 'none'
+                            }}>
+                                ← Volver al Login
+                            </Link>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -1,0 +1,800 @@
+/* ===================================================================
+   RESPONSIVE.CSS — Media Queries & Breakpoints
+   CataratasRH · Sistema de Recursos Humanos
+
+   Breakpoints:
+     xs  < 480px   — Teléfonos pequeños
+     sm  < 640px   — Teléfonos
+     md  < 768px   — Tablets (portrait)
+     lg  < 1024px  — Tablets (landscape) / Laptops pequeñas
+     xl  < 1280px  — Laptops
+   =================================================================== */
+
+/* =================================================================
+   UTILITY CLASSES — Responsive helpers used by JSX
+   ================================================================= */
+
+/* Generic 2-column grid used everywhere as inline style alternative */
+.grid-2col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+/* Detail sections (50/50 layout) */
+.detail-grid-2col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+
+/* Activity log row — 3 columns */
+.activity-log-grid {
+    background: var(--card-bg);
+    border-radius: 0.5rem;
+    border: 1px solid var(--border-color);
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    overflow: hidden;
+}
+
+/* Detail page / modal hero header */
+.detail-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    gap: 1rem;
+}
+
+.detail-header-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+    min-width: 0;
+}
+
+/* Dashboard 2-col grid */
+.dashboard-main-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+/* Reportes structural summary scrollable row */
+.reportes-summary-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    background: var(--card-bg);
+    border-top: 1px solid var(--border-color);
+    border-radius: 0 0 0.5rem 0.5rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Reportes distribution card scrollable */
+.reportes-dist-card {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+
+
+
+/* =================================================================
+   LG — Tablets landscape & small laptops (< 1024px)
+   ================================================================= */
+@media (max-width: 1024px) {
+
+    /* Sidebar */
+    .sidebar {
+        transform: translateX(-100%);
+        transition: transform var(--transition-slow);
+        z-index: 200;
+    }
+
+    .sidebar.open {
+        transform: translateX(0);
+    }
+
+    .sidebar-overlay {
+        display: none;
+    }
+
+    .sidebar-overlay.active {
+        display: block;
+    }
+
+    .main-content {
+        margin-left: 0 !important;
+        max-width: 100vw !important;
+    }
+
+    .app-layout.sidebar-collapsed .main-content {
+        margin-left: 0;
+        max-width: 100vw;
+    }
+
+    /* Show hamburger button in navbar */
+    .navbar-menu-btn {
+        display: flex;
+    }
+
+    /* Page */
+    .page-container {
+        padding: var(--space-6);
+    }
+
+    /* Dashboard */
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard-main-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Landing */
+    .landing-hero-inner {
+        flex-direction: column;
+        text-align: center;
+        gap: 3rem;
+    }
+
+    .landing-hero-description {
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .landing-hero-actions {
+        justify-content: center;
+    }
+
+    .landing-hero-visual {
+        flex: none;
+    }
+
+    .landing-hero-logo-wrapper {
+        width: 240px;
+        height: 240px;
+    }
+
+    .landing-hero-title {
+        font-size: 2.75rem;
+    }
+
+    .landing-stats-inner {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .landing-features-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .landing-footer-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    /* Wizard grid */
+    .wizard-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Forms & details — start stacking sooner */
+    .grid-2col {
+        grid-template-columns: 1fr;
+    }
+
+    .detail-grid-2col {
+        grid-template-columns: 1fr;
+    }
+
+    /* Step Tracker — shrink circles to fit */
+    .steps-indicators>div>div:first-child {
+        width: 26px !important;
+        height: 26px !important;
+        font-size: 0.75rem !important;
+    }
+}
+
+/* =================================================================
+   MD — Tablets portrait (< 768px)
+   ================================================================= */
+@media (max-width: 768px) {
+
+    /* Page */
+    .page-container {
+        padding: var(--space-4);
+    }
+
+    .page-title {
+        font-size: var(--font-size-2xl);
+    }
+
+    .page-subtitle {
+        font-size: var(--font-size-xs);
+    }
+
+    .page-header {
+        margin-bottom: var(--space-5);
+    }
+
+    /* Card header wraps */
+    .card-header {
+        flex-wrap: wrap;
+        gap: var(--space-3);
+    }
+
+    /* Navbar */
+    .navbar-content {
+        padding: 0.5rem 1rem;
+    }
+
+    .user-name {
+        max-width: 100px;
+    }
+
+    .user-info {
+        display: none;
+    }
+
+    .user-menu-trigger {
+        padding: 0.5rem;
+    }
+
+    /* ── Forms ── */
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .grid-2col {
+        grid-template-columns: 1fr;
+    }
+
+    .form-actions {
+        flex-direction: column;
+    }
+
+    .form-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* ── Filters — full width ── */
+    .filters-bar {
+        flex-direction: column;
+        gap: var(--space-3);
+    }
+
+    .filters-inputs {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .filter-group {
+        max-width: 100%;
+        width: 100% !important;
+        min-width: unset !important;
+    }
+
+    .filter-input,
+    .filter-select {
+        min-width: unset !important;
+        width: 100% !important;
+    }
+
+    /* Make all inputs + selects inside filters full width */
+    .filters-bar input,
+    .filters-bar select {
+        width: 100% !important;
+        min-width: unset !important;
+    }
+
+    .filters-actions {
+        border-left: none;
+        border-top: 1px solid var(--neutral-200);
+        padding-left: 0;
+        padding-top: var(--space-3);
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+
+    /* ── Tables ── */
+    .table th,
+    .table td {
+        padding: var(--space-3) var(--space-2);
+        font-size: var(--font-size-xs);
+    }
+
+    .table-actions {
+        flex-direction: column;
+        gap: var(--space-1);
+    }
+
+    /* ── Pagination ── */
+    .pagination-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-3);
+    }
+
+    /* ── Modals ── */
+    .modal,
+    .modal-content {
+        width: 98%;
+        max-height: 95vh;
+        border-radius: var(--radius-lg);
+    }
+
+    .modal-header {
+        padding: var(--space-4);
+    }
+
+    .modal-body {
+        padding: var(--space-4);
+    }
+
+    .modal-title {
+        font-size: var(--font-size-lg);
+    }
+
+    /* ── Wizard ── */
+    .wizard-content {
+        height: 95vh;
+        border-radius: var(--radius-md);
+    }
+
+    .wizard-body {
+        padding: var(--space-4);
+    }
+
+    .wizard-footer {
+        padding: var(--space-4);
+        flex-wrap: wrap;
+        gap: var(--space-3);
+    }
+
+    .wizard-footer .btn {
+        flex: 1;
+        min-width: 120px;
+    }
+
+    .step-tracker-container {
+        padding: var(--space-3) var(--space-3) 0;
+    }
+
+    /* Step circles — compact on tablet */
+    .steps-indicators>div>div:first-child {
+        width: 24px !important;
+        height: 24px !important;
+        font-size: 0.7rem !important;
+    }
+
+    /* Step connecter lines — thin on tablet */
+    .steps-indicators>div>div:last-child {
+        height: 2px !important;
+        margin-left: 4px !important;
+        margin-right: 4px !important;
+    }
+
+    /* ── Cards ── */
+    .card {
+        padding: var(--space-4);
+    }
+
+    /* ── Detail header: stack title above button ── */
+    .detail-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .detail-header-left {
+        flex-wrap: wrap;
+    }
+
+    /* Fallback for inline-style detail headers */
+    .modal-body>div[style*="justify-content: space-between"][style*="align-items: center"]:first-child {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+    }
+
+    /* ── Detail sections — stack columns ── */
+    .detail-grid-2col {
+        grid-template-columns: 1fr;
+    }
+
+    /* Catch inline-style 50/50 grids in detail modals */
+    .modal-body div[style*="gridTemplateColumns: '1fr 1fr'"],
+    .modal-body div[style*='gridTemplateColumns: "1fr 1fr"'],
+    .modal div[style*="gridTemplateColumns: '1fr 1fr'"],
+    .modal div[style*='gridTemplateColumns: "1fr 1fr"'] {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* ── Activity log — stack cells ── */
+    .activity-log-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Catch inline-style 3-column activity grids */
+    .modal-body div[style*="gridTemplateColumns: '1fr 1fr 1fr'"],
+    .modal div[style*="gridTemplateColumns: '1fr 1fr 1fr'"] {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Remove borders between stacked cells in activity log */
+    .activity-log-grid>div {
+        border-right: none !important;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .activity-log-grid>div:last-child {
+        border-bottom: none;
+    }
+
+    /* ── Auth pages ── */
+    .auth-card {
+        grid-template-columns: 1fr;
+        min-height: auto;
+    }
+
+    .auth-right {
+        display: none;
+    }
+
+    .auth-left {
+        padding: 2rem;
+    }
+
+    .auth-title {
+        font-size: 1.75rem;
+    }
+
+
+    /* Auth mobile link — reveal on mobile */
+    .auth-mobile-link {
+        display: block;
+        text-align: center;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--neutral-100);
+    }
+
+    /* ── Register page ── */
+    .register-card {
+        grid-template-columns: 1fr !important;
+    }
+
+    .register-left-side {
+        display: none;
+    }
+
+    .register-right-side {
+        padding: 2rem !important;
+    }
+
+    /* ── Dashboard stats ── */
+    .dashboard-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-4);
+    }
+
+    .stat-card {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .dashboard-main-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* ── Reportes cards ── */
+    .reportes-summary-row {
+        grid-template-columns: repeat(4, minmax(120px, 1fr));
+        overflow-x: auto;
+    }
+
+    /* Fallback for inline-style reportes structural summary */
+    .card>div[style*="gridTemplateColumns: 'repeat(4, 1fr)'"],
+    .card div[style*="gridTemplateColumns: 'repeat(4, 1fr)'"] {
+        overflow-x: auto !important;
+        display: flex !important;
+        min-width: max-content;
+    }
+
+    .card>div[style*="gridTemplateColumns: 'repeat(4, 1fr)'"]>div,
+    .card div[style*="gridTemplateColumns: 'repeat(4, 1fr)'"]>div {
+        min-width: 120px;
+    }
+
+    /* Reportes grid auto-fit — allow single column */
+    div[style*="minmax(450px, 1fr)"] {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* ── Landing ── */
+    .landing-header-inner {
+        padding: 0 1rem;
+        height: 60px;
+    }
+
+    .landing-nav {
+        display: none;
+    }
+
+    .landing-login-btn {
+        display: none;
+    }
+
+    .landing-menu-toggle {
+        display: flex;
+    }
+
+    .landing-hero {
+        padding: 8rem 1.5rem 4rem;
+    }
+
+    .landing-hero-title {
+        font-size: 2.25rem;
+    }
+
+    .landing-features-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .landing-pricing-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .landing-price-card.featured {
+        transform: scale(1);
+    }
+
+    .landing-footer-grid {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+
+    /* ── Confirm dialog ── */
+    .confirm-dialog {
+        padding: var(--space-6);
+    }
+
+    /* ── Alerts positioning ── */
+    .alert {
+        top: 1rem;
+        right: 1rem;
+        left: 1rem;
+        max-width: calc(100vw - 2rem);
+    }
+
+    /* ── Badges in header ── */
+    .header-actions {
+        flex-wrap: wrap;
+        gap: var(--space-2);
+    }
+
+    /* ── EmpresaDetail step sections ── */
+    .empresa-step-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* ── EmpresaDetail resumen cards (step 5) ── */
+    .empresa-resumen-cards {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* =================================================================
+   SM — Teléfonos (< 640px)
+   ================================================================= */
+@media (max-width: 640px) {
+
+    /* Typography */
+    .page-title {
+        font-size: 1.5rem;
+    }
+
+    /* Dashboard stats */
+    .dashboard-stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Stats Landing */
+    .landing-stats-inner {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+
+    .landing-stat-number {
+        font-size: 1.75rem;
+    }
+
+    /* Card */
+    .card {
+        padding: var(--space-4) var(--space-3);
+    }
+
+    /* Modal */
+    .modal,
+    .modal-content {
+        border-radius: var(--radius-md);
+    }
+
+    /* Wizard full-screen */
+    .wizard-content {
+        height: 100dvh;
+        border-radius: 0;
+        max-width: 100%;
+    }
+
+    .wizard-modal {
+        padding: 0;
+    }
+
+    /* Step tracker — minimal circles */
+    .steps-indicators>div>div:first-child {
+        width: 22px !important;
+        height: 22px !important;
+        font-size: 0.65rem !important;
+    }
+
+    /* Step label — hide on very small screen */
+    .step-tracker-container .step-count,
+    .step-tracker-container .step-percentage {
+        font-size: 0.8rem;
+    }
+
+    /* Filters actions stack */
+    .filters-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .filters-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* Table actions row on mobile */
+    .table-actions {
+        flex-direction: row;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    /* Auth */
+    .auth-container {
+        padding: 1rem;
+    }
+
+    .auth-left {
+        padding: 1.5rem;
+    }
+
+    /* Hero */
+    .landing-hero-title {
+        font-size: 1.875rem;
+    }
+
+    .landing-hero-description {
+        font-size: 1rem;
+    }
+
+    .landing-hero-logo-wrapper {
+        width: 180px;
+        height: 180px;
+    }
+
+    /* Pagination compact */
+    .pagination-info {
+        flex-wrap: wrap;
+    }
+
+    /* Column selector */
+    .column-selector-dropdown {
+        right: auto;
+        left: 0;
+    }
+
+    /* Navbar dropdown */
+    .user-menu-dropdown {
+        right: 0;
+        min-width: 200px;
+    }
+
+    /* Auth — center logo and text vertically compact */
+    .auth-header {
+        margin-bottom: 1.25rem;
+    }
+
+    .auth-logo {
+        width: 60px;
+        height: 60px;
+    }
+
+    /* Inline-style wizard grids inside modal body */
+    .modal-body div[style*="gridTemplateColumns"],
+    .modal div[style*="gridTemplateColumns"] {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Reportes structural summary scrollable on mobile */
+    div[style*="repeat(4, 1fr)"] {
+        overflow-x: auto !important;
+    }
+}
+
+/* =================================================================
+   REGISTER page wider breakpoint: < 968px
+   ================================================================= */
+@media (max-width: 968px) {
+    .register-card {
+        grid-template-columns: 1fr !important;
+    }
+
+    .register-left-side {
+        display: none;
+    }
+
+    .register-right-side {
+        padding: 2rem !important;
+    }
+}
+
+/* =================================================================
+   LANDSCAPE Mobile — prevent height issues
+   ================================================================= */
+@media (max-height: 500px) and (orientation: landscape) {
+    .wizard-content {
+        height: 100dvh;
+        border-radius: 0;
+    }
+
+    .auth-card {
+        min-height: auto;
+    }
+
+    .auth-left {
+        padding: 1.5rem 2rem;
+    }
+}
+
+/* =================================================================
+   PRINT styles
+   ================================================================= */
+@media print {
+
+    .sidebar,
+    .navbar,
+    .filters-bar,
+    .pagination-bar,
+    .btn,
+    .table-actions {
+        display: none !important;
+    }
+
+    .main-content {
+        margin-left: 0 !important;
+        max-width: 100% !important;
+    }
+
+    .page-container {
+        padding: 0 !important;
+    }
+
+    .card {
+        box-shadow: none !important;
+        border: 1px solid var(--neutral-200) !important;
+    }
+
+    .table-container {
+        overflow: visible !important;
+    }
+
+    .table {
+        min-width: unset !important;
+    }
+}
