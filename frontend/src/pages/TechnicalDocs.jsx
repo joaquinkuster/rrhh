@@ -17,7 +17,7 @@ const TechnicalDocs = () => {
     }, []);
 
     return (
-        <div style={{ background: 'white', minHeight: '100vh' }}>
+        <div className="landing-page-wrapper" style={{ minHeight: '100vh' }}>
             {/* Header Mirroring LandingPage Style Exactly */}
             <header className={`landing-header ${scrolled ? 'scrolled' : ''}`}>
                 <div className="landing-header-inner">
@@ -43,7 +43,10 @@ const TechnicalDocs = () => {
                         <Link to="/documentacion" className="landing-nav-link active" onClick={() => setMenuOpen(false)}>
                             Documentación
                         </Link>
-                        <Link to="/login" className="landing-login-btn">
+                        <Link to="/login" className="landing-login-btn-mobile" onClick={() => setMenuOpen(false)}>
+                            Iniciar sesión
+                        </Link>
+                        <Link to="/login" className="landing-login-btn" onClick={() => setMenuOpen(false)}>
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
                             </svg>

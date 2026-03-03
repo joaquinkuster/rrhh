@@ -203,7 +203,7 @@ const LandingPage = () => {
     };
 
     return (
-        <div ref={containerRef} style={{ background: 'white' }}>
+        <div ref={containerRef} className="landing-page-wrapper">
             {/* ── Header ── */}
             <header className={`landing-header ${scrolled ? 'scrolled' : ''}`}>
                 <div className="landing-header-inner">
@@ -232,8 +232,12 @@ const LandingPage = () => {
                         <Link
                             to="/documentacion"
                             className="landing-nav-link"
+                            onClick={() => setMenuOpen(false)}
                         >
                             Documentación
+                        </Link>
+                        <Link to="/login" className="landing-login-btn-mobile" onClick={() => setMenuOpen(false)}>
+                            Iniciar sesión
                         </Link>
                         <Link to="/login" className="landing-login-btn">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">

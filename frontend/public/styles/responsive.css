@@ -521,11 +521,31 @@
     }
 
     .landing-nav {
-        display: none;
+        display: none !important; /* Force hide unless open class is present */
+        position: fixed;
+        top: 60px;
+        left: 0;
+        right: 0;
+        width: 100%;
+        background: white;
+        flex-direction: column;
+        padding: 2rem;
+        gap: 1.5rem;
+        border-bottom: 1px solid var(--neutral-100);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        z-index: 9999; /* Very high z-index */
+    }
+
+    .landing-nav.open {
+        display: flex !important; /* Force show when open */
     }
 
     .landing-login-btn {
         display: none;
+    }
+
+    .landing-login-btn-mobile {
+        display: flex;
     }
 
     .landing-menu-toggle {

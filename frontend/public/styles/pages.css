@@ -497,6 +497,12 @@
    LANDING PAGE
    ================================================================= */
 
+.landing-page-wrapper {
+    background: white;
+    overflow-x: hidden;
+    width: 100%;
+}
+
 /* Header */
 .landing-header {
     position: fixed;
@@ -581,8 +587,13 @@
     color: var(--primary-600);
 }
 
-.landing-nav-link:hover::after {
+.landing-nav-link:hover::after,
+.landing-nav-link.active::after {
     width: 100%;
+}
+
+.landing-nav-link.active {
+    color: var(--primary-600);
 }
 
 .landing-login-btn {
@@ -610,6 +621,20 @@
 .landing-login-btn svg {
     width: 18px;
     height: 18px;
+}
+
+.landing-login-btn-mobile {
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 0.75rem 1.5rem;
+    background: var(--primary-500);
+    color: white;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+    margin-top: 1rem;
 }
 
 .landing-menu-toggle {
