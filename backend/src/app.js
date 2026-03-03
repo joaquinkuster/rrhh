@@ -46,7 +46,9 @@ require('./jobs/renuncia.cron');
 // ──────────────────────────────────────────────────────────────────────────────
 const app = express();
 
-// Middleware de CORS — permite requests del frontend en desarrollo
+// Confiar en el proxy para manejar cookies seguras (Railway)
+app.set('trust proxy', 1);
+
 // Middleware de CORS
 app.use(cors({
     origin: process.env.FRONTEND_URL || 'http://localhost:5173',
