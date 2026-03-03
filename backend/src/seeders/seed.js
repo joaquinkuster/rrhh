@@ -263,10 +263,11 @@ const runSeed = async () => {
             const puestoIT = await Puesto.create({ nombre: 'Analista de Sistemas', descripcion: 'Desarrollo y administración de sistemas', departamentoId: deptIT.id });
 
             // ── Empleado 1: Director ──────────────────────────────────────────────
+            const baseDni1 = 20000000 + (espacioId * 1000) + 1;
             const { empleado: empDir, contrato: cDir } = await crearEmpleado({
                 nombre: 'Martín', apellido: 'Rodríguez',
                 email: `martin.rodriguez.${espacioId}@empresa.com`,
-                dni: `22000${espacioId}01`, cuil: `20-22000${espacioId}01-4`,
+                dni: `${baseDni1}`, cuil: `20-${baseDni1}-4`,
                 fechaNacimiento: '1979-05-12', genero: 'masculino', estadoCivil: 'casado',
                 calle: 'Av. Córdoba', numero: '1540', codigoPostal: '3370',
                 espacioId, rol: roles.rolCEO, puesto: puestoDir, salario: 920000,
@@ -284,10 +285,11 @@ const runSeed = async () => {
             await Vacaciones.create({ solicitudId: solVacDir.id, periodo: 2024, diasCorrespondientes: 21, diasTomados: 0, diasDisponibles: 21, fechaInicio: '2024-07-08', fechaFin: '2024-07-26', fechaRegreso: '2024-07-29', diasSolicitud: 15, descripcion: 'Vacaciones de invierno 2024', documentos: [], estado: 'aprobada', notificadoEl: '2024-06-20' }, { hooks: false, validate: false });
 
             // ── Empleado 2: Analista RRHH ─────────────────────────────────────────
+            const baseDni2 = 20000000 + (espacioId * 1000) + 2;
             const { empleado: empRRHH, contrato: cRRHH } = await crearEmpleado({
                 nombre: 'Valeria', apellido: 'Gómez',
                 email: `valeria.gomez.${espacioId}@empresa.com`,
-                dni: `27000${espacioId}02`, cuil: `27-27000${espacioId}02-6`,
+                dni: `${baseDni2}`, cuil: `27-${baseDni2}-6`,
                 fechaNacimiento: '1988-09-23', genero: 'femenino', estadoCivil: 'casado',
                 calle: 'San Martín', numero: '320', codigoPostal: '3370',
                 espacioId, rol: roles.rolRRHH, puesto: puestoRRHH, salario: 580000,
@@ -315,10 +317,11 @@ const runSeed = async () => {
             }, { hooks: false, validate: false });
 
             // ── Empleado 3: Jefe de Obra ──────────────────────────────────────────
+            const baseDni3 = 20000000 + (espacioId * 1000) + 3;
             const { empleado: empJefe, contrato: cJefe } = await crearEmpleado({
                 nombre: 'Hernán', apellido: 'Aguirre',
                 email: `hernan.aguirre.${espacioId}@empresa.com`,
-                dni: `30000${espacioId}03`, cuil: `20-30000${espacioId}03-5`,
+                dni: `${baseDni3}`, cuil: `20-${baseDni3}-5`,
                 fechaNacimiento: '1983-11-08', genero: 'masculino', estadoCivil: 'divorciado',
                 calle: 'Belgrano', numero: '987', codigoPostal: '3370',
                 espacioId, rol: roles.rolOperativo, puesto: puestoJefeOp, salario: 720000,
@@ -350,10 +353,11 @@ const runSeed = async () => {
             await HorasExtras.create({ solicitudId: solHEJefe2.id, fecha: '2024-12-20', horaInicio: '18:00', horaFin: '22:00', cantidadHoras: 4, tipoHorasExtra: '100', motivo: 'Trabajo de urgencia por inspección programada', documentos: [], estado: 'aprobada' }, { hooks: false, validate: false });
 
             // ── Empleado 4: Técnico ───────────────────────────────────────────────
+            const baseDni4 = 20000000 + (espacioId * 1000) + 4;
             const { empleado: empTec, contrato: cTec } = await crearEmpleado({
                 nombre: 'Diego', apellido: 'Pereyra',
                 email: `diego.pereyra.${espacioId}@empresa.com`,
-                dni: `33000${espacioId}04`, cuil: `20-33000${espacioId}04-3`,
+                dni: `${baseDni4}`, cuil: `20-${baseDni4}-3`,
                 fechaNacimiento: '1995-02-17', genero: 'masculino', estadoCivil: 'soltero',
                 calle: 'Mitre', numero: '780', codigoPostal: '3370',
                 espacioId, rol: roles.rolOperativo, puesto: puestoTec, salario: 340000,
@@ -383,10 +387,11 @@ const runSeed = async () => {
             }, { hooks: false, validate: false });
 
             // ── Empleado 5: Analista IT ───────────────────────────────────────────
+            const baseDni5 = 20000000 + (espacioId * 1000) + 5;
             const { empleado: empIT, contrato: cIT } = await crearEmpleado({
                 nombre: 'Luciana', apellido: 'Ferreyra',
                 email: `luciana.ferreyra.${espacioId}@empresa.com`,
-                dni: `38000${espacioId}05`, cuil: `27-38000${espacioId}05-8`,
+                dni: `${baseDni5}`, cuil: `27-${baseDni5}-8`,
                 fechaNacimiento: '1997-07-30', genero: 'femenino', estadoCivil: 'soltero',
                 calle: 'Rivadavia', numero: '455', codigoPostal: '3370',
                 espacioId, rol: roles.rolOperativo, puesto: puestoIT, salario: 490000,
