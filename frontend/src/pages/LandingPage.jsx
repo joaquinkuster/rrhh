@@ -295,7 +295,7 @@ const LandingPage = () => {
                         <div className="landing-stat-label">Disponibilidad</div>
                     </div>
                     <div className="landing-stat landing-animate">
-                        <div className="landing-stat-number">âˆž</div>
+                        <div className="landing-stat-number">∞</div>
                         <div className="landing-stat-label">Escalabilidad</div>
                     </div>
                 </div>
@@ -411,7 +411,7 @@ const LandingPage = () => {
                         </div>
                     </div>
                     <div className="landing-footer-bottom">
-                        <p>© 2025 CataratasRH. Todos los derechos reservados.</p>
+                        <p>© 2026 CataratasRH. Todos los derechos reservados.</p>
                         <div className="landing-footer-bottom-links">
                             <a href="#">Política de Privacidad</a>
                             <a href="#">Términos de Servicio</a>
