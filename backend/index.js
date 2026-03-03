@@ -19,10 +19,16 @@ const PORT = process.env.PORT || 3000;
  */
 const startServer = async () => {
     try {
-        // Sincronizar base de datos (alter: true mantiene los datos existentes)
+        // Sincronizar base de datos
+        // En producción NO usar { force: true } para no borrar datos en cada reinicio
+        const isProd = process.env.NODE_ENV === 'production';
         await sequelize.query('SET FOREIGN_KEY_CHECKS = 0');
-        await sequelize.sync({ force: true });
-        console.log('✅ Base de datos sincronizada');
+        await sequelize.sync({
+            force: !isProd, // En desarrollo borra y recrea
+            alter: isProd   // En producción solo altera (mantiene datos)
+        });
+        await sequelize.query('SET FOREIGN_KEY_CHECKS = 1');
+        console.log(`✅ Base de datos sincronizada (${isProd ? 'Alter' : 'Force'})`);
 
         // Sincronizar tabla de sesiones
         if (app.sessionStore) {

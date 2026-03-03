@@ -46,31 +46,39 @@ require('./jobs/renuncia.cron');
 const app = express();
 
 // Middleware de CORS — permite requests del frontend en desarrollo
+// Middleware de CORS
 app.use(cors({
-    origin: 'http://localhost:5173',
-    credentials: true, // Necesario para envío de cookies de sesión
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    credentials: true,
 }));
 
 // Parseo de cuerpo JSON y URL-encoded con límite ampliado (archivos adjuntos)
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Configuración de sesiones con MemoryStore (suficiente en desarrollo)
+// Configuración de sesiones
+const isProd = process.env.NODE_ENV === 'production';
 app.use(session({
     secret: process.env.SESSION_SECRET || 'cataratas-rh-secret-key-change-in-production',
     resave: false,
     saveUninitialized: false,
     name: 'connect.sid',
     cookie: {
-        secure: false,    // Cambiar a true en producción con HTTPS
+        secure: isProd,    // True en producción para requerir HTTPS
         httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000, // 24 horas por defecto
-        sameSite: 'lax',
+        maxAge: 24 * 60 * 60 * 1000,
+        sameSite: isProd ? 'none' : 'lax', // 'none' permite cross-site cookies con secure: true
     },
 }));
 
-// Servir documentación técnica estática desde la raíz
+// Servir documentación técnica
 app.use('/docs', express.static(path.join(__dirname, '../../docs')));
+
+// Servir el frontend compilado en producción
+const frontendDistPath = path.join(__dirname, '../../frontend/dist');
+if (isProd) {
+    app.use(express.static(frontendDistPath));
+}
 
 // ──────────────────────────────────────────────────────────────────────────────
 // RUTAS DE LA API
@@ -108,6 +116,17 @@ app.use('/api/usuarios', usuarioRoutes);
 app.get('/api/health', (req, res) => {
     res.json({ status: 'OK', message: 'CataratasRH API funcionando' });
 });
+
+// En producción, cualquier ruta que no sea de la API sirve el index.html del frontend (SPA routing)
+if (isProd) {
+    app.get('*', (req, res, next) => {
+        // Si es una ruta de /api o /docs, no interferir (debería haber sido manejada antes)
+        if (req.path.startsWith('/api') || req.path.startsWith('/docs')) {
+            return next();
+        }
+        res.sendFile(path.join(frontendDistPath, 'index.html'));
+    });
+}
 
 // ──────────────────────────────────────────────────────────────────────────────
 // MANEJO GLOBAL DE ERRORES
