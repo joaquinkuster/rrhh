@@ -7,11 +7,11 @@
 const { Sequelize } = require('sequelize');
 
 const sequelize = new Sequelize(
-  process.env.DB_NAME || 'cataratasrh',
-  process.env.DB_USER || 'root',
-  process.env.DB_PASSWORD || '',
+  (process.env.DB_NAME || 'cataratasrh').trim(),
+  (process.env.DB_USER || 'root').trim(),
+  (process.env.DB_PASSWORD || '').trim(),
   {
-    host: process.env.DB_HOST || 'localhost',
+    host: (process.env.DB_HOST || 'localhost').trim(),
     port: process.env.DB_PORT || 3306,
     dialect: 'mysql',
     logging: false,
