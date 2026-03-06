@@ -17,6 +17,11 @@ const PARENTESCOS = [
     'Suegro/a', 'Cuñado/a', 'Yerno', 'Nuera', 'Otro'
 ];
 
+const steps = [
+    { title: 'Datos Básicos' },
+    { title: 'Información Adicional' }
+];
+
 /**
  * Componente interno de error de campo.
  * 

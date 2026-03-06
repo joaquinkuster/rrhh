@@ -129,7 +129,7 @@ const LiquidacionFormulario = ({ liquidacion, onClose, onSuccess }) => {
                             </div>
 
                             <div className="form-group">
-                                <label className="form-label">AntigÃ¼edad</label>
+                                <label className="form-label">Antigüedad</label>
                                 <input
                                     type="number"
                                     step="0.01"
